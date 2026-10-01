@@ -41,7 +41,7 @@ export function ActivityList({ items, groups, onOpen, onRestore, deletedIds, com
             <span className={`icon-tile ${a.kind.startsWith("payment") ? "gold" : ""}`} style={compact ? { width: 32, height: 32 } : undefined}><Icon /></span>
             <div className="item-main">
               <div style={{ whiteSpace: "normal", lineHeight: 1.4 }}>{a.summary}</div>
-              <div className="item-sub">
+              <div className="item-sub wrap2">
                 {timeAgo(a.created_at)}
                 {g && <> · {g.name}</>}
               </div>

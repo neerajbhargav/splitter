@@ -5,11 +5,17 @@ export type Portion = { id: string; amount: number };
 /** Parse "12.5", "$1,200.00", "12" into cents. Returns null for invalid or non-positive input. */
 export function parseMoney(input: string | number | null | undefined): number | null {
   if (input === null || input === undefined) return null;
-  const s = String(input).replace(/[^0-9.\-]/g, "");
-  if (!s || s === "." || s === "-") return null;
-  const n = Number(s);
-  if (!Number.isFinite(n)) return null;
-  return Math.round(n * 100);
+  if (typeof input === "number") return Number.isFinite(input) ? Math.round(input * 100) : null;
+  // Accept "$1,234.56", "1234.5", "-12", " 12 ". Reject anything else ("1e2", "12abc", "1.2.3").
+  const t = input.trim().replace(/^(-?)\$\s*/, "$1");
+  if (!/^-?(\d{1,3}(,\d{3})+|\d+)?(\.\d*)?$/.test(t) || !/\d/.test(t)) return null;
+  const neg = t.startsWith("-");
+  const [whole, frac = ""] = t.replace(/[-,]/g, "").split(".");
+  // Exact decimal to cents, rounding half up on the third decimal.
+  const f = (frac + "000").slice(0, 3);
+  const cents = Number(whole || "0") * 100 + Number(f.slice(0, 2)) + (Number(f[2]) >= 5 ? 1 : 0);
+  if (!Number.isSafeInteger(cents)) return null;
+  return neg ? -cents : cents;
 }
 
 /** Like parseMoney but treats empty input as 0 and allows 0. */

@@ -182,11 +182,11 @@ export default function GroupSettings() {
                 <div key={m.id} className="item">
                   <Avatar name={m.display_name} color={m.color} src={avatarFor(m, b.profiles)} size={34} />
                   <div className="item-main">
-                    <div className="item-title">
+                    <div className="item-title clamp-2">
                       {m.display_name}
                       {m.user_id === me.id && <span className="faint"> (you)</span>}
                     </div>
-                    <div className="item-sub">
+                    <div className="item-sub wrap-all">
                       {[m.user_id ? "Joined" : "Not joined yet", m.email, m.phone].filter(Boolean).join(" · ")}
                       {bal !== 0 && <> · <span className={bal > 0 ? "pos" : "neg"}>{bal > 0 ? "gets back" : "owes"} {money(Math.abs(bal), group.currency)}</span></>}
                     </div>

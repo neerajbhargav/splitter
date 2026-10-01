@@ -533,8 +533,13 @@ begin
   select count(*) into bad from (
     select x from jsonb_array_elements(p->'payers') x
     union all select x from jsonb_array_elements(p->'splits') x) t(x)
-  where (x->>'amount_cents')::bigint < 0
-     or not exists (select 1 from public.group_members m
+  where (x->>'amount_cents')::bigint < 0 or coalesce(nullif(x->>'weight', '')::numeric, 0) < 0;
+  if bad > 0 then raise exception 'Amounts, percentages and shares can''t be negative'; end if;
+
+  select count(*) into bad from (
+    select x from jsonb_array_elements(p->'payers') x
+    union all select x from jsonb_array_elements(p->'splits') x) t(x)
+  where not exists (select 1 from public.group_members m
                     where m.id = public.try_uuid(x->>'member_id') and m.group_id = p_group);
   if bad > 0 then raise exception 'Every person in an expense must belong to this group'; end if;
 
@@ -1175,6 +1180,11 @@ begin
   select * into b from public.upcoming_bills where id = bid for update;
   if not found or not public.is_group_member(b.group_id) then raise exception 'Not allowed'; end if;
   if b.status <> 'upcoming' then raise exception 'This bill was already marked paid'; end if;
+  if jsonb_typeof(p_payers) <> 'array' or jsonb_array_length(p_payers) = 0 then raise exception 'Choose who paid'; end if;
+  -- Checked-off shares were paid to one person, so they need exactly one payer to become payments.
+  if jsonb_array_length(p_payers) <> 1 and exists (select 1 from public.upcoming_bill_shares where bill_id = bid and paid_at is not null) then
+    raise exception 'Some shares are checked off as paid. Choose a single payer, or uncheck them first.';
+  end if;
   eid := public.save_expense(null, b.group_id, jsonb_build_object(
     'description', b.title, 'amount_cents', b.amount_cents, 'category', b.category,
     'expense_date', coalesce(p_date, current_date), 'notes', b.notes, 'split_type', 'exact',

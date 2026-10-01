@@ -4,7 +4,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Activity, LayoutDashboard, LogOut, Plus, Settings, Users } from "lucide-react";
 import { MeProvider, useMe, useToast } from "./providers";
-import { Avatar } from "./ui";
+import { Avatar, LogoMark } from "./ui";
+import { ThemeCycle } from "./ThemeToggle";
 import { ExpenseEditor } from "./ExpenseEditor";
 import { api, loadGroupsLite, loadProfile, useLiveRefresh } from "@/lib/data";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -82,7 +83,8 @@ function Frame({ children }: { children: ReactNode }) {
       <div className="app">
         <aside className="sidebar">
           <div className="brand">
-            <Link href="/dashboard" className="wordmark">SPLIT<b>TER</b></Link>
+            <Link href="/dashboard" className="brand-link"><LogoMark size={24} /><span className="wordmark">SPLIT<b>TER</b></span></Link>
+            <ThemeCycle />
           </div>
           <button type="button" className="btn btn-primary btn-block" onClick={() => openQuick()}>
             <Plus /> Add expense
@@ -103,7 +105,7 @@ function Frame({ children }: { children: ReactNode }) {
               const K = groupKind(g.kind).icon;
               return (
                 <Link key={g.id} href={`/groups/${g.id}`} className={`side-link ${currentGroup === g.id ? "active" : ""}`}>
-                  <K /> <span className="ellipsis">{g.name}</span>
+                  <K /> <span className="clamp-2">{g.name}</span>
                 </Link>
               );
             })}
@@ -112,7 +114,7 @@ function Frame({ children }: { children: ReactNode }) {
           <div className="side-foot">
             <Avatar name={name} src={me.profile?.avatar_url} size={32} />
             <div className="who">
-              <div className="ellipsis" style={{ fontWeight: 500 }}>{name}</div>
+              <div className="clamp-2" style={{ fontWeight: 500 }}>{name}</div>
               <div className="ellipsis tiny faint">{me.email}</div>
             </div>
             <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={signOut} title="Sign out" aria-label="Sign out">
@@ -123,8 +125,8 @@ function Frame({ children }: { children: ReactNode }) {
 
         <div className="main">
           <header className="topbar">
-            <Link href="/dashboard" className="wordmark" style={{ fontSize: 19 }}>SPLIT<b>TER</b></Link>
-            <Link href="/account" aria-label="Account"><Avatar name={name} src={me.profile?.avatar_url} size={30} /></Link>
+            <Link href="/dashboard" className="brand-link" style={{ gap: 8 }}><LogoMark size={22} /><span className="wordmark" style={{ fontSize: 19 }}>SPLIT<b>TER</b></span></Link>
+            <span className="row-flex" style={{ gap: 6 }}><ThemeCycle /><Link href="/account" aria-label="Account"><Avatar name={name} src={me.profile?.avatar_url} size={30} /></Link></span>
           </header>
           {children}
         </div>

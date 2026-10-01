@@ -14,7 +14,7 @@ export function GroupRow({ s, maxLines = 2 }: { s: GroupSummary; maxLines?: numb
     <Link href={`/groups/${s.group.id}`} className="grow-row clickable">
       <span className="icon-tile" style={{ width: 44, height: 44, borderRadius: 12 }}><K /></span>
       <div className="item-main">
-        <div className="item-title" style={{ fontSize: 15 }}>{s.group.name}</div>
+        <div className="item-title clamp-2" style={{ fontSize: 15 }}>{s.group.name}</div>
         {shown.length > 0 ? (
           <div className="tree">
             {shown.map((t) => t.from === s.mine!.id

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { LogOut } from "lucide-react";
 import { useMe, useToast } from "@/components/providers";
 import { Avatar } from "@/components/ui";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { api, loadProfile } from "@/lib/data";
 import { CURRENCIES } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -69,6 +70,14 @@ export default function AccountPage() {
           <div><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Saving..." : "Save"}</button></div>
         </div>
       </form>
+
+      <section className="card">
+        <div className="card-head"><span className="card-title">Appearance</span></div>
+        <div className="card-body stack-sm">
+          <ThemeToggle />
+          <span className="hint">Device follows your phone or computer setting and switches automatically.</span>
+        </div>
+      </section>
 
       <section className="card">
         <div className="card-head"><span className="card-title">Use it like an app</span></div>

@@ -717,8 +717,9 @@ body > .page, main.page-narrow:not(.main .page) { padding-top: calc(28px + env(s
 
 /* ---------- logo mark (yin-yang) ---------- */
 .logo-mark { flex: none; display: inline-block; vertical-align: middle; }
-.logo-mark .lm-a { fill: var(--gold); }
-.logo-mark .lm-b { fill: var(--ink); }
+.logo-mark .lm-yang { fill: var(--gold); }
+.logo-mark .lm-yin { fill: transparent; }
+html[data-theme="light"] .logo-mark .lm-yin { fill: var(--ink); }
 .brand-link { display: inline-flex; align-items: center; gap: 10px; }
 
 /* ---------- segmented control (theme) ---------- */

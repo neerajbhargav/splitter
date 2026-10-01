@@ -160,7 +160,7 @@ export default function GroupPage() {
                       <Avatar name={m.display_name} color={m.color} src={avatarFor(m, b.profiles)} size={34} />
                       <div className="item-main">
                         <div className="item-title">{m.display_name}{m.user_id === me.id && <span className="faint"> (you)</span>}{!m.is_active && <span className="faint"> (left)</span>}</div>
-                        <div className="item-sub">Paid {money(t.paid, cur)} · share {money(t.share, cur)}{!m.user_id && " · not joined yet"}</div>
+                        <div className="item-sub">Put in {money(n + t.share, cur)} · share {money(t.share, cur)}{!m.user_id && " · not joined yet"}</div>
                       </div>
                       <div className="item-end">
                         <div className="k">{n > 0 ? "gets back" : n < 0 ? "owes" : "settled up"}</div>

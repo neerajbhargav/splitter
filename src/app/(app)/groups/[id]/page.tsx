@@ -161,7 +161,7 @@ export default function GroupPage() {
             </div>
             <div style={{ textAlign: "right", flex: "none" }} className="hide-mobile">
               <div className="tiny faint">{myNet > 0 ? "you get back" : myNet < 0 ? "you owe" : "balance"}</div>
-              <div className={`xd-amount ${myNet > 0 ? "pos" : myNet < 0 ? "neg" : ""}`} style={{ fontSize: 34 }}><BigMoney cents={myNet} currency={cur} /></div>
+              <div className={`xd-amount ${myNet > 0 ? "pos" : myNet < 0 ? "neg" : ""}`} style={{ fontSize: 34, marginTop: 6 }}><BigMoney cents={myNet} currency={cur} /></div>
             </div>
           </div>
           <div className="row-flex small faint wrap" style={{ gap: 8, marginTop: 10 }}>
@@ -280,9 +280,9 @@ export default function GroupPage() {
                       <div key={t.from + t.to} className="settle-row">
                         <Avatar name={from.display_name} color={from.color} src={avatarFor(from, b.profiles)} size={32} />
                         <span className="arrow-pill"><ChevronLeft width={14} style={{ transform: "rotate(180deg)" }} /></span>
-                        <Avatar name={to.display_name} color={to.color} src={avatarFor(to, b.profiles)} size={32} />
+                        <span className="to-avatar"><Avatar name={to.display_name} color={to.color} src={avatarFor(to, b.profiles)} size={32} /></span>
                         <div className="grow" style={{ minWidth: 0 }}>
-                          <div className="ellipsis small"><b style={{ fontWeight: 600 }}>{name(t.from)}</b> <span className="faint">{from.user_id === me.id ? "pay" : "pays"}</span> <b style={{ fontWeight: 600 }}>{name(t.to)}</b></div>
+                          <div className="clamp-2 small"><b style={{ fontWeight: 600 }}>{name(t.from)}</b> <span className="faint">{from.user_id === me.id ? "pay" : "pays"}</span> <b style={{ fontWeight: 600 }}>{name(t.to)}</b></div>
                           <div className={`amt ${to.user_id === me.id ? "pos" : from.user_id === me.id ? "neg" : ""}`}>{money(t.amount, cur)}</div>
                         </div>
                         {remind && (
@@ -439,12 +439,12 @@ function ExpenseRow({ e, mine, name, cur, onClick }: { e: Expense; mine: Member 
         {e.is_payment ? (
           <>
             <div className="item-title row-flex" style={{ gap: 6 }}>{name(payers[0]?.member_id)} <ArrowRight width={13} className="faint" /> {name(e.expense_splits[0]?.member_id)}</div>
-            <div className="item-sub">Payment{e.notes ? ` · ${e.notes}` : ""}</div>
+            <div className="item-sub wrap2">Payment{e.notes ? ` · ${e.notes}` : ""}</div>
           </>
         ) : (
           <>
             <div className="item-title row-flex" style={{ gap: 6 }}>
-              <span className="ellipsis">{e.description}</span>
+              <span className="clamp-2">{e.description}</span>
               {e.repeat_interval !== "none" && <Repeat width={12} className="gold" style={{ flex: "none" }} />}
               {e.receipt_path && <span className="badge" style={{ height: 18 }}>receipt</span>}
             </div>

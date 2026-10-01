@@ -73,10 +73,9 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
                       <span className="icon-tile"><Icon /></span>
                       <div className="item-main">
                         <div className="item-title row-flex" style={{ gap: 6 }}>
-                          <span className="ellipsis">{b.title}</span>
-                          {b.is_estimate && <span className="badge" style={{ height: 18 }}>estimate</span>}
+                          <span className="clamp-2">{b.title}</span>
                         </div>
-                        <div className={`item-sub ${due.tone}`}>{due.text} · {paidShares.length} of {shares.length} paid</div>
+                        <div className={`item-sub ${due.tone}`}>{b.is_estimate && <span className="badge" style={{ height: 17, marginRight: 6, verticalAlign: "1px" }}>estimate</span>}{due.text} · {paidShares.length} of {shares.length} paid</div>
                         <div style={{ marginTop: 8, maxWidth: 360 }}><Progress value={paidAmt} max={b.amount_cents} size="sm" /></div>
                       </div>
                       <div className="item-end">

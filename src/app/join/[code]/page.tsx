@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { Avatar, Loading, Spinner } from "@/components/ui";
+import { Avatar, Loading, Spinner, LogoMark } from "@/components/ui";
 import { useToast } from "@/components/providers";
 import { api } from "@/lib/data";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -93,7 +93,7 @@ function Join() {
 
   return (
     <main className="page page-narrow" style={{ paddingTop: "calc(72px + env(safe-area-inset-top))" }}>
-      <Link href="/" className="wordmark">SPLIT<b>TER</b></Link>
+      <Link href="/" className="brand-link"><LogoMark size={26} /><span className="wordmark">SPLIT<b>TER</b></span></Link>
       {!invite ? (
         <div style={{ marginTop: 40 }}>
           <h1 className="page-title">This invite expired.</h1>

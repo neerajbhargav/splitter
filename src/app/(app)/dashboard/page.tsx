@@ -63,8 +63,8 @@ export default function Dashboard() {
 
     // who owes what
     const people: Slice[] = [
-      ...sum.owesYou.filter((p) => p.currency === cur).map((p, i) => ({ key: p.key, name: `${p.name} owes you`, value: p.amount, color: ["#8cc4a0", "#a3d1b3", "#bbdec7", "#6fa886", "#d2eadb", "#5a9273"][i % 6] })),
-      ...sum.youOwe.filter((p) => p.currency === cur).map((p, i) => ({ key: p.key, name: `You owe ${p.name}`, value: -p.amount, color: ["#e58a6f", "#eba38d", "#f1bcab", "#c9705a", "#f6d3c8", "#b05f4b"][i % 6] })),
+      ...sum.owesYou.filter((p) => p.currency === cur).map((p, i) => ({ key: p.key, name: `${p.name} owes you`, value: p.amount, color: `var(--pos-${(i % 6) + 1})` })),
+      ...sum.youOwe.filter((p) => p.currency === cur).map((p, i) => ({ key: p.key, name: `You owe ${p.name}`, value: -p.amount, color: `var(--neg-${(i % 6) + 1})` })),
     ];
 
     // upcoming bills where I have a share
@@ -75,7 +75,7 @@ export default function Dashboard() {
         const paid = b.upcoming_bill_shares.filter((s) => s.paid_at);
         return { b, g: groupName.get(b.group_id), mine, paidCount: paid.length, paidAmt: paid.reduce((a, s) => a + s.amount_cents, 0) };
       })
-      .filter((x) => x.g);
+      .filter((x) => x.g && x.mine);
 
     return { cur, t, balance: t.owed - t.owe, months, thisMonth, cats, people, upcoming };
   }, [data, sum, me.id, me.profile]);
@@ -131,7 +131,7 @@ export default function Dashboard() {
                       <span className="icon-tile">{(() => { const I = category(b.category).icon; return <I />; })()}</span>
                       <div className="item-main">
                         <div className="item-title" style={{ whiteSpace: "normal" }}>{b.title}</div>
-                        <div className={`item-sub ${overdue ? "neg" : ""}`}>{g!.name} · {b.due_date ? `${overdue ? "Overdue since" : "Due"} ${new Date(b.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "No due date"}</div>
+                        <div className={`item-sub wrap2 ${overdue ? "neg" : ""}`}>{b.due_date ? `${overdue ? "Overdue since" : "Due"} ${new Date(b.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "No due date"} · {g!.name}</div>
                         <div style={{ marginTop: 8 }}><Progress value={paidAmt} max={b.amount_cents} size="sm" /></div>
                         <div className="tiny faint" style={{ marginTop: 4 }}>{paidCount} of {b.upcoming_bill_shares.length} paid · {money(paidAmt, g!.currency)} of {money(b.amount_cents, g!.currency)}</div>
                       </div>
@@ -154,7 +154,7 @@ export default function Dashboard() {
           <Card title="Spending" description={`Last 6 months · this month your share is ${money(view.thisMonth.mine, cur)} of ${money(view.thisMonth.total, cur)}`}>
             <MonthlyBars data={view.months} currency={cur} />
             <div className="row-flex small faint" style={{ gap: 16, marginTop: 6 }}>
-              <span className="row-flex" style={{ gap: 6 }}><i className="sw" style={{ width: 10, height: 10, borderRadius: 3, background: "rgba(240, 234, 224, 0.3)", display: "inline-block" }} /> Group total</span>
+              <span className="row-flex" style={{ gap: 6 }}><i className="sw" style={{ width: 10, height: 10, borderRadius: 3, background: "var(--bar-muted-2)", display: "inline-block" }} /> Group total</span>
               <span className="row-flex" style={{ gap: 6 }}><i className="sw" style={{ width: 10, height: 10, borderRadius: 3, background: "var(--chart-1)", display: "inline-block" }} /> Your share</span>
             </div>
           </Card>
@@ -181,7 +181,7 @@ export default function Dashboard() {
                       <Avatar name={p.name} color={p.color} src={p.avatar} size={36} />
                       <div className="item-main">
                         <div className="item-title">{p.name}</div>
-                        <div className="item-sub">{p.groups.map((g) => g.groupName).join(" · ")}</div>
+                        <div className="item-sub wrap2">{p.groups.map((g) => g.groupName).join(" · ")}</div>
                       </div>
                       <div className="item-end">
                         <div className={`v ${p.amount > 0 ? "pos" : "neg"}`} style={{ fontWeight: 700 }}>

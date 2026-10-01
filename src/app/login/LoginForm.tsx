@@ -1,7 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import { Mail } from "lucide-react";
-import { GitHubLogo, GoogleLogo, Spinner } from "@/components/ui";
+import { GitHubLogo, GoogleLogo, LogoMark, Spinner } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 export function LoginForm({ next, initialError, joining }: { next: string; initialError: string | null; joining: boolean }) {
@@ -35,7 +35,7 @@ export function LoginForm({ next, initialError, joining }: { next: string; initi
 
   return (
     <div className="auth-card">
-      <div className="wordmark" style={{ marginBottom: 36 }}>SPLIT<b>TER</b></div>
+      <div className="brand-link" style={{ marginBottom: 36 }}><LogoMark size={30} /><span className="wordmark">SPLIT<b>TER</b></span></div>
       <h2>{joining ? "Sign in to join" : "Sign in"}</h2>
       <p className="muted" style={{ margin: 0 }}>
         {joining ? "Your group invite is waiting. Sign in and you'll land right in it." : "Split expenses with your roommates."}

@@ -155,12 +155,15 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
       const src = splitType === "percent" ? pct : shares;
       const weights = people.map((m) => ({ id: m.id, weight: Number(src[m.id] ?? (splitType === "shares" ? 0 : 0)) || 0 }));
       const sum = weights.reduce((a, w) => a + w.weight, 0);
+      const negative = weights.some((w) => w.weight < 0);
       splitByWeights(total, weights).forEach((p) => out.set(p.id, { amount: p.amount, weight: weights.find((w) => w.id === p.id)!.weight }));
       if (splitType === "percent") {
-        if (Math.abs(sum - 100) > 0.001) problem = sum < 100 ? `${+(100 - sum).toFixed(2)}% left to assign` : `Over by ${+(sum - 100).toFixed(2)}%`;
+        if (negative) problem = "Percentages can't be negative";
+        else if (Math.abs(sum - 100) > 0.001) problem = sum < 100 ? `${+(100 - sum).toFixed(2)}% left to assign` : `Over by ${+(sum - 100).toFixed(2)}%`;
         note = `${+sum.toFixed(2)}% of 100%`;
       } else {
-        if (sum <= 0) problem = "Give at least one person a share";
+        if (negative) problem = "Shares can't be negative";
+        else if (sum <= 0) problem = "Give at least one person a share";
         note = `${+sum.toFixed(2)} total shares`;
       }
     }

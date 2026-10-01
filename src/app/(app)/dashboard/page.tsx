@@ -57,7 +57,7 @@ export default function Dashboard() {
           <div className="eyebrow">{greeting()}{first ? `, ${first}` : ""}</div>
           <h1 className="page-title">Dashboard</h1>
         </div>
-        <div className="head-actions">
+        <div className="head-actions hide-mobile">
           <Link href="/groups/new" className="btn"><Users /> New group</Link>
           <button type="button" className="btn btn-primary" onClick={() => quick.open()}><Plus /> Add expense</button>
         </div>

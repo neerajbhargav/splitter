@@ -109,32 +109,34 @@ export default function GroupPage() {
 
   return (
     <main className="page">
-      <Link href="/groups" className="back"><ChevronLeft width={14} /> Groups</Link>
-      <div className="page-head">
-        <div style={{ minWidth: 0 }}>
-          <div className="eyebrow row-flex"><K width={13} height={13} /> {groupKind(group.kind).label} · {cur}</div>
-          <h1 className="page-title ellipsis">{group.name}</h1>
-          <div className="row-flex" style={{ marginTop: 10 }}>
-            <span className="avatar-stack">
-              {active.slice(0, 6).map((m) => <Avatar key={m.id} name={m.display_name} color={m.color} src={avatarFor(m, b.profiles)} size={26} />)}
-            </span>
-            <span className="small muted">
-              {myNet > 0 ? <>You are owed <b className="pos num">{money(myNet, cur)}</b></>
-                : myNet < 0 ? <>You owe <b className="neg num">{money(-myNet, cur)}</b></>
-                : "You are all settled up"}
-            </span>
-          </div>
-        </div>
-        <div className="head-actions">
-          <button type="button" className="btn btn-primary" onClick={() => setEditor({ open: true, expense: null })}><Plus /> Add expense</button>
-          <button type="button" className="btn" onClick={() => setSettle({ open: true, preset: null, payment: null })}><CircleDollarSign /> Settle up</button>
-          <button type="button" className="btn btn-icon" onClick={() => setInviteOpen(true)} title="Invite people" aria-label="Invite people"><Link2 /></button>
-          <button type="button" className="btn btn-icon" onClick={exportCsv} title="Export CSV" aria-label="Export CSV"><Download /></button>
-          <Link href={`/groups/${group.id}/settings`} className="btn btn-icon" title="Group settings" aria-label="Group settings"><Settings /></Link>
+      <div className="group-top">
+        <Link href="/groups" className="back"><ChevronLeft width={14} /> Groups</Link>
+        <div className="icon-cluster">
+          <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => setInviteOpen(true)} title="Invite people" aria-label="Invite people"><Link2 /></button>
+          <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={exportCsv} title="Export CSV" aria-label="Export CSV"><Download /></button>
+          <Link href={`/groups/${group.id}/settings`} className="btn btn-ghost btn-icon btn-sm" title="Group settings" aria-label="Group settings"><Settings /></Link>
         </div>
       </div>
+      <div className="eyebrow row-flex" style={{ gap: 6 }}><K width={13} height={13} /> {groupKind(group.kind).label} · {cur}</div>
+      <h1 className="page-title" style={{ marginTop: 8 }}>{group.name}</h1>
+      <div className="group-meta">
+        <span className="avatar-stack">
+          {active.slice(0, 6).map((m) => <Avatar key={m.id} name={m.display_name} color={m.color} src={avatarFor(m, b.profiles)} size={26} />)}
+          {active.length > 6 && <span className="avatar" style={{ ["--size" as string]: "26px", background: "var(--surface-3)", color: "var(--ink-2)" }}>+{active.length - 6}</span>}
+        </span>
+        <span className="small muted">
+          {myNet > 0 ? <>You are owed <b className="pos num">{money(myNet, cur)}</b></>
+            : myNet < 0 ? <>You owe <b className="neg num">{money(-myNet, cur)}</b></>
+            : "You are all settled up"}
+        </span>
+      </div>
+      <div className="group-actions">
+        <button type="button" className="btn btn-primary hide-mobile" onClick={() => setEditor({ open: true, expense: null })}><Plus /> Add expense</button>
+        <button type="button" className="btn" onClick={() => setSettle({ open: true, preset: null, payment: null })}><CircleDollarSign /> Settle up</button>
+        <button type="button" className="btn show-mobile" onClick={() => setInviteOpen(true)}><Link2 /> Invite</button>
+      </div>
 
-      <div className="tabs" role="tablist">
+      <div className="tabs" role="tablist" style={{ marginTop: 22 }}>
         {(["expenses", "balances", "activity", "insights"] as Tab[]).map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
             {t[0].toUpperCase() + t.slice(1)}
@@ -160,7 +162,7 @@ export default function GroupPage() {
                       <Avatar name={m.display_name} color={m.color} src={avatarFor(m, b.profiles)} size={34} />
                       <div className="item-main">
                         <div className="item-title">{m.display_name}{m.user_id === me.id && <span className="faint"> (you)</span>}{!m.is_active && <span className="faint"> (left)</span>}</div>
-                        <div className="item-sub">Put in {money(n + t.share, cur)} · share {money(t.share, cur)}{!m.user_id && " · not joined yet"}</div>
+                        <div className="item-sub wrap2">Put in {money(n + t.share, cur)} · share {money(t.share, cur)}{!m.user_id && " · not joined yet"}</div>
                       </div>
                       <div className="item-end">
                         <div className="k">{n > 0 ? "gets back" : n < 0 ? "owes" : "settled up"}</div>

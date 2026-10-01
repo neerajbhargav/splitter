@@ -129,10 +129,10 @@ function Frame({ children }: { children: ReactNode }) {
           {children}
         </div>
 
-        <button type="button" className="fab" onClick={() => openQuick()} aria-label="Add expense"><Plus /></button>
         <nav className="tabbar">
           <Link href="/dashboard" className={active("/dashboard") ? "active" : ""}><LayoutDashboard />Home</Link>
           <Link href="/groups" className={path === "/groups" || currentGroup ? "active" : ""}><Users />Groups</Link>
+          <button type="button" className="tab-add" onClick={() => openQuick()} aria-label="Add expense"><span><Plus /></span></button>
           <Link href="/activity" className={active("/activity") ? "active" : ""}><Activity />Activity</Link>
           <Link href="/account" className={active("/account") ? "active" : ""}><Settings />Account</Link>
         </nav>

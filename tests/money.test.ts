@@ -73,7 +73,7 @@ test("simplify produces fewer payments that settle everyone", () => {
     equal("n", 3850, ["n", "a"]),
   ];
   const raw = pairwiseDebts(entries);
-  const simple = simplifyDebts(netBalances(ids, entries));
+  const simple = simplifyDebts(netBalances(ids, entries), raw);
   assert.equal(raw.length, 6);
   assert.equal(simple.length, 3);
   assert.ok(simple.length <= ids.length - 1);
@@ -129,11 +129,41 @@ test("random ledgers always settle to zero", () => {
       entries.push(equal(ids[Math.floor(rnd() * ids.length)], total, among));
     }
     const net = netBalances(ids, entries);
-    const simple = simplifyDebts(net);
+    const raw = pairwiseDebts(entries);
+    const simple = simplifyDebts(net, raw);
     assert.ok(simple.length <= ids.length - 1);
-    for (const txs of [simple, pairwiseDebts(entries)]) {
+    assert.ok(simple.length <= raw.length);
+    for (const txs of [simple, raw]) {
       const after = netBalances(ids, [...entries, ...txs.map((t) => exp([[t.from, t.amount]], [[t.to, t.amount]]))]);
       assert.ok(Object.values(after).every((v) => v === 0));
     }
   }
+});
+
+test("Splitwise example: Anna owes Bob, Bob owes Charlie -> Anna pays Charlie", () => {
+  const e1 = exp([["b", 2000]], [["a", 2000]]);
+  const e2 = exp([["c", 2000]], [["b", 2000]]);
+  const raw = pairwiseDebts([e1, e2]);
+  assert.equal(raw.length, 2);
+  assert.deepEqual(simplifyDebts(netBalances(["a", "b", "c"], [e1, e2]), raw), [{ from: "a", to: "c", amount: 2000 }]);
+});
+
+test("prefers paying people you already owe when it costs no extra payment", () => {
+  // a and b owe x (x paid for them); c and d owe y. Greedy might cross them; the rule keeps them.
+  const e1 = exp([["x", 1000]], [["a", 500], ["b", 500]]);
+  const e2 = exp([["y", 1200]], [["c", 600], ["d", 600]]);
+  const raw = pairwiseDebts([e1, e2]);
+  const s = simplifyDebts(netBalances(["a", "b", "c", "d", "x", "y"], [e1, e2]), raw);
+  assert.equal(s.length, 4);
+  for (const t of s) assert.ok(raw.some((r) => r.from === t.from && r.to === t.to), JSON.stringify(t));
+});
+
+test("multi-payer raw debts are proportional", () => {
+  // a paid 75, b paid 25 for a 100 dinner shared by a, b, c, d
+  const e = exp([["a", 7500], ["b", 2500]], [["a", 2500], ["b", 2500], ["c", 2500], ["d", 2500]]);
+  const raw = pairwiseDebts([e]);
+  const c = raw.filter((t) => t.from === "c");
+  assert.deepEqual(c.map((t) => [t.to, t.amount]).sort(), [["a", 2500]]);
+  const after = netBalances(["a", "b", "c", "d"], [e, ...raw.map((t) => exp([[t.from, t.amount]], [[t.to, t.amount]]))]);
+  assert.ok(Object.values(after).every((v) => v === 0));
 });

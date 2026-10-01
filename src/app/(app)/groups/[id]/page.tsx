@@ -67,8 +67,8 @@ export default function GroupPage() {
     const ids = b.members.map((m) => m.id);
     const live = b.expenses.filter((e) => !e.deleted_at);
     const net = netBalances(ids, live);
-    const simple = simplifyDebts(net);
     const raw = pairwiseDebts(live);
+    const simple = simplifyDebts(net, raw);
     return {
       live,
       net,
@@ -225,8 +225,8 @@ export default function GroupPage() {
               )}
               <p className="hint" style={{ margin: "8px 0 0" }}>
                 {group.simplify_debts
-                  ? "Simplify looks only at overall balances, so people may pay someone they never shared an expense with. Totals stay the same."
-                  : "Each person pays back whoever covered their share."}
+                  ? "Simplify uses the fewest payments, keeps everyone paying people they already owe whenever possible, and never changes anyone's total."
+                  : "Each person pays back whoever covered their share of each expense."}
               </p>
             </div>
           </section>

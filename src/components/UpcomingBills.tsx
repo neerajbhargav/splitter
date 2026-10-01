@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CalendarClock, Check, ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
+import { Progress } from "./kit";
 import { Avatar, Modal, Segmented } from "./ui";
 import { useMe, useToast } from "./providers";
 import { api } from "@/lib/data";
@@ -27,6 +28,12 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
   const [open, setOpen] = useState<string | null>(null);
   const [editor, setEditor] = useState<{ open: boolean; bill: UpcomingBill | null }>({ open: false, bill: null });
   const [paying, setPaying] = useState<UpcomingBill | null>(null);
+  const [busyTick, setBusyTick] = useState<string | null>(null);
+  const canTick = (b: UpcomingBill, mid: string) => mid === mine?.id || b.created_by === me.id || mine?.role === "owner";
+  async function tick(b: UpcomingBill, mid: string, paid: boolean) {
+    setBusyTick(b.id + mid);
+    try { await api.setSharePaid(b.id, mid, paid); } catch (e) { toast.err(e); } finally { setBusyTick(null); }
+  }
   const cur = group.currency;
   const total = bills.reduce((a, b) => a + b.amount_cents, 0);
   const myTotal = bills.reduce((a, b) => a + (b.upcoming_bill_shares.find((s) => s.member_id === mine?.id)?.amount_cents ?? 0), 0);
@@ -56,7 +63,10 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
                 const due = dueLabel(b);
                 const myShare = b.upcoming_bill_shares.find((s) => s.member_id === mine?.id)?.amount_cents ?? 0;
                 const isOpen = open === b.id;
-                const shares = [...b.upcoming_bill_shares].sort((x, y) => y.amount_cents - x.amount_cents);
+                const shares = [...b.upcoming_bill_shares].sort((x, y) => Number(!!x.paid_at) - Number(!!y.paid_at) || y.amount_cents - x.amount_cents);
+                const paidShares = b.upcoming_bill_shares.filter((x) => x.paid_at);
+                const paidAmt = paidShares.reduce((a, x) => a + x.amount_cents, 0);
+                const myPaid = !!b.upcoming_bill_shares.find((x) => x.member_id === mine?.id)?.paid_at;
                 return (
                   <div key={b.id}>
                     <div className="item clickable" role="button" tabIndex={0} onClick={() => setOpen(isOpen ? null : b.id)} onKeyDown={(k) => k.key === "Enter" && setOpen(isOpen ? null : b.id)}>
@@ -66,23 +76,39 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
                           <span className="ellipsis">{b.title}</span>
                           {b.is_estimate && <span className="badge" style={{ height: 18 }}>estimate</span>}
                         </div>
-                        <div className={`item-sub ${due.tone}`}>{due.text} · {shares.length} people</div>
+                        <div className={`item-sub ${due.tone}`}>{due.text} · {paidShares.length} of {shares.length} paid</div>
+                        <div style={{ marginTop: 8, maxWidth: 360 }}><Progress value={paidAmt} max={b.amount_cents} size="sm" /></div>
                       </div>
                       <div className="item-end">
                         <div className="v">{b.is_estimate ? "~" : ""}{money(b.amount_cents, cur)}</div>
-                        {mine && <div className="k">you {money(myShare, cur)}</div>}
+                        {mine && <div className={`k ${myPaid ? "pos" : ""}`}>{myPaid ? "you paid ✓" : `you ${money(myShare, cur)}`}</div>}
                       </div>
                       <ChevronDown width={16} className="faint" style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s", flex: "none" }} />
                     </div>
                     {isOpen && (
                       <div className="upcoming-detail">
                         <div className="list">
+                          <div className="between small" style={{ padding: "10px 0 6px" }}>
+                            <span className="muted">{money(paidAmt, cur)} of {money(b.amount_cents, cur)} collected</span>
+                            <span className="faint">{shares.length - paidShares.length} left to pay</span>
+                          </div>
                           {shares.map((s) => {
                             const m = members.find((x) => x.id === s.member_id);
+                            const allowed = canTick(b, s.member_id);
+                            const marker = s.paid_marked_by ? members.find((x) => x.user_id === s.paid_marked_by) : null;
                             return (
-                              <div key={s.member_id} className="item" style={{ padding: "8px 0" }}>
+                              <div key={s.member_id} className={`item owe-row ${s.paid_at ? "paid" : ""}`} style={{ padding: "8px 0" }}>
+                                <button type="button" className={`tick ${s.paid_at ? "on" : ""}`} disabled={!allowed || busyTick === b.id + s.member_id}
+                                  title={allowed ? (s.paid_at ? "Mark as not paid" : "Mark as paid") : "Only they, the bill creator or the group owner can tick this"}
+                                  aria-label={`${name(s.member_id)} ${s.paid_at ? "paid" : "not paid"}`}
+                                  onClick={() => tick(b, s.member_id, !s.paid_at)}><Check /></button>
                                 <Avatar name={m?.display_name ?? "?"} color={m?.color} size={24} />
-                                <div className="item-main"><span className="item-title" style={{ fontWeight: 400 }}>{name(s.member_id)}</span></div>
+                                <div className="item-main">
+                                  <span className="item-title" style={{ fontWeight: 500 }}>{name(s.member_id)}</span>
+                                  {s.paid_at && (
+                                    <div className="item-sub">Paid {new Date(s.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{marker && marker.id !== s.member_id ? ` · marked by ${marker.user_id === me.id ? "you" : marker.display_name}` : ""}</div>
+                                  )}
+                                </div>
                                 <span className="num">{money(s.amount_cents, cur)}</span>
                               </div>
                             );
@@ -97,7 +123,7 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
                             try { await api.deleteUpcoming(b.id); toast.ok("Removed"); } catch (e) { toast.err(e); }
                           }}><Trash2 /> Remove</button>
                         </div>
-                        <p className="hint" style={{ margin: "8px 0 0" }}>Upcoming bills don't change balances. Marking one paid adds it to expenses with this exact split.</p>
+                        <p className="hint" style={{ margin: "8px 0 0" }}>Tick your share once you've sent it. Ticks don't change balances. When the bill itself is paid, "Mark as paid" adds it to expenses and records every ticked share as paid to whoever paid the bill.</p>
                       </div>
                     )}
                   </div>
@@ -259,6 +285,9 @@ function MarkPaid({ bill, group, members, onClose }: { bill: UpcomingBill | null
         }}>{busy ? "Saving..." : `Paid ${money(bill.amount_cents, group.currency)}`}</button></>}>
       <div className="stack">
         <p className="muted" style={{ margin: 0 }}><b>{bill.title}</b> becomes an expense with the same split{bill.is_estimate ? ". It was an estimate, so edit the amount first if the real bill was different." : "."}</p>
+        {bill.upcoming_bill_shares.some((s) => s.paid_at && s.member_id !== payer) && (
+          <div className="banner"><Check /> {bill.upcoming_bill_shares.filter((s) => s.paid_at && s.member_id !== payer).length} ticked share(s) will be recorded as paid to {members.find((m) => m.id === payer)?.display_name ?? "the payer"}.</div>
+        )}
         <div className="form-row">
           <div className="field"><label className="label" htmlFor="mp-payer">Who paid</label>
             <select id="mp-payer" className="select" value={payer} onChange={(e) => setPayer(e.target.value)}>

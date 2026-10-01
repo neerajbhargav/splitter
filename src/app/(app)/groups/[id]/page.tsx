@@ -12,6 +12,8 @@ import { ExpenseDetail } from "@/components/ExpenseDetail";
 import { SettleUpModal } from "@/components/SettleUp";
 import { ActivityList } from "@/components/ActivityList";
 import { UpcomingBills } from "@/components/UpcomingBills";
+import { BigMoney } from "@/components/kit";
+import { CHART_COLORS, Donut, MonthlyBars, NetBars } from "@/components/charts";
 import { api, loadGroup, useLiveRefresh, type GroupBundle } from "@/lib/data";
 import { entryNetFor, netBalances, pairwiseDebts, paidAndShare, simplifyDebts, type Tx } from "@/lib/debts";
 import { CATEGORIES, category, groupKind } from "@/lib/categories";
@@ -60,8 +62,11 @@ export default function GroupPage() {
     reload,
   );
   useEffect(() => {
-    const e = new URLSearchParams(window.location.search).get("e");
+    const q = new URLSearchParams(window.location.search);
+    const e = q.get("e");
     if (e) setDetailId(e);
+    const t = q.get("tab");
+    if (t === "balances" || t === "activity" || t === "insights" || t === "expenses") setTab(t);
   }, []);
 
   const d = useMemo(() => {
@@ -79,6 +84,11 @@ export default function GroupPage() {
       debts: b.group.simplify_debts ? simple : raw,
       mine: b.members.find((m) => m.user_id === me.id),
       totals: paidAndShare(live),
+      spent: live.filter((e) => !e.is_payment).reduce((a, e) => a + e.amount_cents, 0),
+      spentMonth: (() => {
+        const n = new Date(); const k = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}`;
+        return live.filter((e) => !e.is_payment && e.expense_date.startsWith(k)).reduce((a, e) => a + e.amount_cents, 0);
+      })(),
       flows: (() => {
         const f: Record<string, { sent: number; received: number }> = {};
         for (const e of live) {
@@ -89,6 +99,14 @@ export default function GroupPage() {
         return f;
       })(),
       deleted: new Set(b.expenses.filter((e) => e.deleted_at).map((e) => e.id)),
+      upcomingDue: (() => {
+        const u: Record<string, { due: number; paid: number }> = {};
+        for (const bill of b.upcoming) for (const s of bill.upcoming_bill_shares) {
+          const x = (u[s.member_id] ??= { due: 0, paid: 0 });
+          if (s.paid_at) x.paid += s.amount_cents; else x.due += s.amount_cents;
+        }
+        return u;
+      })(),
     };
   }, [b, me.id]);
 
@@ -128,36 +146,49 @@ export default function GroupPage() {
           <Link href={`/groups/${group.id}/settings`} className="btn btn-ghost btn-icon btn-sm" title="Group settings" aria-label="Group settings"><Settings /></Link>
         </div>
       </div>
-      <div className="eyebrow row-flex" style={{ gap: 6 }}><K width={13} height={13} /> {groupKind(group.kind).label} · {cur}</div>
-      <h1 className="page-title" style={{ marginTop: 8 }}>{group.name}</h1>
-      <div className="group-meta">
-        <span className="avatar-stack">
-          {active.slice(0, 6).map((m) => <Avatar key={m.id} name={m.display_name} color={m.color} src={avatarFor(m, b.profiles)} size={26} />)}
-          {active.length > 6 && <span className="avatar" style={{ ["--size" as string]: "26px", background: "var(--surface-3)", color: "var(--ink-2)" }}>+{active.length - 6}</span>}
-        </span>
-        <span className="small muted">
-          {myNet > 0 ? <>You are owed <b className="pos num">{money(myNet, cur)}</b></>
-            : myNet < 0 ? <>You owe <b className="neg num">{money(-myNet, cur)}</b></>
-            : "You are all settled up"}
-        </span>
-      </div>
-      <div className="group-actions">
-        <button type="button" className="btn btn-primary hide-mobile" onClick={() => setEditor({ open: true, expense: null })}><Plus /> Add expense</button>
-        <button type="button" className="btn" onClick={() => setSettle({ open: true, preset: null, payment: null })}><CircleDollarSign /> Settle up</button>
-        <button type="button" className="btn show-mobile" onClick={() => setInviteOpen(true)}><Link2 /> Invite</button>
-      </div>
+      <section className="card group-hero" style={{ overflow: "visible" }}>
+        <div style={{ position: "relative" }}><div className="cover" /><span className="cover-icon"><K /></span></div>
+        <div className="cover-body">
+          <div className="between" style={{ alignItems: "flex-start", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <h1 className="page-title">{group.name}</h1>
+              <div className="summary-lines">
+                {d.mine && d.debts.filter((t) => t.from === d.mine!.id || t.to === d.mine!.id).slice(0, 3).map((t) => t.from === d.mine!.id
+                  ? <span key={t.from + t.to}>You owe {name(t.to)} <b className="neg num">{money(t.amount, cur)}</b></span>
+                  : <span key={t.from + t.to}>{name(t.from)} owes you <b className="pos num">{money(t.amount, cur)}</b></span>)}
+                {(!d.mine || !d.debts.some((t) => t.from === d.mine!.id || t.to === d.mine!.id)) && <span>You are all settled up in this group</span>}
+              </div>
+            </div>
+            <div style={{ textAlign: "right", flex: "none" }} className="hide-mobile">
+              <div className="tiny faint">{myNet > 0 ? "you get back" : myNet < 0 ? "you owe" : "balance"}</div>
+              <div className={`xd-amount ${myNet > 0 ? "pos" : myNet < 0 ? "neg" : ""}`} style={{ fontSize: 34 }}><BigMoney cents={myNet} currency={cur} /></div>
+            </div>
+          </div>
+          <div className="row-flex small faint wrap" style={{ gap: 8, marginTop: 10 }}>
+            <span className="avatar-stack">
+              {active.slice(0, 6).map((m) => <Avatar key={m.id} name={m.display_name} color={m.color} src={avatarFor(m, b.profiles)} size={22} />)}
+              {active.length > 6 && <span className="avatar" style={{ ["--size" as string]: "22px", background: "var(--surface-3)", color: "var(--ink-2)" }}>+{active.length - 6}</span>}
+            </span>
+            <span>{groupKind(group.kind).label} · {cur} · spent {money(d.spent, cur)} · this month {money(d.spentMonth, cur)}</span>
+          </div>
+          <div className="chip-row">
+            <button type="button" className="btn btn-primary" onClick={() => setSettle({ open: true, preset: null, payment: null })}><CircleDollarSign /> Settle up</button>
+            <button type="button" className="btn hide-mobile" onClick={() => setEditor({ open: true, expense: null })}><Plus /> Add expense</button>
+            {(["expenses", "balances", "insights", "activity"] as Tab[]).map((t) => (
+              <button key={t} type="button" className={`btn ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}>
+                {t === "insights" ? "Charts" : t === "expenses" ? "Expenses" : t[0].toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+            <button type="button" className="btn" onClick={() => setInviteOpen(true)}><Link2 /> Invite</button>
+          </div>
+        </div>
+      </section>
 
       <div style={{ marginTop: 18 }}>
         <UpcomingBills group={group} members={members} bills={b.upcoming} />
       </div>
 
-      <div className="tabs" role="tablist" style={{ marginTop: 22 }}>
-        {(["expenses", "balances", "activity", "insights"] as Tab[]).map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
-            {t[0].toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
+      <div style={{ height: 18 }} />
 
       {tab === "expenses" && (
         <ExpensesTab bundle={b} mine={d.mine} name={name} onOpen={(e) => setDetailId(e.id)} onAdd={() => setEditor({ open: true, expense: null })} />
@@ -166,14 +197,16 @@ export default function GroupPage() {
       {tab === "balances" && (
         <div className="grid-2">
           <section className="card">
-            <div className="card-head"><span className="card-title">Balances</span></div>
+            <div className="card-head"><div><div className="card-title">Balances</div><div className="card-desc">Green gets money back, red owes</div></div></div>
             <div className="card-body">
-              <div className="list">
+              <NetBars currency={cur} data={members.filter((m) => (d.net[m.id] ?? 0) !== 0).map((m) => ({ name: m.user_id === me.id ? "You" : m.display_name, value: (d.net[m.id] ?? 0) }))
+                .sort((x, y) => y.value - x.value)} />
+              <div className="list" style={{ marginTop: 6 }}>
                 {members.filter((m) => m.is_active || (d.net[m.id] ?? 0) !== 0).map((m) => {
                   const n = d.net[m.id] ?? 0;
                   const t = d.totals[m.id] ?? { paid: 0, share: 0 };
                   return (
-                    <div key={m.id} className="item">
+                    <div key={m.id} className="item" style={{ alignItems: "flex-start" }}>
                       <Avatar name={m.display_name} color={m.color} src={avatarFor(m, b.profiles)} size={34} />
                       <div className="item-main">
                         <div className="item-title">{m.display_name}{m.user_id === me.id && <span className="faint"> (you)</span>}{!m.is_active && <span className="faint"> (left)</span>}</div>
@@ -185,6 +218,23 @@ export default function GroupPage() {
                             !m.user_id ? "not joined yet" : null,
                           ].filter(Boolean).join(" · ")}
                         </div>
+                        {d.debts.some((t) => t.from === m.id || t.to === m.id) && (
+                          <div className="tree">
+                            {d.debts.filter((t) => t.from === m.id).map((t) => (
+                              <div key={"o" + t.to}>{m.user_id === me.id ? "You pay" : "Pays"} {name(t.to) === "You" ? "you" : name(t.to)} <b className="neg num">{money(t.amount, cur)}</b></div>
+                            ))}
+                            {d.debts.filter((t) => t.to === m.id).map((t) => (
+                              <div key={"i" + t.from}>{m.user_id === me.id ? "You get" : "Gets"} <b className="pos num">{money(t.amount, cur)}</b> from {name(t.from) === "You" ? "you" : name(t.from)}</div>
+                            ))}
+                          </div>
+                        )}
+                        {(d.upcomingDue[m.id]?.due || d.upcomingDue[m.id]?.paid) ? (
+                          <div className="item-sub" style={{ marginTop: 2 }}>
+                            {d.upcomingDue[m.id].due > 0
+                              ? <span className="gold">+ {money(d.upcomingDue[m.id].due, cur)} upcoming, not paid yet</span>
+                              : <span className="pos">Upcoming bills paid ✓</span>}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="item-end">
                         <div className="k">{n > 0 ? "gets back" : n < 0 ? "owes" : "settled up"}</div>
@@ -221,17 +271,19 @@ export default function GroupPage() {
               {!d.debts.length ? (
                 <Empty title="All settled">Nobody owes anybody in this group.</Empty>
               ) : (
-                <div className="list">
+                <div>
                   {d.debts.map((t) => {
                     const from = members.find((m) => m.id === t.from)!;
                     const to = members.find((m) => m.id === t.to)!;
                     const remind = from.user_id !== me.id ? reminderLink(from, to.user_id === me.id ? "me" : to.display_name, t.amount, group, window.location.origin) : null;
                     return (
-                      <div key={t.from + t.to} className="debt">
-                        <Avatar name={from.display_name} color={from.color} src={avatarFor(from, b.profiles)} size={28} />
+                      <div key={t.from + t.to} className="settle-row">
+                        <Avatar name={from.display_name} color={from.color} src={avatarFor(from, b.profiles)} size={32} />
+                        <span className="arrow-pill"><ChevronLeft width={14} style={{ transform: "rotate(180deg)" }} /></span>
+                        <Avatar name={to.display_name} color={to.color} src={avatarFor(to, b.profiles)} size={32} />
                         <div className="grow" style={{ minWidth: 0 }}>
-                          <div className="ellipsis"><b style={{ fontWeight: 500 }}>{name(t.from)}</b> <span className="faint">{from.user_id === me.id ? "pay" : "pays"}</span> <b style={{ fontWeight: 500 }}>{name(t.to)}</b></div>
-                          <div className="num small gold">{money(t.amount, cur)}</div>
+                          <div className="ellipsis small"><b style={{ fontWeight: 600 }}>{name(t.from)}</b> <span className="faint">{from.user_id === me.id ? "pay" : "pays"}</span> <b style={{ fontWeight: 600 }}>{name(t.to)}</b></div>
+                          <div className={`amt ${to.user_id === me.id ? "pos" : from.user_id === me.id ? "neg" : ""}`}>{money(t.amount, cur)}</div>
                         </div>
                         {remind && (
                           remind.href ? (
@@ -241,7 +293,7 @@ export default function GroupPage() {
                               onClick={() => navigator.clipboard.writeText(remind.text).then(() => toast.ok("Reminder copied. Paste it anywhere."))}><Bell /></button>
                           )
                         )}
-                        <button type="button" className="btn btn-sm" onClick={() => setSettle({ open: true, preset: t, payment: null })}>Settle</button>
+                        <button type="button" className="btn btn-sm btn-primary" onClick={() => setSettle({ open: true, preset: t, payment: null })}>Settle</button>
                       </div>
                     );
                   })}
@@ -283,6 +335,7 @@ export default function GroupPage() {
         expense={detail}
         group={group}
         members={members}
+        allExpenses={b.expenses}
         onClose={() => {
           setDetailId(null);
           if (window.location.search) window.history.replaceState(null, "", window.location.pathname);
@@ -420,80 +473,66 @@ function ExpenseRow({ e, mine, name, cur, onClick }: { e: Expense; mine: Member 
 }
 
 function Insights({ bundle }: { bundle: GroupBundle }) {
+  const me = useMe();
   const cur = bundle.group.currency;
+  const mine = bundle.members.find((m) => m.user_id === me.id);
   const spend = bundle.expenses.filter((e) => !e.deleted_at && !e.is_payment);
-  const total = spend.reduce((a, e) => a + e.amount_cents, 0);
-  const today = new Date();
-  const thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  const monthTotal = spend.filter((e) => e.expense_date.startsWith(thisMonth)).reduce((a, e) => a + e.amount_cents, 0);
-
+  const now = new Date();
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const dt = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+    return { key: `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`, label: dt.toLocaleDateString("en-US", { month: "short" }), total: 0, mine: 0 };
+  });
+  for (const e of spend) {
+    const m = months.find((x) => e.expense_date.startsWith(x.key));
+    if (!m) continue;
+    m.total += e.amount_cents;
+    m.mine += e.expense_splits.filter((x) => x.member_id === mine?.id).reduce((a, x) => a + x.amount_cents, 0);
+  }
   const byCat = new Map<string, number>();
   for (const e of spend) byCat.set(e.category, (byCat.get(e.category) ?? 0) + e.amount_cents);
-  const cats = [...byCat.entries()].sort((a, b) => b[1] - a[1]);
-  const maxCat = Math.max(1, ...cats.map((c) => c[1]));
-
-  const months: { key: string; label: string; total: number }[] = [];
-  const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const dt = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
-    months.push({ key, label: dt.toLocaleDateString("en-US", { month: "short" }), total: spend.filter((e) => e.expense_date.startsWith(key)).reduce((a, e) => a + e.amount_cents, 0) });
-  }
-  const maxMonth = Math.max(1, ...months.map((m) => m.total));
+  const cats = [...byCat.entries()].sort((x, y) => y[1] - x[1]).map(([k, v], i) => ({ key: k, name: category(k).label, value: v, color: CHART_COLORS[i % CHART_COLORS.length] }));
+  const total = spend.reduce((a, e) => a + e.amount_cents, 0);
   const totals = paidAndShare(spend);
+  const people = bundle.members.filter((m) => totals[m.id]).map((m) => ({ m, ...totals[m.id] })).sort((x, y) => y.share - x.share);
+  const maxP = Math.max(1, ...people.map((p) => Math.max(p.paid, p.share)));
 
   if (!spend.length) {
     return <section className="card"><div className="card-body"><Empty title="Nothing to chart yet">Insights appear once the group has a few expenses.</Empty></div></section>;
   }
-
   return (
-    <>
-      <section className="stats" style={{ gridTemplateColumns: "1fr 1fr" }}>
-        <div className="stat"><div className="eyebrow">Total spent</div><div className="stat-value">{money(total, cur)}</div></div>
-        <div className="stat" style={{ borderLeft: "1px solid var(--line)" }}><div className="eyebrow">This month</div><div className="stat-value">{money(monthTotal, cur)}</div></div>
-      </section>
-      <div className="grid-2">
+    <div className="dash-grid">
+      <div className="dash-col">
         <section className="card">
-          <div className="card-head"><span className="card-title">By category</span></div>
-          <div className="card-body">
-            {cats.map(([id, amt]) => (
-              <div key={id} className="bar-row">
-                <span className="ellipsis">{category(id).label}</span>
-                <div className="bar-track"><div className="bar-fill" style={{ width: `${(amt / maxCat) * 100}%` }} /></div>
-                <span className="num">{money(amt, cur)}</span>
-              </div>
-            ))}
-          </div>
+          <div className="card-head"><div><div className="card-title">Spending by month</div><div className="card-desc">Group total vs your share, last 6 months</div></div></div>
+          <div className="card-body"><MonthlyBars data={months} currency={cur} /></div>
         </section>
         <section className="card">
-          <div className="card-head"><span className="card-title">Last 6 months</span></div>
-          <div className="card-body">
-            {months.map((m) => (
-              <div key={m.key} className="bar-row">
-                <span>{m.label}</span>
-                <div className="bar-track"><div className="bar-fill" style={{ width: `${(m.total / maxMonth) * 100}%`, opacity: m.key === thisMonth ? 1 : 0.6 }} /></div>
-                <span className="num">{money(m.total, cur)}</span>
+          <div className="card-head"><div><div className="card-title">Paid vs share</div><div className="card-desc">What each person put in compared with what they used</div></div></div>
+          <div className="card-body stack-sm">
+            {people.map(({ m, paid, share }) => (
+              <div key={m.id}>
+                <div className="between small" style={{ marginBottom: 4 }}>
+                  <span className="row-flex" style={{ gap: 8 }}><Avatar name={m.display_name} color={m.color} src={avatarFor(m, bundle.profiles)} size={22} /> {m.user_id === me.id ? "You" : m.display_name}</span>
+                  <span className="faint num">paid {money(paid, cur)} · share {money(share, cur)}</span>
+                </div>
+                <div className="progress sm" style={{ marginBottom: 3 }}><span style={{ width: `${(paid / maxP) * 100}%` }} /></div>
+                <div className="progress sm"><span style={{ width: `${(share / maxP) * 100}%`, background: "var(--chart-2)" }} /></div>
               </div>
             ))}
+            <div className="row-flex small faint" style={{ gap: 16, marginTop: 4 }}>
+              <span className="row-flex" style={{ gap: 6 }}><i style={{ width: 10, height: 10, borderRadius: 3, background: "var(--chart-1)", display: "inline-block" }} /> Paid</span>
+              <span className="row-flex" style={{ gap: 6 }}><i style={{ width: 10, height: 10, borderRadius: 3, background: "var(--chart-2)", display: "inline-block" }} /> Share</span>
+            </div>
           </div>
         </section>
       </div>
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="card-head"><span className="card-title">Per person</span></div>
-        <div className="card-body">
-          <div className="list">
-            {bundle.members.filter((m) => totals[m.id]).map((m) => (
-              <div key={m.id} className="item">
-                <Avatar name={m.display_name} color={m.color} src={avatarFor(m, bundle.profiles)} size={30} />
-                <div className="item-main"><div className="item-title">{m.display_name}</div></div>
-                <div className="item-end"><div className="k">paid</div><div className="v">{money(totals[m.id].paid, cur)}</div></div>
-                <div className="item-end" style={{ minWidth: 90 }}><div className="k">share</div><div className="v muted">{money(totals[m.id].share, cur)}</div></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-    </>
+      <div className="dash-col">
+        <section className="card">
+          <div className="card-head"><div><div className="card-title">By category</div><div className="card-desc">All time</div></div></div>
+          <div className="card-body"><Donut data={cats} currency={cur} center={money(total, cur)} centerLabel="total spent" /></div>
+        </section>
+      </div>
+    </div>
   );
 }
 

@@ -1064,3 +1064,135 @@ begin
   select invite_code into code from public.groups where id = gid;
   return code;
 end $$;
+
+-- =====================================================================
+-- Upcoming bills: per-person "paid my share" check marks.
+-- A person can tick their own share; the bill's creator or the group owner
+-- can tick anyone's. When the bill is marked paid, ticked shares become
+-- payments to whoever paid the bill.
+-- =====================================================================
+alter table public.upcoming_bill_shares add column if not exists paid_at timestamptz;
+alter table public.upcoming_bill_shares add column if not exists paid_marked_by uuid references auth.users(id) on delete set null;
+
+create or replace function public.set_share_paid(bid uuid, mid uuid, p_paid boolean) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  b public.upcoming_bills;
+  me public.group_members;
+  who text;
+  actor text;
+begin
+  select * into b from public.upcoming_bills where id = bid;
+  if not found or not public.is_group_member(b.group_id) then raise exception 'Not allowed'; end if;
+  if b.status <> 'upcoming' then raise exception 'This bill was already marked paid'; end if;
+  select * into me from public.group_members where group_id = b.group_id and user_id = auth.uid();
+  if not (me.id = mid or b.created_by = auth.uid() or me.role = 'owner') then
+    raise exception 'Only that person, the bill creator, or the group owner can change this';
+  end if;
+  update public.upcoming_bill_shares
+     set paid_at = case when p_paid then coalesce(paid_at, now()) else null end,
+         paid_marked_by = case when p_paid then auth.uid() else null end
+   where bill_id = bid and member_id = mid;
+  if not found then raise exception 'That person is not part of this bill'; end if;
+  select display_name into who from public.group_members where id = mid;
+  actor := public.actor_name(b.group_id);
+  perform public.log_activity(b.group_id, case when p_paid then 'upcoming_share_paid' else 'upcoming_share_unpaid' end,
+    case when me.id = mid then actor || case when p_paid then ' marked their share of "' else ' unmarked their share of "' end
+         else actor || case when p_paid then ' marked ' else ' unmarked ' end || who || '''s share of "' end
+    || b.title || '" as ' || case when p_paid then 'paid' else 'not paid' end,
+    null, (select amount_cents from public.upcoming_bill_shares where bill_id = bid and member_id = mid));
+end $$;
+
+-- Keep check marks when a bill is edited (for people whose share didn't change).
+create or replace function public.save_upcoming_bill(p_id uuid, p_group uuid, p jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  bid uuid;
+  total bigint := (p->>'amount_cents')::bigint;
+  ttl text := left(trim(coalesce(p->>'title', '')), 100);
+  ssum bigint;
+  bad int;
+  kept jsonb := '[]'::jsonb;
+begin
+  if not public.is_group_member(p_group) then raise exception 'You are not in this group'; end if;
+  if total is null or total <= 0 then raise exception 'Amount must be greater than zero'; end if;
+  if ttl = '' then raise exception 'Add a name for the bill'; end if;
+  if jsonb_typeof(p->'shares') <> 'array' or jsonb_array_length(p->'shares') = 0 then raise exception 'Choose who splits this bill'; end if;
+  select coalesce(sum((x->>'amount_cents')::bigint), 0) into ssum from jsonb_array_elements(p->'shares') x;
+  if ssum <> total then raise exception 'Shares add up to % but the bill is %', public.fmt_cents(ssum), public.fmt_cents(total); end if;
+  select count(*) into bad from jsonb_array_elements(p->'shares') x
+   where (x->>'amount_cents')::bigint < 0
+      or not exists (select 1 from public.group_members m where m.id = public.try_uuid(x->>'member_id') and m.group_id = p_group);
+  if bad > 0 then raise exception 'Every person in a bill must belong to this group'; end if;
+  if (select count(distinct x->>'member_id') from jsonb_array_elements(p->'shares') x) <> jsonb_array_length(p->'shares') then
+    raise exception 'A person appears twice in the same bill';
+  end if;
+
+  if p_id is null then
+    insert into public.upcoming_bills (group_id, title, amount_cents, due_date, is_estimate, category, notes)
+    values (p_group, ttl, total, nullif(p->>'due_date', '')::date, coalesce((p->>'is_estimate')::boolean, false),
+            coalesce(nullif(p->>'category', ''), 'utilities'), nullif(trim(coalesce(p->>'notes', '')), ''))
+    returning id into bid;
+  else
+    update public.upcoming_bills set
+      title = ttl, amount_cents = total, due_date = nullif(p->>'due_date', '')::date,
+      is_estimate = coalesce((p->>'is_estimate')::boolean, false),
+      category = coalesce(nullif(p->>'category', ''), 'utilities'),
+      notes = nullif(trim(coalesce(p->>'notes', '')), ''), updated_at = now()
+    where id = p_id and group_id = p_group and status = 'upcoming'
+    returning id into bid;
+    if bid is null then raise exception 'That bill no longer exists or was already paid'; end if;
+    select coalesce(jsonb_agg(jsonb_build_object('member_id', member_id, 'amount_cents', amount_cents, 'paid_at', paid_at, 'by', paid_marked_by)), '[]'::jsonb)
+      into kept from public.upcoming_bill_shares where bill_id = bid and paid_at is not null;
+    delete from public.upcoming_bill_shares where bill_id = bid;
+  end if;
+
+  insert into public.upcoming_bill_shares (bill_id, member_id, amount_cents)
+  select bid, (x->>'member_id')::uuid, (x->>'amount_cents')::bigint
+  from jsonb_array_elements(p->'shares') x where (x->>'amount_cents')::bigint > 0;
+
+  update public.upcoming_bill_shares s
+     set paid_at = (k->>'paid_at')::timestamptz, paid_marked_by = nullif(k->>'by', '')::uuid
+    from jsonb_array_elements(kept) k
+   where s.bill_id = bid and s.member_id = (k->>'member_id')::uuid and s.amount_cents = (k->>'amount_cents')::bigint;
+
+  perform public.log_activity(p_group, case when p_id is null then 'upcoming_added' else 'upcoming_updated' end,
+    public.actor_name(p_group) || case when p_id is null then ' added upcoming bill "' else ' updated upcoming bill "' end || ttl || '"'
+      || coalesce(' (due ' || to_char(nullif(p->>'due_date', '')::date, 'Mon FMDD') || ')', ''),
+    null, total);
+  return bid;
+end $$;
+
+-- Marking the whole bill paid also records ticked shares as payments to the (single) payer.
+create or replace function public.mark_upcoming_paid(bid uuid, p_payers jsonb, p_date date default null) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  b public.upcoming_bills;
+  eid uuid;
+  payer uuid;
+  s record;
+begin
+  select * into b from public.upcoming_bills where id = bid for update;
+  if not found or not public.is_group_member(b.group_id) then raise exception 'Not allowed'; end if;
+  if b.status <> 'upcoming' then raise exception 'This bill was already marked paid'; end if;
+  eid := public.save_expense(null, b.group_id, jsonb_build_object(
+    'description', b.title, 'amount_cents', b.amount_cents, 'category', b.category,
+    'expense_date', coalesce(p_date, current_date), 'notes', b.notes, 'split_type', 'exact',
+    'is_payment', false, 'repeat_interval', 'none', 'payers', p_payers,
+    'splits', (select coalesce(jsonb_agg(jsonb_build_object('member_id', x.member_id, 'amount_cents', x.amount_cents)), '[]'::jsonb)
+               from public.upcoming_bill_shares x where x.bill_id = bid)));
+  if jsonb_array_length(p_payers) = 1 then
+    payer := (p_payers->0->>'member_id')::uuid;
+    for s in select * from public.upcoming_bill_shares where bill_id = bid and paid_at is not null and member_id <> payer loop
+      perform public.save_expense(null, b.group_id, jsonb_build_object(
+        'description', 'Payment', 'amount_cents', s.amount_cents, 'category', 'payment',
+        'expense_date', coalesce(s.paid_at::date, coalesce(p_date, current_date)),
+        'notes', 'Share of "' || b.title || '" (checked off in Upcoming bills)',
+        'split_type', 'exact', 'is_payment', true, 'repeat_interval', 'none',
+        'payers', jsonb_build_array(jsonb_build_object('member_id', s.member_id, 'amount_cents', s.amount_cents)),
+        'splits', jsonb_build_array(jsonb_build_object('member_id', payer, 'amount_cents', s.amount_cents))));
+    end loop;
+  end if;
+  update public.upcoming_bills set status = 'paid', expense_id = eid, updated_at = now() where id = bid;
+  return eid;
+end $$;

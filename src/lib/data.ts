@@ -50,7 +50,7 @@ export async function loadGroup(gid: string): Promise<GroupBundle | null> {
         .order("expense_date", { ascending: false }).order("created_at", { ascending: false }).range(a, b)),
     sb().from("activity").select("*").eq("group_id", gid).order("created_at", { ascending: false }).limit(150),
     sb().from("profiles").select("*"),
-    sb().from("upcoming_bills").select("*, upcoming_bill_shares(member_id, amount_cents)").eq("group_id", gid).eq("status", "upcoming")
+    sb().from("upcoming_bills").select("*, upcoming_bill_shares(member_id, amount_cents, paid_at, paid_marked_by)").eq("group_id", gid).eq("status", "upcoming")
       .order("due_date", { ascending: true, nullsFirst: false }),
   ]);
   const group = unwrap(g as PgResult<Group>);
@@ -66,10 +66,10 @@ export async function loadGroup(gid: string): Promise<GroupBundle | null> {
   };
 }
 
-export type Overview = { groups: Group[]; members: Member[]; expenses: Expense[]; activity: ActivityItem[]; profiles: Profile[] };
+export type Overview = { groups: Group[]; members: Member[]; expenses: Expense[]; activity: ActivityItem[]; profiles: Profile[]; upcoming: UpcomingBill[] };
 
 export async function loadOverview(activityLimit = 40): Promise<Overview> {
-  const [groups, members, expenses, activity, profiles] = await Promise.all([
+  const [groups, members, expenses, activity, profiles, upcoming] = await Promise.all([
     sb().from("groups").select("*").order("updated_at", { ascending: false }),
     sb().from("group_members").select("*").order("created_at"),
     fetchAll<Expense>((a, b) =>
@@ -77,6 +77,8 @@ export async function loadOverview(activityLimit = 40): Promise<Overview> {
         .order("expense_date", { ascending: false }).range(a, b)),
     sb().from("activity").select("*").order("created_at", { ascending: false }).limit(activityLimit),
     sb().from("profiles").select("*"),
+    sb().from("upcoming_bills").select("*, upcoming_bill_shares(member_id, amount_cents, paid_at, paid_marked_by)").eq("status", "upcoming")
+      .order("due_date", { ascending: true, nullsFirst: false }),
   ]);
   return {
     groups: unwrap(groups as PgResult<Group[]>) ?? [],
@@ -84,6 +86,7 @@ export async function loadOverview(activityLimit = 40): Promise<Overview> {
     expenses,
     activity: unwrap(activity as PgResult<ActivityItem[]>) ?? [],
     profiles: unwrap(profiles as PgResult<Profile[]>) ?? [],
+    upcoming: upcoming.error ? [] : ((upcoming.data as UpcomingBill[]) ?? []),
   };
 }
 
@@ -141,6 +144,7 @@ export const api = {
   saveUpcoming: (id: string | null, gid: string, input: UpcomingInput) =>
     call<string>("save_upcoming_bill", { p_id: id, p_group: gid, p: input }),
   deleteUpcoming: (id: string) => call<null>("delete_upcoming_bill", { bid: id }),
+  setSharePaid: (bid: string, mid: string, paid: boolean) => call<null>("set_share_paid", { bid, mid, p_paid: paid }),
   markUpcomingPaid: (id: string, payers: { member_id: string; amount_cents: number }[], date: string) =>
     call<string>("mark_upcoming_paid", { bid: id, p_payers: payers, p_date: date }),
   processRecurring: async () => {

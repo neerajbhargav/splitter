@@ -125,6 +125,23 @@ export function SettleUpModal({ open, onClose, group, members, debts, preset, pa
           </div>
         )}
 
+        {from && to && (() => {
+          const fa = members.find((m) => m.id === from); const ta = members.find((m) => m.id === to);
+          const amt = parseMoney(amount) ?? 0;
+          const who = (m?: Member) => (m?.user_id === me.id ? "You" : m?.display_name ?? "Someone");
+          return (
+            <div className="pay-visual">
+              <div className="pair">
+                <Avatar name={fa?.display_name ?? "?"} color={fa?.color} size={64} />
+                <ArrowRight width={22} />
+                <Avatar name={ta?.display_name ?? "?"} color={ta?.color} size={64} />
+              </div>
+              <div className="sentence"><b>{who(fa)}</b> paid <b>{ta?.user_id === me.id ? "you" : ta?.display_name ?? "someone"}</b></div>
+              <div className="xd-amount gold">{money(amt > 0 ? amt : 0, group.currency)}</div>
+            </div>
+          );
+        })()}
+
         <div className="row-flex" style={{ alignItems: "flex-end" }}>
           <div className="field grow">
             <label className="label" htmlFor="pay-from">Paid by</label>

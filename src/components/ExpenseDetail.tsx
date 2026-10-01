@@ -4,13 +4,14 @@ import { Pencil, Repeat, RotateCcw, Send, Trash2 } from "lucide-react";
 import { Avatar, Modal } from "./ui";
 import { useMe, useToast } from "./providers";
 import { addComment, api, deleteComment, loadComments, receiptUrl, useLiveRefresh } from "@/lib/data";
-import { category } from "@/lib/categories";
+import { category, groupKind } from "@/lib/categories";
 import { longDate, money, timeAgo } from "@/lib/format";
 import type { Comment, Expense, Group, Member } from "@/lib/types";
 
 const REPEAT_LABEL: Record<string, string> = { weekly: "Every week", biweekly: "Every 2 weeks", monthly: "Every month", yearly: "Every year" };
 
-export function ExpenseDetail({ expense, group, members, onClose, onEdit }: {
+export function ExpenseDetail({ expense, group, members, onClose, onEdit, allExpenses = [] }: {
+  allExpenses?: Expense[];
   expense: Expense | null;
   group: Group;
   members: Member[];
@@ -114,48 +115,74 @@ export function ExpenseDetail({ expense, group, members, onClose, onEdit }: {
     >
       <div className="stack">
         {deleted && <div className="banner neg">This was deleted. Restore it to count it again.</div>}
-        <div className="row-flex" style={{ gap: 14 }}>
-          <span className={`icon-tile ${expense.is_payment ? "gold" : ""}`} style={{ width: 52, height: 52, borderRadius: 14 }}><Icon /></span>
-          <div className="grow">
-            <div className="serif" style={{ fontSize: 26, lineHeight: 1.15 }}>{title}</div>
-            <div className="serif gold" style={{ fontSize: 34, lineHeight: 1.1 }}>{money(expense.amount_cents, cur)}</div>
+        <div className="xd-head">
+          <span className={`icon-tile ${expense.is_payment ? "gold" : ""}`}><Icon /></span>
+          <div className="grow" style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}>{title}</div>
+            <div className="xd-amount">{money(expense.amount_cents, cur)}</div>
+            <span className="group-chip">{(() => { const GI = groupKind(group.kind).icon; return <span className="icon-tile"><GI /></span>; })()}{group.name}</span>
           </div>
         </div>
-        <div className="row-flex wrap small faint">
-          <span>{longDate(expense.expense_date)}</span>
-          {!expense.is_payment && <span className="badge">{cat.label}</span>}
-          {expense.repeat_interval !== "none" && <span className="badge gold"><Repeat /> {REPEAT_LABEL[expense.repeat_interval]}</span>}
+        <div className="small faint" style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: -4 }}>
+          <span className="row-flex wrap" style={{ gap: 8 }}>
+            {longDate(expense.expense_date)}
+            {!expense.is_payment && <span className="badge">{cat.label}</span>}
+            {expense.repeat_interval !== "none" && <span className="badge gold"><Repeat /> {REPEAT_LABEL[expense.repeat_interval]}</span>}
+          </span>
           <span>Added by {nm(byUser(expense.created_by))} {timeAgo(expense.created_at)}</span>
-          {expense.updated_by && <span>, edited {timeAgo(expense.updated_at)}</span>}
+          {expense.updated_by && <span>Last updated by {nm(byUser(expense.updated_by))} {timeAgo(expense.updated_at)}</span>}
         </div>
 
         {!expense.is_payment && (
-          <div className="card" style={{ padding: "4px 16px" }}>
+          <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14 }}>
             {payers.map((p) => {
               const m = member(p.member_id);
               return (
-                <div key={"p" + p.member_id} className="item">
-                  <Avatar name={m?.display_name ?? "?"} color={m?.color} size={28} />
-                  <div className="item-main"><span className="item-title">{nm(m)} paid</span></div>
-                  <span className="num">{money(p.amount_cents, cur)}</span>
+                <div key={"p" + p.member_id} className="row-flex" style={{ gap: 12, marginBottom: 4 }}>
+                  <Avatar name={m?.display_name ?? "?"} color={m?.color} size={40} />
+                  <span style={{ fontSize: 15 }}><b style={{ fontWeight: 600 }}>{nm(m)}</b> paid <b className="num">{money(p.amount_cents, cur)}</b></span>
                 </div>
               );
             })}
-            {expense.expense_splits.map((s) => {
-              const m = member(s.member_id);
-              const weight = expense.split_type === "percent" ? `${s.weight}%` : expense.split_type === "shares" ? `${s.weight} share${Number(s.weight) === 1 ? "" : "s"}` : "";
-              return (
-                <div key={"s" + s.member_id} className="item">
-                  <span style={{ width: 28 }} />
-                  <div className="item-main">
-                    <span className="item-sub">{nm(m)} {m?.user_id === me.id ? "owe" : "owes"} {weight && <span className="faint">({weight})</span>}</span>
+            <div className="tree" style={{ marginLeft: 20, gap: 8, paddingTop: 4 }}>
+              {expense.expense_splits.filter((x) => x.amount_cents !== 0).map((x) => {
+                const m = member(x.member_id);
+                const weight = expense.split_type === "percent" ? `${x.weight}%` : expense.split_type === "shares" ? `${x.weight} share${Number(x.weight) === 1 ? "" : "s"}` : "";
+                return (
+                  <div key={"s" + x.member_id} className="tree-avatar" style={{ fontSize: 14 }}>
+                    <Avatar name={m?.display_name ?? "?"} color={m?.color} size={24} />
+                    <span>{nm(m)} {m?.user_id === me.id ? "owe" : "owes"} <b className="num">{money(x.amount_cents, cur)}</b> {weight && <span className="faint">({weight})</span>}</span>
                   </div>
-                  <span className="num muted">{money(s.amount_cents, cur)}</span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
+
+        {!expense.is_payment && (() => {
+          const months: { key: string; label: string; cents: number }[] = [];
+          const base = new Date(expense.expense_date + "T12:00:00");
+          for (let i = 2; i >= 0; i--) {
+            const dt = new Date(base.getFullYear(), base.getMonth() - i, 1);
+            const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+            const cents = allExpenses.filter((e) => !e.deleted_at && !e.is_payment && e.category === expense.category && e.expense_date.startsWith(key)).reduce((a, e) => a + e.amount_cents, 0);
+            months.push({ key, label: dt.toLocaleString("en-US", { month: "short" }), cents });
+          }
+          const max = Math.max(1, ...months.map((m) => m.cents));
+          if (!allExpenses.length || months.every((m) => m.cents === 0)) return null;
+          return (
+            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+              <div className="small" style={{ fontWeight: 600, marginBottom: 8 }}>Spending trends for {group.name} :: {cat.label}</div>
+              {months.map((m, i) => (
+                <div key={m.key} className={`trend-row ${i === 2 ? "cur" : ""}`}>
+                  <span className="faint">{m.label}</span>
+                  <span className="bar-track"><span className="bar-fill" style={{ width: `${(m.cents / max) * 100}%` }} /></span>
+                  <span className="num" style={{ textAlign: "right" }}>{money(m.cents, cur)}</span>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {expense.notes && (
           <div className="field">

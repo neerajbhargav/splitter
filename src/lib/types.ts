@@ -117,7 +117,8 @@ export type UpcomingBill = {
   status: "upcoming" | "paid";
   expense_id: string | null;
   created_at: string;
-  upcoming_bill_shares: { member_id: string; amount_cents: number }[];
+  created_by?: string | null;
+  upcoming_bill_shares: { member_id: string; amount_cents: number; paid_at?: string | null; paid_marked_by?: string | null }[];
 };
 
 export type UpcomingInput = {

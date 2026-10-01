@@ -7,6 +7,7 @@ import { Empty, Loading } from "@/components/ui";
 import { GroupRow } from "@/components/GroupRow";
 import { loadOverview, useLiveRefresh, type Overview } from "@/lib/data";
 import { summarize } from "@/lib/overview";
+import { money } from "@/lib/format";
 
 export default function GroupsPage() {
   const me = useMe();
@@ -28,6 +29,12 @@ export default function GroupsPage() {
         </div>
         <Link href="/groups/new" className="btn btn-primary"><Plus /> New group</Link>
       </div>
+      {(() => {
+        const tot = Object.entries(sum.totals)[0];
+        if (!tot) return <div className="overall faint">Overall, you are all settled up</div>;
+        const [cur, t] = tot; const n = t.owed - t.owe;
+        return <div className="overall">Overall, {n >= 0 ? "you are owed" : "you owe"} <span className={n >= 0 ? "pos" : "neg"}>{money(Math.abs(n), cur)}</span></div>;
+      })()}
       <section className="card">
         <div className="card-body">
           {sum.groups.length ? (

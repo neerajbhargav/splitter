@@ -167,3 +167,17 @@ test("multi-payer raw debts are proportional", () => {
   const after = netBalances(["a", "b", "c", "d"], [e, ...raw.map((t) => exp([[t.from, t.amount]], [[t.to, t.amount]]))]);
   assert.ok(Object.values(after).every((v) => v === 0));
 });
+
+test("no relays: creditors never pay, debtors never receive", () => {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  for (let round = 0; round < 60; round++) {
+    const ids = Array.from({ length: 3 + Math.floor(rnd() * 5) }, (_, i) => "m" + i);
+    const entries: LedgerEntry[] = [];
+    for (let k = 0; k < 2 + Math.floor(rnd() * 8); k++) entries.push(equal(ids[Math.floor(rnd() * ids.length)], 1 + Math.floor(rnd() * 40000), ids.filter(() => rnd() > 0.3).concat(ids[0])));
+    const net = netBalances(ids, entries);
+    for (const t of simplifyDebts(net, pairwiseDebts(entries))) {
+      assert.ok(net[t.from] < 0 && net[t.to] > 0, JSON.stringify(t));
+    }
+  }
+});

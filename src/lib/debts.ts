@@ -258,6 +258,8 @@ export function simplifyDebts(net: Record<string, number>, raw: Tx[] = []): Tx[]
     });
   // Nobody pays out more in total than they owed before (or than their balance, if nothing raw).
   const valid = (txs: Tx[]) => {
+    // No relays: people who are owed never pay, people who owe never receive.
+    for (const t of txs) if ((net[t.from] ?? 0) >= 0 || (net[t.to] ?? 0) <= 0) return false;
     const paid = new Map<string, number>();
     for (const t of txs) paid.set(t.from, (paid.get(t.from) ?? 0) + t.amount);
     for (const [id, p] of paid) if (p > Math.max(outTotal.get(id) ?? 0, -Math.min(0, net[id] ?? 0))) return false;

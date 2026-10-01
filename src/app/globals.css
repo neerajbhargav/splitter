@@ -464,3 +464,21 @@ html, body { overflow-x: hidden; }
 .list .item-sub.wrap2 { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 .grid-2 { align-items: start; }
+
+/* iOS home-screen (standalone) mode: keep content out from under the status bar / notch */
+@media (max-width: 860px) {
+  .topbar {
+    padding-top: calc(10px + env(safe-area-inset-top));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    min-height: calc(56px + env(safe-area-inset-top));
+    background: rgba(11, 11, 12, 0.98);
+  }
+}
+/* pages without the app top bar (sign in, invite, setup, 404) */
+.auth-panel { padding-top: calc(32px + env(safe-area-inset-top)); padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
+body > .page, main.page-narrow:not(.main .page) { padding-top: calc(28px + env(safe-area-inset-top)); }
+@media (max-width: 640px) {
+  dialog.modal[open] { padding-top: env(safe-area-inset-top); }
+  .modal-card, .modal-card.wide { max-height: calc(100dvh - env(safe-area-inset-top) - 12px); }
+}

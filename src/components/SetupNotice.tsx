@@ -1,6 +1,6 @@
 export function SetupNotice() {
   return (
-    <main className="page page-narrow" style={{ paddingTop: 80 }}>
+    <main className="page page-narrow" style={{ paddingTop: "calc(80px + env(safe-area-inset-top))" }}>
       <div className="wordmark">SPLIT<b>TER</b></div>
       <h1 className="page-title" style={{ marginTop: 28 }}>Almost there.</h1>
       <p className="page-sub">

@@ -50,7 +50,7 @@ export default function JoinPage() {
 
   const K = invite ? groupKind(invite.kind).icon : null;
   return (
-    <main className="page page-narrow" style={{ paddingTop: 72 }}>
+    <main className="page page-narrow" style={{ paddingTop: "calc(72px + env(safe-area-inset-top))" }}>
       <Link href="/" className="wordmark">SPLIT<b>TER</b></Link>
       {!invite ? (
         <div style={{ marginTop: 40 }}>

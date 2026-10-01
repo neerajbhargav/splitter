@@ -1,5 +1,7 @@
 # SPLITTER
 
+**Live:** https://usesplitter.vercel.app
+
 Split rent, groceries and trips with the people you live and travel with. Everyone in a group sees the same numbers, live, and one tap tells you who pays whom.
 
 ## Features

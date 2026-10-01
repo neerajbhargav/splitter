@@ -14,6 +14,7 @@ function iconFor(kind: string) {
   if (kind === "expense_restored") return RotateCcw;
   if (kind === "expense_recurring") return Repeat;
   if (kind.startsWith("member")) return UserPlus;
+  if (kind === "member_fixed" || kind === "member_unclaimed") return UserPlus;
   if (kind === "group_updated") return Settings;
   return Users;
 }

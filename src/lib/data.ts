@@ -127,7 +127,9 @@ export const api = {
   leaveGroup: (gid: string) => call<null>("leave_group", { gid }),
   regenerateInvite: (gid: string) => call<string>("regenerate_invite", { gid }),
   getInvite: (code: string) => call<Invite | null>("get_invite", { p_code: code }, false),
-  joinGroup: (code: string, claim: string | null) => call<string>("join_group", { p_code: code, p_claim: claim }),
+  joinGroup: (code: string, claim: string | null, asNew = false) =>
+    call<string>("join_group", { p_code: code, p_claim: claim, p_new: asNew }),
+  unclaimMySpot: (gid: string) => call<string>("unclaim_my_spot", { gid }),
   addMember: (gid: string, name: string, email?: string, phone?: string) =>
     call<string>("add_member", { gid, p_name: name, p_email: email || null, p_phone: phone || null }),
   updateMember: (mid: string, name: string, email?: string | null, phone?: string | null) =>

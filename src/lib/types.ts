@@ -86,7 +86,9 @@ export type Invite = {
   kind: GroupKind;
   member_count: number;
   already_member: boolean;
-  placeholders: { id: string; display_name: string; color: string }[];
+  me_name?: string | null;
+  suggested?: { member_id: string; how: "email" | "name" } | null;
+  placeholders: { id: string; display_name: string; color: string; looks_like_me?: boolean }[];
 };
 
 export type ExpenseInput = {

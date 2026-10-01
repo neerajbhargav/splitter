@@ -923,3 +923,144 @@ begin
     alter publication supabase_realtime add table public.upcoming_bills;
   end if;
 end $$;
+
+-- =====================================================================
+-- Smarter joining: match the person to their spot automatically
+--   1. a spot whose email matches the account's email
+--   2. otherwise a spot whose name matches the account's name (first name or full name)
+-- Only when there is no single clear match does the app ask "which one is you?".
+-- =====================================================================
+
+create or replace function public.name_tokens(t text) returns text[]
+language sql immutable as $$
+  select coalesce(array_remove(regexp_split_to_array(lower(regexp_replace(coalesce(t, ''), '[^[:alpha:] ]', ' ', 'g')), '\s+'), ''), '{}');
+$$;
+
+-- Best unclaimed spot for the signed-in user in a group: {member_id, how: 'email'|'name'} or null.
+create or replace function public.suggest_spot(gid uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare
+  me public.profiles;
+  full_name text;
+  mine text[];
+  ids uuid[];
+begin
+  if auth.uid() is null then return null; end if;
+  select * into me from public.profiles where id = auth.uid();
+  select coalesce(nullif(raw_user_meta_data->>'full_name', ''), nullif(raw_user_meta_data->>'name', ''), me.display_name)
+    into full_name from auth.users where id = auth.uid();
+  -- 1) email
+  if me.email is not null then
+    select array_agg(id) into ids from public.group_members
+     where group_id = gid and user_id is null and is_active and lower(email) = lower(me.email);
+    if coalesce(array_length(ids, 1), 0) = 1 then return jsonb_build_object('member_id', ids[1], 'how', 'email'); end if;
+  end if;
+  -- 2) name: the spot's full name equals mine, or the spot's first name equals my first name
+  mine := public.name_tokens(coalesce(full_name, '')) || public.name_tokens(coalesce(me.display_name, ''));
+  if coalesce(array_length(mine, 1), 0) = 0 then return null; end if;
+  select array_agg(id) into ids from public.group_members m
+   where m.group_id = gid and m.user_id is null and m.is_active
+     and (array_to_string(public.name_tokens(m.display_name), ' ') = array_to_string(public.name_tokens(full_name), ' ')
+          or (char_length((public.name_tokens(m.display_name))[1]) >= 2 and (public.name_tokens(m.display_name))[1] = any (mine)));
+  if coalesce(array_length(ids, 1), 0) = 1 then return jsonb_build_object('member_id', ids[1], 'how', 'name'); end if;
+  return null;
+end $$;
+
+-- Does a spot's name plausibly belong to the signed-in user? (used to double-check manual picks)
+create or replace function public.spot_looks_like_me(mid uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.group_members m, auth.users u
+    where m.id = mid and u.id = auth.uid()
+      and ((m.email is not null and lower(m.email) = lower(u.email))
+           or public.name_tokens(m.display_name) && (public.name_tokens(u.raw_user_meta_data->>'full_name')
+                                                    || public.name_tokens(u.raw_user_meta_data->>'name')
+                                                    || public.name_tokens((select display_name from public.profiles where id = u.id)))));
+$$;
+
+create or replace function public.get_invite(p_code text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare g public.groups; sug jsonb;
+begin
+  select * into g from public.groups where invite_code = p_code;
+  if not found then return null; end if;
+  if auth.uid() is not null then sug := public.suggest_spot(g.id); end if;
+  return jsonb_build_object(
+    'group_id', g.id,
+    'name', g.name,
+    'kind', g.kind,
+    'member_count', (select count(*) from public.group_members where group_id = g.id and is_active),
+    'already_member', public.is_group_member(g.id),
+    'me_name', (select display_name from public.profiles where id = auth.uid()),
+    'suggested', sug,
+    'placeholders', case when auth.uid() is null then '[]'::jsonb else coalesce((
+      select jsonb_agg(jsonb_build_object('id', id, 'display_name', display_name, 'color', color,
+                                          'looks_like_me', public.spot_looks_like_me(id)) order by created_at)
+      from public.group_members where group_id = g.id and user_id is null and is_active), '[]'::jsonb) end);
+end $$;
+
+drop function if exists public.join_group(text, uuid);
+-- p_claim: a specific spot. p_new: join as a new person. Neither: use the automatic match.
+create or replace function public.join_group(p_code text, p_claim uuid default null, p_new boolean default false) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  g public.groups;
+  me public.profiles;
+  mid uuid;
+  nm text;
+  sug jsonb;
+  how text := 'new';
+begin
+  if auth.uid() is null then raise exception 'Sign in first'; end if;
+  perform public.ensure_profile();
+  select * into g from public.groups where invite_code = p_code;
+  if not found then raise exception 'This invite link is invalid or was reset'; end if;
+  select * into me from public.profiles where id = auth.uid();
+  select id into mid from public.group_members where group_id = g.id and user_id = auth.uid();
+  if mid is not null then
+    update public.group_members set is_active = true where id = mid;
+    return g.id;
+  end if;
+  if p_claim is null and not p_new then
+    sug := public.suggest_spot(g.id);
+    if sug is not null then p_claim := (sug->>'member_id')::uuid; how := sug->>'how';
+    elsif exists (select 1 from public.group_members where group_id = g.id and user_id is null and is_active) then
+      raise exception 'Choose which name is you';
+    end if;
+  elsif p_claim is not null then how := 'picked';
+  end if;
+  if p_claim is not null then
+    update public.group_members set user_id = auth.uid(), email = coalesce(email, me.email), is_active = true
+     where id = p_claim and group_id = g.id and user_id is null
+     returning id into mid;
+    if mid is null then raise exception 'That spot was already claimed by someone else'; end if;
+  else
+    insert into public.group_members (group_id, user_id, display_name, email, color)
+    values (g.id, auth.uid(), left(coalesce(nullif(me.display_name, ''), 'New member'), 40), me.email,
+            public.member_color((select count(*)::int from public.group_members where group_id = g.id)))
+    returning id into mid;
+  end if;
+  select display_name into nm from public.group_members where id = mid;
+  perform public.log_activity(g.id, 'member_joined', nm || ' joined the group'
+    || case how when 'email' then ' (matched by email)' when 'name' then ' (matched by name)'
+                when 'picked' then case when coalesce(me.display_name, '') <> nm then ' as ' || me.display_name else '' end
+                else '' end);
+  return g.id;
+end $$;
+
+-- "That's not me": the signed-in user gives their spot back (keeps its expenses) so they can pick again.
+create or replace function public.unclaim_my_spot(gid uuid) returns text
+language plpgsql security definer set search_path = public as $$
+declare m public.group_members; code text; me_name text;
+begin
+  select * into m from public.group_members where group_id = gid and user_id = auth.uid();
+  if not found then raise exception 'You are not in this group'; end if;
+  select display_name into me_name from public.profiles where id = auth.uid();
+  update public.group_members set user_id = null,
+    email = case when lower(email) = lower((select email from public.profiles where id = auth.uid())) then null else email end
+   where id = m.id;
+  insert into public.activity (group_id, actor_id, kind, summary)
+  values (gid, auth.uid(), 'member_unclaimed', coalesce(me_name, 'Someone') || ' said they are not ' || m.display_name || ' and is picking again');
+  select invite_code into code from public.groups where id = gid;
+  return code;
+end $$;

@@ -195,6 +195,17 @@ export default function GroupSettings() {
                     onClick={() => { setEditing(m.id); setDraft({ name: m.display_name, email: m.email ?? "", phone: m.phone ?? "" }); }}>
                     <Pencil />
                   </button>
+                  {m.id === mine?.id && (
+                    <button type="button" className="btn btn-ghost btn-sm" title="You claimed the wrong name? Give it back and pick again." onClick={async () => {
+                      if (!confirm(`Give back "${m.display_name}" and pick your name again? Expenses stay with ${m.display_name}.`)) return;
+                      try {
+                        const code = await api.unclaimMySpot(group.id);
+                        router.replace(`/join/${code}?pick=1`);
+                      } catch (err) {
+                        toast.err(err);
+                      }
+                    }}>This isn't me</button>
+                  )}
                   {m.id !== mine?.id && (
                     <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Remove ${m.display_name}`} onClick={() => remove(m)}
                       disabled={bal !== 0} title={bal !== 0 ? "Settle their balance first" : "Remove"}>

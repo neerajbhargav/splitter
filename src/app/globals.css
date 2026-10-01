@@ -489,3 +489,5 @@ body > .page, main.page-narrow:not(.main .page) { padding-top: calc(28px + env(s
 .item-sub.neg { color: var(--neg); }
 .item-sub.gold { color: var(--gold); }
 @media (max-width: 860px) { .upcoming-detail { padding-left: 4px; } }
+.upcoming .item-title .ellipsis, .upcoming .item-sub { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.upcoming .item-title { white-space: normal; align-items: flex-start; }

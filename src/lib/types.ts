@@ -102,3 +102,28 @@ export type ExpenseInput = {
   payers: { member_id: string; amount_cents: number }[];
   splits: { member_id: string; amount_cents: number; weight?: number | null }[];
 };
+
+export type UpcomingBill = {
+  id: string;
+  group_id: string;
+  title: string;
+  amount_cents: number;
+  due_date: string | null;
+  is_estimate: boolean;
+  category: string;
+  notes: string | null;
+  status: "upcoming" | "paid";
+  expense_id: string | null;
+  created_at: string;
+  upcoming_bill_shares: { member_id: string; amount_cents: number }[];
+};
+
+export type UpcomingInput = {
+  title: string;
+  amount_cents: number;
+  due_date: string | null;
+  is_estimate: boolean;
+  category: string;
+  notes: string;
+  shares: { member_id: string; amount_cents: number }[];
+};

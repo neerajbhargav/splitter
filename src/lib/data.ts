@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { supabaseBrowser } from "./supabase/client";
-import type { ActivityItem, Comment, Expense, ExpenseInput, Group, Invite, Member, Profile } from "./types";
+import type { ActivityItem, Comment, Expense, ExpenseInput, Group, Invite, Member, Profile, UpcomingBill, UpcomingInput } from "./types";
 
 const sb = () => supabaseBrowser();
 
@@ -39,10 +39,10 @@ export function notifyChanged() {
   if (typeof window !== "undefined") window.dispatchEvent(new Event(CHANGED));
 }
 
-export type GroupBundle = { group: Group; members: Member[]; expenses: Expense[]; activity: ActivityItem[]; profiles: Profile[] };
+export type GroupBundle = { group: Group; members: Member[]; expenses: Expense[]; activity: ActivityItem[]; profiles: Profile[]; upcoming: UpcomingBill[] };
 
 export async function loadGroup(gid: string): Promise<GroupBundle | null> {
-  const [g, members, expenses, activity, profiles] = await Promise.all([
+  const [g, members, expenses, activity, profiles, upcoming] = await Promise.all([
     sb().from("groups").select("*").eq("id", gid).maybeSingle(),
     sb().from("group_members").select("*").eq("group_id", gid).order("created_at"),
     fetchAll<Expense>((a, b) =>
@@ -50,6 +50,8 @@ export async function loadGroup(gid: string): Promise<GroupBundle | null> {
         .order("expense_date", { ascending: false }).order("created_at", { ascending: false }).range(a, b)),
     sb().from("activity").select("*").eq("group_id", gid).order("created_at", { ascending: false }).limit(150),
     sb().from("profiles").select("*"),
+    sb().from("upcoming_bills").select("*, upcoming_bill_shares(member_id, amount_cents)").eq("group_id", gid).eq("status", "upcoming")
+      .order("due_date", { ascending: true, nullsFirst: false }),
   ]);
   const group = unwrap(g as PgResult<Group>);
   if (!group) return null;
@@ -59,6 +61,8 @@ export async function loadGroup(gid: string): Promise<GroupBundle | null> {
     expenses,
     activity: unwrap(activity as PgResult<ActivityItem[]>) ?? [],
     profiles: unwrap(profiles as PgResult<Profile[]>) ?? [],
+    // Older deployments may not have run the upcoming-bills migration yet: treat as none.
+    upcoming: upcoming.error ? [] : ((upcoming.data as UpcomingBill[]) ?? []),
   };
 }
 
@@ -132,6 +136,11 @@ export const api = {
   saveExpense: (id: string | null, gid: string, input: ExpenseInput) => call<string>("save_expense", { p_id: id, p_group: gid, p: input }),
   deleteExpense: (id: string) => call<null>("delete_expense", { eid: id }),
   restoreExpense: (id: string) => call<null>("restore_expense", { eid: id }),
+  saveUpcoming: (id: string | null, gid: string, input: UpcomingInput) =>
+    call<string>("save_upcoming_bill", { p_id: id, p_group: gid, p: input }),
+  deleteUpcoming: (id: string) => call<null>("delete_upcoming_bill", { bid: id }),
+  markUpcomingPaid: (id: string, payers: { member_id: string; amount_cents: number }[], date: string) =>
+    call<string>("mark_upcoming_paid", { bid: id, p_payers: payers, p_date: date }),
   processRecurring: async () => {
     const n = await call<number>("process_recurring", {}, false);
     if (n > 0) notifyChanged();

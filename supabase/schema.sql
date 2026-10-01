@@ -784,3 +784,142 @@ create policy "receipts upload" on storage.objects for insert to authenticated
 drop policy if exists "receipts delete" on storage.objects;
 create policy "receipts delete" on storage.objects for delete to authenticated
   using (bucket_id = 'receipts' and owner = auth.uid());
+
+-- =====================================================================
+-- Upcoming bills: bills that are known but not paid yet. They show each
+-- person's share but do NOT affect balances until marked paid, which turns
+-- the bill into a normal expense with the same split.
+-- =====================================================================
+
+create table if not exists public.upcoming_bills (
+  id uuid primary key default gen_random_uuid(),
+  group_id uuid not null references public.groups(id) on delete cascade,
+  title text not null check (char_length(trim(title)) between 1 and 100),
+  amount_cents bigint not null check (amount_cents > 0),
+  due_date date,
+  is_estimate boolean not null default false,
+  category text not null default 'utilities',
+  notes text,
+  status text not null default 'upcoming' check (status in ('upcoming', 'paid')),
+  expense_id uuid references public.expenses(id) on delete set null,
+  created_by uuid references auth.users(id) on delete set null default auth.uid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists upcoming_bills_group_idx on public.upcoming_bills (group_id, status, due_date);
+
+create table if not exists public.upcoming_bill_shares (
+  bill_id uuid not null references public.upcoming_bills(id) on delete cascade,
+  member_id uuid not null references public.group_members(id) on delete cascade,
+  amount_cents bigint not null check (amount_cents >= 0),
+  primary key (bill_id, member_id)
+);
+
+-- p = { title, amount_cents, due_date, is_estimate, category, notes, shares: [{member_id, amount_cents}] }
+create or replace function public.save_upcoming_bill(p_id uuid, p_group uuid, p jsonb) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  bid uuid;
+  total bigint := (p->>'amount_cents')::bigint;
+  ttl text := left(trim(coalesce(p->>'title', '')), 100);
+  ssum bigint;
+  bad int;
+begin
+  if not public.is_group_member(p_group) then raise exception 'You are not in this group'; end if;
+  if total is null or total <= 0 then raise exception 'Amount must be greater than zero'; end if;
+  if ttl = '' then raise exception 'Add a name for the bill'; end if;
+  if jsonb_typeof(p->'shares') <> 'array' or jsonb_array_length(p->'shares') = 0 then raise exception 'Choose who splits this bill'; end if;
+  select coalesce(sum((x->>'amount_cents')::bigint), 0) into ssum from jsonb_array_elements(p->'shares') x;
+  if ssum <> total then raise exception 'Shares add up to % but the bill is %', public.fmt_cents(ssum), public.fmt_cents(total); end if;
+  select count(*) into bad from jsonb_array_elements(p->'shares') x
+   where (x->>'amount_cents')::bigint < 0
+      or not exists (select 1 from public.group_members m where m.id = public.try_uuid(x->>'member_id') and m.group_id = p_group);
+  if bad > 0 then raise exception 'Every person in a bill must belong to this group'; end if;
+  if (select count(distinct x->>'member_id') from jsonb_array_elements(p->'shares') x) <> jsonb_array_length(p->'shares') then
+    raise exception 'A person appears twice in the same bill';
+  end if;
+
+  if p_id is null then
+    insert into public.upcoming_bills (group_id, title, amount_cents, due_date, is_estimate, category, notes)
+    values (p_group, ttl, total, nullif(p->>'due_date', '')::date, coalesce((p->>'is_estimate')::boolean, false),
+            coalesce(nullif(p->>'category', ''), 'utilities'), nullif(trim(coalesce(p->>'notes', '')), ''))
+    returning id into bid;
+  else
+    update public.upcoming_bills set
+      title = ttl, amount_cents = total, due_date = nullif(p->>'due_date', '')::date,
+      is_estimate = coalesce((p->>'is_estimate')::boolean, false),
+      category = coalesce(nullif(p->>'category', ''), 'utilities'),
+      notes = nullif(trim(coalesce(p->>'notes', '')), ''), updated_at = now()
+    where id = p_id and group_id = p_group and status = 'upcoming'
+    returning id into bid;
+    if bid is null then raise exception 'That bill no longer exists or was already paid'; end if;
+    delete from public.upcoming_bill_shares where bill_id = bid;
+  end if;
+
+  insert into public.upcoming_bill_shares (bill_id, member_id, amount_cents)
+  select bid, (x->>'member_id')::uuid, (x->>'amount_cents')::bigint
+  from jsonb_array_elements(p->'shares') x where (x->>'amount_cents')::bigint > 0;
+
+  perform public.log_activity(p_group, case when p_id is null then 'upcoming_added' else 'upcoming_updated' end,
+    public.actor_name(p_group) || case when p_id is null then ' added upcoming bill "' else ' updated upcoming bill "' end || ttl || '"'
+      || coalesce(' (due ' || to_char(nullif(p->>'due_date', '')::date, 'Mon FMDD') || ')', ''),
+    null, total);
+  return bid;
+end $$;
+
+create or replace function public.delete_upcoming_bill(bid uuid) returns void
+language plpgsql security definer set search_path = public as $$
+declare b public.upcoming_bills;
+begin
+  select * into b from public.upcoming_bills where id = bid;
+  if not found or not public.is_group_member(b.group_id) then raise exception 'Not allowed'; end if;
+  delete from public.upcoming_bills where id = bid;
+  perform public.log_activity(b.group_id, 'upcoming_deleted',
+    public.actor_name(b.group_id) || ' removed upcoming bill "' || b.title || '"', null, b.amount_cents);
+end $$;
+
+-- Turns an upcoming bill into a real expense with the same split. p_payers = [{member_id, amount_cents}]
+create or replace function public.mark_upcoming_paid(bid uuid, p_payers jsonb, p_date date default null) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  b public.upcoming_bills;
+  eid uuid;
+begin
+  select * into b from public.upcoming_bills where id = bid for update;
+  if not found or not public.is_group_member(b.group_id) then raise exception 'Not allowed'; end if;
+  if b.status <> 'upcoming' then raise exception 'This bill was already marked paid'; end if;
+  eid := public.save_expense(null, b.group_id, jsonb_build_object(
+    'description', b.title,
+    'amount_cents', b.amount_cents,
+    'category', b.category,
+    'expense_date', coalesce(p_date, current_date),
+    'notes', b.notes,
+    'split_type', 'exact',
+    'is_payment', false,
+    'repeat_interval', 'none',
+    'payers', p_payers,
+    'splits', (select coalesce(jsonb_agg(jsonb_build_object('member_id', s.member_id, 'amount_cents', s.amount_cents)), '[]'::jsonb)
+               from public.upcoming_bill_shares s where s.bill_id = bid)));
+  update public.upcoming_bills set status = 'paid', expense_id = eid, updated_at = now() where id = bid;
+  return eid;
+end $$;
+
+alter table public.upcoming_bills enable row level security;
+alter table public.upcoming_bill_shares enable row level security;
+
+drop policy if exists "upcoming read" on public.upcoming_bills;
+create policy "upcoming read" on public.upcoming_bills for select to authenticated
+  using (public.is_group_member(group_id));
+
+drop policy if exists "upcoming shares read" on public.upcoming_bill_shares;
+create policy "upcoming shares read" on public.upcoming_bill_shares for select to authenticated
+  using (exists (select 1 from public.upcoming_bills b where b.id = bill_id and public.is_group_member(b.group_id)));
+
+revoke insert, update, delete on public.upcoming_bills, public.upcoming_bill_shares from anon, authenticated;
+
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'upcoming_bills') then
+    alter publication supabase_realtime add table public.upcoming_bills;
+  end if;
+end $$;

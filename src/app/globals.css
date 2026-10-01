@@ -482,3 +482,10 @@ body > .page, main.page-narrow:not(.main .page) { padding-top: calc(28px + env(s
   dialog.modal[open] { padding-top: env(safe-area-inset-top); }
   .modal-card, .modal-card.wide { max-height: calc(100dvh - env(safe-area-inset-top) - 12px); }
 }
+
+/* upcoming bills section */
+.upcoming { border-color: rgba(201, 169, 110, 0.22); background: linear-gradient(180deg, rgba(201,169,110,0.05), transparent 60%), var(--surface); }
+.upcoming-detail { padding: 4px 0 14px 50px; border-bottom: 1px solid var(--line); }
+.item-sub.neg { color: var(--neg); }
+.item-sub.gold { color: var(--gold); }
+@media (max-width: 860px) { .upcoming-detail { padding-left: 4px; } }

@@ -1,10 +1,11 @@
 "use client";
 import Link from "next/link";
-import { CircleDollarSign, MessageSquare, Pencil, Plus, Repeat, RotateCcw, Settings, Trash2, UserPlus, Users } from "lucide-react";
+import { CalendarClock, CircleDollarSign, MessageSquare, Pencil, Plus, Repeat, RotateCcw, Settings, Trash2, UserPlus, Users } from "lucide-react";
 import { money, timeAgo } from "@/lib/format";
 import type { ActivityItem, Group } from "@/lib/types";
 
 function iconFor(kind: string) {
+  if (kind.startsWith("upcoming")) return CalendarClock;
   if (kind.startsWith("payment")) return CircleDollarSign;
   if (kind === "comment") return MessageSquare;
   if (kind === "expense_added") return Plus;

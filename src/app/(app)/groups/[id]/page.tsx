@@ -11,6 +11,7 @@ import { ExpenseEditor } from "@/components/ExpenseEditor";
 import { ExpenseDetail } from "@/components/ExpenseDetail";
 import { SettleUpModal } from "@/components/SettleUp";
 import { ActivityList } from "@/components/ActivityList";
+import { UpcomingBills } from "@/components/UpcomingBills";
 import { api, loadGroup, useLiveRefresh, type GroupBundle } from "@/lib/data";
 import { entryNetFor, netBalances, pairwiseDebts, paidAndShare, simplifyDebts, type Tx } from "@/lib/debts";
 import { CATEGORIES, category, groupKind } from "@/lib/categories";
@@ -54,6 +55,7 @@ export default function GroupPage() {
       { table: "activity", filter: `group_id=eq.${id}` },
       { table: "groups", filter: `id=eq.${id}` },
       { table: "group_members", filter: `group_id=eq.${id}` },
+      { table: "upcoming_bills", filter: `group_id=eq.${id}` },
     ],
     reload,
   );
@@ -77,6 +79,15 @@ export default function GroupPage() {
       debts: b.group.simplify_debts ? simple : raw,
       mine: b.members.find((m) => m.user_id === me.id),
       totals: paidAndShare(live),
+      flows: (() => {
+        const f: Record<string, { sent: number; received: number }> = {};
+        for (const e of live) {
+          if (!e.is_payment) continue;
+          for (const p of e.expense_payers) (f[p.member_id] ??= { sent: 0, received: 0 }).sent += p.amount_cents;
+          for (const x of e.expense_splits) (f[x.member_id] ??= { sent: 0, received: 0 }).received += x.amount_cents;
+        }
+        return f;
+      })(),
       deleted: new Set(b.expenses.filter((e) => e.deleted_at).map((e) => e.id)),
     };
   }, [b, me.id]);
@@ -136,6 +147,10 @@ export default function GroupPage() {
         <button type="button" className="btn show-mobile" onClick={() => setInviteOpen(true)}><Link2 /> Invite</button>
       </div>
 
+      <div style={{ marginTop: 18 }}>
+        <UpcomingBills group={group} members={members} bills={b.upcoming} />
+      </div>
+
       <div className="tabs" role="tablist" style={{ marginTop: 22 }}>
         {(["expenses", "balances", "activity", "insights"] as Tab[]).map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>
@@ -162,7 +177,14 @@ export default function GroupPage() {
                       <Avatar name={m.display_name} color={m.color} src={avatarFor(m, b.profiles)} size={34} />
                       <div className="item-main">
                         <div className="item-title">{m.display_name}{m.user_id === me.id && <span className="faint"> (you)</span>}{!m.is_active && <span className="faint"> (left)</span>}</div>
-                        <div className="item-sub wrap2">Put in {money(n + t.share, cur)} · share {money(t.share, cur)}{!m.user_id && " · not joined yet"}</div>
+                        <div className="item-sub wrap2">
+                          {[
+                            `Paid ${money(t.paid + (d.flows[m.id]?.sent ?? 0), cur)}`,
+                            d.flows[m.id]?.received ? `got back ${money(d.flows[m.id].received, cur)}` : null,
+                            `share ${money(t.share, cur)}`,
+                            !m.user_id ? "not joined yet" : null,
+                          ].filter(Boolean).join(" · ")}
+                        </div>
                       </div>
                       <div className="item-end">
                         <div className="k">{n > 0 ? "gets back" : n < 0 ? "owes" : "settled up"}</div>

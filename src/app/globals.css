@@ -347,7 +347,7 @@ dialog.modal::backdrop { background: rgba(0, 0, 0, 0.72); }
 /* =====================================================================
    Polish pass: proportions, overflow, mobile layout
    ===================================================================== */
-html, body { overflow-x: hidden; }
+html, body { overflow-x: clip; }
 .main, .page, .card, .card-body, .list, .item, .item-main { min-width: 0; }
 .grid-2 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .page { max-width: 920px; padding: 36px 40px 120px; }
@@ -491,3 +491,8 @@ body > .page, main.page-narrow:not(.main .page) { padding-top: calc(28px + env(s
 @media (max-width: 860px) { .upcoming-detail { padding-left: 4px; } }
 .upcoming .item-title .ellipsis, .upcoming .item-sub { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .upcoming .item-title { white-space: normal; align-items: flex-start; }
+
+/* keep the desktop sidebar pinned while the page scrolls */
+@media (min-width: 861px) {
+  .sidebar { position: sticky; top: 0; align-self: start; height: 100vh; height: 100dvh; overflow-y: auto; }
+}

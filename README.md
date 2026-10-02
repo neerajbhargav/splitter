@@ -123,3 +123,17 @@ tests/                     node:test suite for the math
 - **Receipt scanning:** Attach a JPG, PNG, WebP, BMP or PDF and choose Scan. English OCR runs locally using Tesseract.js; engine/language files download from CDN, but the image/text are not sent to an external OCR service. Review/edit suggestions before applying. PDFs use local selectable-text extraction first, with local OCR fallback for image pages. At most five pages are read; longer PDFs warn and leave the final total blank. Encrypted PDFs require an unlocked copy. HEIC can be attached, not scanned. Ambiguous dates and conflicting totals are left blank. Receipt files are uploaded to private Supabase storage only when the expense is saved.
 
 For existing deployments, apply `supabase/migrations/20261001_free_expense_tools.sql` then `supabase/migrations/20261002_itemized_currency.sql` before deploying this version. Fresh deployments can use the complete idempotent schema. `npm test` includes isolated PostgreSQL/WASM permission and calculation regressions using synthetic data, not production records.
+
+## Private personal finance tools
+
+The authenticated `/finance` workspace is private to each account and independent of shared group balances:
+
+- **Debt payoff planner:** save balances, nominal APRs and fixed monthly minimums; compare avalanche/snowball with extra monthly payments, rolled-over minimums, estimated payoff months, interest and an amortization schedule. Monthly interest uses exact half-up BigInt-cent arithmetic. It models up to 600 months and does not promise payoff when the plan cannot finish. What-if settings are calculator drafts, not bank instructions.
+- **Budgeting assistant:** monthly take-home income, category limits, optional 50/30/20 starter, manual spending and savings contributions, category progress and local rule-based guidance. Subscription costs/debt minimums are reminders, not silently deducted a second time. Nothing is sent to an AI service.
+- **Subscription tracker:** weekly, monthly, quarterly and yearly recurrence, original-day-preserving renewal dates, actual scheduled 30-day forecast, monthly/yearly estimates, paused/canceled states and manual charge logging into Budget. Marking canceled does not cancel a merchant's service. Notifications are on-page only.
+
+All amounts use integer hundredths in one personal-finance currency. Choose it before entering records; it is locked afterward to prevent silent relabeling. Group currencies remain independent. No real financial data is prefilled, no bank/payment providers are connected, and forecasts never update balances or create expense entries automatically.
+
+For an existing database, apply `supabase/migrations/20261003_personal_finance.sql`. Its five tables enforce owner-only read access; validated RPCs are the only authenticated write path. Every mutation locks/touches the owner's `finance_settings` row as a private realtime invalidation signal. Tests cover cross-account read/write isolation, hidden helper privileges, duplicate charge protection, valid categories, currency locking and exact money/date calculations.
+
+Finance reads and drafts bind to a specific authenticated account; every RPC checks the expected owner and draft currency under the per-owner lock. Switching accounts or changing currency on another device cannot silently reuse an old money draft. Client regressions cover paginated account switches and both pre/post-request authentication races.

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { Activity, LayoutDashboard, LogOut, Plus, Search, Settings, Users } from "lucide-react";
+import { Activity, LayoutDashboard, LogOut, Plus, Search, Settings, Users, Wallet } from "lucide-react";
 import { MeProvider, useMe, useToast } from "./providers";
 import { Avatar, LogoMark } from "./ui";
 import { ThemeCycle } from "./ThemeToggle";
@@ -74,6 +74,7 @@ function Frame({ children }: { children: ReactNode }) {
   const nav = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/search", label: "Search", icon: Search },
+    { href: "/finance", label: "Finance", icon: Wallet },
     { href: "/activity", label: "Activity", icon: Activity },
     { href: "/account", label: "Account", icon: Settings },
   ];
@@ -141,7 +142,7 @@ function Frame({ children }: { children: ReactNode }) {
           <Link href="/groups" className={path === "/groups" || currentGroup ? "active" : ""}><Users />Groups</Link>
           <button type="button" className="tab-add" onClick={() => openQuick()} aria-label="Add expense"><span><Plus /></span></button>
           <Link href="/activity" className={active("/activity") ? "active" : ""}><Activity />Activity</Link>
-          <Link href="/account" className={active("/account") ? "active" : ""}><Settings />Account</Link>
+          <Link href="/finance" className={active("/finance") ? "active" : ""}><Wallet />Finance</Link>
         </nav>
       </div>
 

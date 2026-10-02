@@ -207,7 +207,7 @@ export function ExpenseDetail({ expense, group, members, onClose, onEdit, allExp
 
         <div className="field">
           <span className="label">Comments</span>
-          {comments.length === 0 && <p className="hint" style={{ margin: 0 }}>No comments yet.</p>}
+          {comments.length === 0 && <p className="hint">No comments yet.</p>}
           {comments.map((c) => {
             const m = byUser(c.user_id);
             return (

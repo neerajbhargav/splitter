@@ -139,7 +139,7 @@ export default function GroupPage() {
   return (
     <main className="page">
       <div className="group-top">
-        <Link href="/groups" className="back"><ChevronLeft width={14} /> Groups</Link>
+        <Link href="/groups" className="back"><ChevronLeft width={14} height={14} /> Groups</Link>
         <div className="icon-cluster">
           <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => setInviteOpen(true)} title="Invite people" aria-label="Invite people"><Link2 /></button>
           <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={exportCsv} title="Export CSV" aria-label="Export CSV"><Download /></button>
@@ -184,11 +184,7 @@ export default function GroupPage() {
         </div>
       </section>
 
-      <div style={{ marginTop: 18 }}>
-        <UpcomingBills group={group} members={members} bills={b.upcoming} />
-      </div>
-
-      <div style={{ height: 18 }} />
+      <UpcomingBills group={group} members={members} bills={b.upcoming} />
 
       {tab === "expenses" && (
         <ExpensesTab bundle={b} mine={d.mine} name={name} onOpen={(e) => setDetailId(e.id)} onAdd={() => setEditor({ open: true, expense: null })} />
@@ -279,7 +275,7 @@ export default function GroupPage() {
                     return (
                       <div key={t.from + t.to} className="settle-row">
                         <Avatar name={from.display_name} color={from.color} src={avatarFor(from, b.profiles)} size={32} />
-                        <span className="arrow-pill"><ChevronLeft width={14} style={{ transform: "rotate(180deg)" }} /></span>
+                        <span className="arrow-pill"><ChevronLeft width={14} height={14} style={{ transform: "rotate(180deg)" }} /></span>
                         <span className="to-avatar"><Avatar name={to.display_name} color={to.color} src={avatarFor(to, b.profiles)} size={32} /></span>
                         <div className="grow" style={{ minWidth: 0 }}>
                           <div className="clamp-2 small"><b style={{ fontWeight: 600 }}>{name(t.from)}</b> <span className="faint">{from.user_id === me.id ? "pay" : "pays"}</span> <b style={{ fontWeight: 600 }}>{name(t.to)}</b></div>
@@ -398,7 +394,7 @@ function ExpensesTab({ bundle, mine, name, onOpen, onAdd }: {
       <div className="card-body">
         <div className="row-flex wrap" style={{ marginBottom: 6 }}>
           <div style={{ position: "relative", flex: "1 1 200px" }}>
-            <Search width={15} style={{ position: "absolute", left: 11, top: 12, color: "var(--ink-3)" }} />
+            <Search width={15} height={15} style={{ position: "absolute", left: 11, top: 12, color: "var(--ink-3)" }} />
             <input className="input" style={{ paddingLeft: 34 }} placeholder="Search expenses" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search expenses" />
           </div>
           <select className="select" style={{ width: 170 }} value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Filter by category">
@@ -438,14 +434,14 @@ function ExpenseRow({ e, mine, name, cur, onClick }: { e: Expense; mine: Member 
       <div className="item-main">
         {e.is_payment ? (
           <>
-            <div className="item-title row-flex" style={{ gap: 6 }}>{name(payers[0]?.member_id)} <ArrowRight width={13} className="faint" /> {name(e.expense_splits[0]?.member_id)}</div>
+            <div className="item-title row-flex" style={{ gap: 6 }}>{name(payers[0]?.member_id)} <ArrowRight width={13} height={13} className="faint" /> {name(e.expense_splits[0]?.member_id)}</div>
             <div className="item-sub wrap2">Payment{e.notes ? ` · ${e.notes}` : ""}</div>
           </>
         ) : (
           <>
             <div className="item-title row-flex" style={{ gap: 6 }}>
               <span className="clamp-2">{e.description}</span>
-              {e.repeat_interval !== "none" && <Repeat width={12} className="gold" style={{ flex: "none" }} />}
+              {e.repeat_interval !== "none" && <Repeat width={12} height={12} className="gold" style={{ flex: "none" }} />}
               {e.receipt_path && <span className="badge" style={{ height: 18 }}>receipt</span>}
             </div>
             <div className="item-sub">
@@ -544,7 +540,7 @@ function InviteModal({ open, onClose, groupId, name, code }: { open: boolean; on
   return (
     <Modal open={open} onClose={onClose} title="Invite people">
       <div className="stack">
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted">
           Anyone with this link can join <b>{name}</b>. If you already added them by name, they can claim that spot and keep their expenses.
         </p>
         <div className="row-flex">
@@ -571,7 +567,7 @@ function InviteModal({ open, onClose, groupId, name, code }: { open: boolean; on
             <RefreshCw /> Reset link
           </button>
         </div>
-        <p className="hint" style={{ margin: 0 }}>Adding someone's email in group settings also works: they are connected automatically the first time they sign in with it.</p>
+        <p className="hint">Adding someone's email in group settings also works: they are connected automatically the first time they sign in with it.</p>
       </div>
     </Modal>
   );

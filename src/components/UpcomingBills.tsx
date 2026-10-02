@@ -50,7 +50,7 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
       </div>
       <div className="card-body">
         {!bills.length ? (
-          <p className="hint" style={{ margin: 0 }}>Nothing coming up. Add a bill before it's paid so everyone sees their share early.</p>
+          <p className="hint">Nothing coming up. Add a bill before it's paid so everyone sees their share early.</p>
         ) : (
           <>
             <div className="between small" style={{ marginBottom: 4 }}>
@@ -82,7 +82,7 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
                         <div className="v">{b.is_estimate ? "~" : ""}{money(b.amount_cents, cur)}</div>
                         {mine && <div className={`k ${myPaid ? "pos" : ""}`}>{myPaid ? "you paid ✓" : `you ${money(myShare, cur)}`}</div>}
                       </div>
-                      <ChevronDown width={16} className="faint" style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s", flex: "none" }} />
+                      <ChevronDown width={16} height={16} className="faint" style={{ transform: isOpen ? "rotate(180deg)" : undefined, transition: "transform .15s", flex: "none" }} />
                     </div>
                     {isOpen && (
                       <div className="upcoming-detail">
@@ -283,7 +283,7 @@ function MarkPaid({ bill, group, members, onClose }: { bill: UpcomingBill | null
           catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
         }}>{busy ? "Saving..." : `Paid ${money(bill.amount_cents, group.currency)}`}</button></>}>
       <div className="stack">
-        <p className="muted" style={{ margin: 0 }}><b>{bill.title}</b> becomes an expense with the same split{bill.is_estimate ? ". It was an estimate, so edit the amount first if the real bill was different." : "."}</p>
+        <p className="muted"><b>{bill.title}</b> becomes an expense with the same split{bill.is_estimate ? ". It was an estimate, so edit the amount first if the real bill was different." : "."}</p>
         {bill.upcoming_bill_shares.some((s) => s.paid_at && s.member_id !== payer) && (
           <div className="banner"><Check /> {bill.upcoming_bill_shares.filter((s) => s.paid_at && s.member_id !== payer).length} ticked share(s) will be recorded as paid to {members.find((m) => m.id === payer)?.display_name ?? "the payer"}.</div>
         )}
@@ -295,7 +295,7 @@ function MarkPaid({ bill, group, members, onClose }: { bill: UpcomingBill | null
           <div className="field"><label className="label" htmlFor="mp-date">Paid on</label>
             <input id="mp-date" type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} /></div>
         </div>
-        <p className="hint" style={{ margin: 0 }}>Paid on {longDate(date)}. Balances update for everyone right away.</p>
+        <p className="hint">Paid on {longDate(date)}. Balances update for everyone right away.</p>
         {error && <div className="banner neg">{error}</div>}
       </div>
     </Modal>

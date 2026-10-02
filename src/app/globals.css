@@ -864,3 +864,11 @@ svg.lucide { aspect-ratio: 1 / 1; }
 /* recharts bars: flat base on the axis, only the top corners rounded */
 .recharts-bar-rectangle path { stroke: none; }
 .mbars-empty { height: 100%; display: flex; align-items: center; justify-content: center; }
+
+/* Free expense tools share the existing responsive form and theme. */
+.item-inputs { display:grid; grid-template-columns:minmax(0,1fr) 110px 40px; align-items:end; gap:10px; }
+.item-assignees { border:0; padding:0; margin:0; min-width:0; }
+.item-assignees legend { padding:0; margin-bottom:8px; }
+.item-assignees .badge { cursor:pointer; gap:7px; white-space:normal; }
+.item-assignees input { accent-color:var(--gold); }
+@media(max-width:480px){ .item-inputs { grid-template-columns:minmax(0,1fr) 88px 32px; gap:6px; } }

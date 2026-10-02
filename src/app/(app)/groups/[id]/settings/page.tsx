@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Check, ChevronLeft, Copy, Pencil, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { useMe, useToast } from "@/components/providers";
 import { Avatar, Empty, Loading, Switch } from "@/components/ui";
+import { DefaultSplitSettings } from "@/components/DefaultSplitSettings";
 import { api, loadGroup, useLiveRefresh, type GroupBundle } from "@/lib/data";
 import { netBalances } from "@/lib/debts";
 import { GROUP_KINDS } from "@/lib/categories";
@@ -51,6 +52,7 @@ export default function GroupSettings() {
   if (!b) return <Loading />;
 
   const { group, members } = b;
+  const currencyLocked = b.expenses.length > 0 || b.upcoming.length > 0;
   const net = netBalances(members.map((m) => m.id), b.expenses.filter((e) => !e.deleted_at));
   const mine = members.find((m) => m.user_id === me.id);
   const link = `${window.location.origin}/join/${group.invite_code}`;
@@ -59,7 +61,7 @@ export default function GroupSettings() {
     e.preventDefault();
     setSavingInfo(true);
     try {
-      await api.updateGroup(group.id, { name, kind, currency });
+      await api.updateGroup(group.id, { name, kind, currency: currencyLocked ? group.currency : currency });
       toast.ok("Group updated");
     } catch (err) {
       toast.err(err);
@@ -143,12 +145,12 @@ export default function GroupSettings() {
               ))}
             </div>
           </div>
-          <div className="field" style={{ maxWidth: 220 }}>
+          <div className="field" style={{ maxWidth: 520 }}>
             <label className="label" htmlFor="s-cur">Currency</label>
-            <select id="s-cur" className="select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            <select id="s-cur" className="select" style={{ maxWidth: 220 }} value={currency} disabled={currencyLocked} aria-describedby="s-cur-hint" onChange={(e) => setCurrency(e.target.value)}>
               {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
             </select>
-            <span className="hint">Changing this relabels existing amounts. It does not convert them.</span>
+            <span id="s-cur-hint" className="hint">{currencyLocked ? "The base currency is locked because this group has bills or expenses. Convert foreign expenses into this currency when adding them." : "Choose the base currency before adding expenses. It locks once this group has a bill or expense."}</span>
           </div>
           <div className="between" style={{ paddingTop: 4 }}>
             <div>
@@ -160,6 +162,8 @@ export default function GroupSettings() {
           <div><button type="submit" className="btn btn-primary" disabled={savingInfo}>{savingInfo ? "Saving..." : "Save details"}</button></div>
         </div>
       </form>
+
+      <DefaultSplitSettings group={group} members={members} />
 
       <section className="card">
         <div className="card-head"><span className="card-title">Members</span></div>

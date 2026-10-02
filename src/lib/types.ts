@@ -2,6 +2,10 @@ export type GroupKind = "home" | "trip" | "couple" | "other";
 export type SplitType = "equal" | "exact" | "percent" | "shares";
 export type RepeatInterval = "none" | "weekly" | "biweekly" | "monthly" | "yearly";
 
+export type ExpenseItem = { description: string; amount_cents: number; member_ids: string[] };
+export type DefaultSplit = { type: "equal" | "percent" | "shares"; members: { member_id: string; weight: number }[] };
+export type FxMetadata = { source_currency: string | null; source_amount_cents: number | null; fx_rate: number | null; fx_date: string | null };
+
 export type Profile = {
   id: string;
   display_name: string;
@@ -16,6 +20,7 @@ export type Group = {
   kind: GroupKind;
   currency: string;
   simplify_debts: boolean;
+  default_split?: DefaultSplit | null;
   invite_code: string;
   created_by: string | null;
   created_at: string;
@@ -37,7 +42,10 @@ export type Member = {
 
 export type Share = { member_id: string; amount_cents: number; weight?: number | null };
 
-export type Expense = {
+export type Expense = Partial<FxMetadata> & {
+  items?: ExpenseItem[];
+  tax_cents?: number;
+  tip_cents?: number;
   id: string;
   group_id: string;
   description: string;
@@ -91,7 +99,10 @@ export type Invite = {
   placeholders: { id: string; display_name: string; color: string; looks_like_me?: boolean }[];
 };
 
-export type ExpenseInput = {
+export type ExpenseInput = Partial<FxMetadata> & {
+  items?: ExpenseItem[];
+  tax_cents?: number;
+  tip_cents?: number;
   description: string;
   amount_cents: number;
   category: string;

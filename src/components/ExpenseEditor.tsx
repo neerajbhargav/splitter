@@ -4,10 +4,14 @@ import { Paperclip, Trash2 } from "lucide-react";
 import { Avatar, Loading, Modal, Segmented } from "./ui";
 import { useMe, useToast } from "./providers";
 import { api, loadGroup, uploadReceipt } from "@/lib/data";
+import { CurrencyConversion } from "./CurrencyConversion";
+import { ReceiptScanner } from "./ReceiptScanner";
+import { ItemizationEditor, type ItemDraft } from "./ItemizationEditor";
+import { itemizedSplit } from "@/lib/itemization";
 import { CATEGORIES } from "@/lib/categories";
 import { centsToInput, money, todayISO } from "@/lib/format";
 import { parseMoney, parseMoneyOrZero, splitByWeights, splitEqual } from "@/lib/split";
-import type { Expense, ExpenseInput, Group, Member, RepeatInterval, SplitType } from "@/lib/types";
+import type { Expense, ExpenseInput, FxMetadata, Group, Member, RepeatInterval, SplitType } from "@/lib/types";
 
 type Props = {
   open: boolean;
@@ -103,10 +107,13 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
 }) {
   const me = useMe();
   const involved = (id: string) =>
-    !!expense && (expense.expense_payers.some((p) => p.member_id === id) || expense.expense_splits.some((s) => s.member_id === id));
+    !!expense && (expense.expense_payers.some((p) => p.member_id === id) || expense.expense_splits.some((s) => s.member_id === id) || expense.items?.some(it=>it.member_ids.includes(id)));
   const people = members.filter((m) => m.is_active || involved(m.id));
   const mine = members.find((m) => m.user_id === me.id);
   const cur = group.currency;
+  const def = !expense && group.default_split;
+  const validDefault = def && def.members.length > 0 && def.members.every(s => people.some(m => m.id === s.member_id && m.is_active)) ? def : null;
+  const defaultWeights = validDefault ? Object.fromEntries(validDefault.members.map(s => [s.member_id,String(s.weight)])) : {};
 
   const [description, setDescription] = useState(expense?.description ?? "");
   const [amount, setAmount] = useState(expense ? centsToInput(expense.amount_cents) : "");
@@ -118,21 +125,30 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
   const [payer, setPayer] = useState<string>(expense?.expense_payers[0]?.member_id ?? mine?.id ?? people[0]?.id ?? "");
   const [payerAmts, setPayerAmts] = useState<Record<string, string>>(() =>
     Object.fromEntries((expense?.expense_payers ?? []).map((p) => [p.member_id, centsToInput(p.amount_cents)])));
-  const [splitType, setSplitType] = useState<SplitType>(expense?.split_type ?? "equal");
+  const [splitType, setSplitType] = useState<SplitType>(expense?.split_type ?? validDefault?.type ?? "equal");
   const [included, setIncluded] = useState<Set<string>>(() =>
-    new Set(expense ? expense.expense_splits.map((s) => s.member_id) : people.filter((m) => m.is_active).map((m) => m.id)));
+    new Set(expense ? expense.expense_splits.map((s) => s.member_id) : (validDefault?.type === "equal" ? validDefault.members.map(s=>s.member_id) : people.filter((m) => m.is_active).map((m) => m.id))));
   const fromSplits = (t: SplitType, f: (s: Expense["expense_splits"][number]) => string) =>
     expense?.split_type === t ? Object.fromEntries(expense.expense_splits.map((s) => [s.member_id, f(s)])) : {};
   const [exact, setExact] = useState<Record<string, string>>(() => fromSplits("exact", (s) => centsToInput(s.amount_cents)));
-  const [pct, setPct] = useState<Record<string, string>>(() => fromSplits("percent", (s) => String(s.weight ?? "")));
-  const [shares, setShares] = useState<Record<string, string>>(() => fromSplits("shares", (s) => String(s.weight ?? "1")));
+  const [pct, setPct] = useState<Record<string, string>>(() => expense ? fromSplits("percent", (s) => String(s.weight ?? "")) : validDefault?.type === "percent" ? defaultWeights : {});
+  const [shares, setShares] = useState<Record<string, string>>(() => expense ? fromSplits("shares", (s) => String(s.weight ?? "1")) : validDefault?.type === "shares" ? defaultWeights : {});
   const [file, setFile] = useState<File | null>(null);
   const [dropReceipt, setDropReceipt] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const total = parseMoney(amount) ?? 0;
+  const [itemMode,setItemMode] = useState(!!expense?.items?.length);
+  const [items,setItems] = useState<ItemDraft[]>(()=>expense?.items?.map(it=>({description:it.description,amount:centsToInput(it.amount_cents),member_ids:it.member_ids})) ?? [{description:"",amount:"",member_ids:[]}]);
+  const [tax,setTax] = useState(centsToInput(expense?.tax_cents ?? 0));
+  const [tip,setTip] = useState(centsToInput(expense?.tip_cents ?? 0));
+  const [fx,setFx] = useState<FxMetadata|null>(expense?.source_currency ? {source_currency:expense.source_currency,source_amount_cents:expense.source_amount_cents??null,fx_rate:expense.fx_rate??null,fx_date:expense.fx_date??null} : null);
+  const parsedItems = items.map(it=>({description:it.description,amount_cents:parseMoney(it.amount)??-1,member_ids:it.member_ids}));
+  const taxCents = tax.trim() ? parseMoney(tax)??-1 : 0;
+  const tipCents = tip.trim() ? parseMoney(tip)??-1 : 0;
+  const itemResult = itemizedSplit(parsedItems,taxCents,tipCents,people.map(m=>m.id));
+  const total = itemMode ? itemResult.total : parseMoney(amount) ?? 0;
 
-  const split = useMemo(() => {
+  const regularSplit = useMemo(() => {
     const out = new Map<string, { amount: number; weight: number | null }>();
     let problem: string | null = null;
     let note = "";
@@ -170,6 +186,8 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
     return { out, problem, note };
   }, [splitType, people, included, exact, pct, shares, total, cur]);
 
+  const split = itemMode ? {...itemResult,note:"Item subtotals plus proportional tax and tip"} : regularSplit;
+
   const payers = useMemo(() => {
     if (payerMode === "single") {
       return { list: payer ? [{ member_id: payer, amount_cents: total }] : [], problem: payer ? null : "Choose who paid" };
@@ -188,7 +206,14 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
     e.preventDefault();
     setError(null);
     if (!description.trim()) return setError("Add a description");
-    if (total <= 0) return setError("Enter an amount greater than zero");
+    if (!Number.isSafeInteger(total) || total <= 0) return setError("Enter a valid amount greater than zero");
+    if (fx && (fx.source_amount_cents === null || fx.fx_rate === null || Math.abs(Math.round(fx.source_amount_cents*fx.fx_rate)-total)>1)) return setError("Amount changed. Reapply or remove the currency conversion.");
+    if (payerMode === "multi" && people.some(m=>payerAmts[m.id]?.trim() && (parseMoney(payerAmts[m.id]) === null || (parseMoney(payerAmts[m.id])??0)<0))) return setError("Enter valid nonnegative payer amounts");
+    if (!itemMode && splitType === "exact" && people.some(m=>exact[m.id]?.trim() && (parseMoney(exact[m.id]) === null || (parseMoney(exact[m.id])??0)<0))) return setError("Enter valid nonnegative exact amounts");
+    if (!itemMode && (splitType === "percent" || splitType === "shares")) {
+      const values = splitType === "percent" ? pct : shares;
+      if (people.some(m=>values[m.id]?.trim() && (!Number.isFinite(Number(values[m.id])) || Number(values[m.id])<0))) return setError("Enter valid nonnegative percentages or shares");
+    }
     if (payers.problem) return setError(payers.problem);
     if (split.problem) return setError(split.problem);
     setSaving(true);
@@ -202,7 +227,11 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
         category,
         expense_date: date,
         notes,
-        split_type: splitType,
+        split_type: itemMode ? "exact" : splitType,
+        items: itemMode ? parsedItems : [],
+        tax_cents: itemMode ? taxCents : 0,
+        tip_cents: itemMode ? tipCents : 0,
+        ...(fx ?? {source_currency:null,source_amount_cents:null,fx_rate:null,fx_date:null}),
         is_payment: false,
         repeat_interval: repeat,
         payers: payers.list,
@@ -246,8 +275,8 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
           <label className="label" htmlFor="exp-amt">Amount <span className="faint">{cur}</span></label>
           <div className="input-money">
             <span>{money(0, cur).replace(/[\d.,\s]/g, "") || "$"}</span>
-            <input id="exp-amt" className="input input-lg" inputMode="decimal" value={amount}
-              onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+            <input id="exp-amt" className="input input-lg" inputMode="decimal" value={itemMode ? centsToInput(total) : amount} disabled={itemMode}
+              onChange={(e) => {setAmount(e.target.value);}} placeholder="0.00" />
           </div>
         </div>
         <div className="field">
@@ -255,6 +284,10 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
           <input id="exp-date" type="date" className="input" style={{ height: 56 }} value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
       </div>
+
+      {!itemMode && <CurrencyConversion currency={cur} amountCents={total} date={date} initial={fx ?? undefined}
+        onApply={r=>{setAmount(centsToInput(r.amount_cents));setFx(r);}} onClear={()=>setFx(null)} />}
+      {itemMode && <p className="hint">Amount is calculated from items in {cur}. Currency conversion is available with non-itemized splits.</p>}
 
       <div className="field">
         <label className="label" htmlFor="exp-payer">Paid by</label>
@@ -292,21 +325,24 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
       <div className="field">
         <div className="between wrap">
           <span className="label">Split</span>
-          <Segmented<SplitType>
-            value={splitType}
-            onChange={setSplitType}
+          <Segmented<SplitType | "items">
+            value={itemMode ? "items" : splitType}
+            onChange={v=>{if(v==="items"){setItemMode(true);setFx(null);}else{if(itemMode)setAmount(centsToInput(total));setItemMode(false);setSplitType(v);}}}
             options={[
               { id: "equal", label: "Equally" },
               { id: "exact", label: "Exact" },
               { id: "percent", label: "Percent" },
               { id: "shares", label: "Shares" },
+              { id: "items", label: "By item" },
             ]}
           />
         </div>
+        {!expense && <p className="hint">{validDefault ? "Started from this group's saved default. You can change it for this expense." : def ? "The saved default includes unavailable people. Started with everyone equally; review this split." : "Tip: save a reusable split in group settings."}</p>}
+        {itemMode && <ItemizationEditor items={items} onChange={setItems} tax={tax} tip={tip} onTax={setTax} onTip={setTip} members={people} currency={cur} total={total} problem={itemResult.problem}/>}
         <div className="card" style={{ padding: "4px 14px", marginTop: 6 }}>
           {people.map((m) => {
             const share = split.out.get(m.id)?.amount ?? 0;
-            const on = splitType === "equal" ? included.has(m.id) : share > 0;
+            const on = !itemMode && splitType === "equal" ? included.has(m.id) : share > 0;
             return (
               <div key={m.id} className={`split-row ${on ? "" : "off"}`}>
                 <Avatar name={m.display_name} color={m.color} size={26} />
@@ -314,7 +350,7 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
                   {m.display_name}
                   {m.user_id === me.id && <span className="faint"> (you)</span>}
                 </span>
-                {splitType === "equal" ? (
+                {itemMode ? <span className="faint">Itemized</span> : splitType === "equal" ? (
                   <label className="check" style={{ justifySelf: "end" }}>
                     <input type="checkbox" checked={included.has(m.id)} onChange={() => toggle(m.id)} aria-label={`Include ${m.display_name}`} />
                   </label>
@@ -339,14 +375,14 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
           })}
           <div className="split-total" style={{ marginBottom: 10 }}>
             <span className={split.problem ? "neg" : "faint"}>{split.problem ?? split.note}</span>
-            {splitType === "equal" && (
+            {!itemMode && splitType === "equal" && (
               <span>
                 <button type="button" className="link-btn" onClick={() => setIncluded(new Set(people.map((m) => m.id)))}>All</button>
                 <span className="faint"> / </span>
                 <button type="button" className="link-btn" onClick={() => setIncluded(new Set())}>None</button>
               </span>
             )}
-            {splitType === "percent" && (
+            {!itemMode && splitType === "percent" && (
               <button type="button" className="link-btn" onClick={() => {
                 const n = people.length;
                 const base = Math.floor((100 / n) * 100) / 100;
@@ -355,7 +391,7 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
                 setPct(next);
               }}>Even it out</button>
             )}
-            {splitType === "shares" && (
+            {!itemMode && splitType === "shares" && (
               <button type="button" className="link-btn" onClick={() => setShares(Object.fromEntries(people.map((m) => [m.id, "1"])))}>1 share each</button>
             )}
           </div>
@@ -389,6 +425,9 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
           )}
         </div>
       </div>
+
+      <ReceiptScanner file={file} onApply={r=>{if(r.description!==undefined)setDescription(r.description);if(r.date!==undefined)setDate(r.date);if(r.amount_cents!==undefined && !itemMode){setAmount(centsToInput(r.amount_cents));setFx(null);}}} />
+      {itemMode && file && <p className="hint">Scanning can fill the merchant and date. Review line items manually; their total controls the amount.</p>}
 
       <div className="field">
         <label className="label" htmlFor="exp-notes">Notes</label>

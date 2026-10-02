@@ -13,7 +13,7 @@ import { SettleUpModal } from "@/components/SettleUp";
 import { ActivityList } from "@/components/ActivityList";
 import { UpcomingBills } from "@/components/UpcomingBills";
 import { BigMoney } from "@/components/kit";
-import { CHART_COLORS, Donut, MonthlyBars, NetBars } from "@/components/charts";
+import { CHART_COLORS, Donut, MonthlyBars, NetBars, PaidShareBars } from "@/components/charts";
 import { api, loadGroup, useLiveRefresh, type GroupBundle } from "@/lib/data";
 import { entryNetFor, netBalances, pairwiseDebts, paidAndShare, simplifyDebts, type Tx } from "@/lib/debts";
 import { CATEGORIES, category, groupKind } from "@/lib/categories";
@@ -174,12 +174,20 @@ export default function GroupPage() {
           <div className="chip-row">
             <button type="button" className="btn btn-primary" onClick={() => setSettle({ open: true, preset: null, payment: null })}><CircleDollarSign /> Settle up</button>
             <button type="button" className="btn hide-mobile" onClick={() => setEditor({ open: true, expense: null })}><Plus /> Add expense</button>
+            <button type="button" className="btn" onClick={() => setInviteOpen(true)}><Link2 /> Invite</button>
+          </div>
+          <div className="view-tabs" role="tablist" aria-label="Group views">
             {(["expenses", "balances", "insights", "activity"] as Tab[]).map((t) => (
-              <button key={t} type="button" className={`btn ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}>
+              <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""}
+                onClick={() => {
+                  setTab(t);
+                  const q = new URLSearchParams(window.location.search);
+                  if (t === "expenses") q.delete("tab"); else q.set("tab", t);
+                  window.history.replaceState(null, "", window.location.pathname + (q.toString() ? `?${q}` : ""));
+                }}>
                 {t === "insights" ? "Charts" : t === "expenses" ? "Expenses" : t[0].toUpperCase() + t.slice(1)}
               </button>
             ))}
-            <button type="button" className="btn" onClick={() => setInviteOpen(true)}><Link2 /> Invite</button>
           </div>
         </div>
       </section>
@@ -504,21 +512,11 @@ function Insights({ bundle }: { bundle: GroupBundle }) {
         </section>
         <section className="card">
           <div className="card-head"><div><div className="card-title">Paid vs share</div><div className="card-desc">What each person put in compared with what they used</div></div></div>
-          <div className="card-body stack-sm">
-            {people.map(({ m, paid, share }) => (
-              <div key={m.id}>
-                <div className="between small" style={{ marginBottom: 4 }}>
-                  <span className="row-flex" style={{ gap: 8 }}><Avatar name={m.display_name} color={m.color} src={avatarFor(m, bundle.profiles)} size={22} /> {m.user_id === me.id ? "You" : m.display_name}</span>
-                  <span className="faint num">paid {money(paid, cur)} · share {money(share, cur)}</span>
-                </div>
-                <div className="progress sm" style={{ marginBottom: 3 }}><span style={{ width: `${(paid / maxP) * 100}%` }} /></div>
-                <div className="progress sm"><span style={{ width: `${(share / maxP) * 100}%`, background: "var(--chart-2)" }} /></div>
-              </div>
-            ))}
-            <div className="row-flex small faint" style={{ gap: 16, marginTop: 4 }}>
-              <span className="row-flex" style={{ gap: 6 }}><i style={{ width: 10, height: 10, borderRadius: 3, background: "var(--chart-1)", display: "inline-block" }} /> Paid</span>
-              <span className="row-flex" style={{ gap: 6 }}><i style={{ width: 10, height: 10, borderRadius: 3, background: "var(--chart-2)", display: "inline-block" }} /> Share</span>
-            </div>
+          <div className="card-body">
+            <PaidShareBars currency={cur} rows={people.map(({ m, paid, share }) => ({
+              key: m.id, name: m.user_id === me.id ? "You" : m.display_name, paid, share,
+              avatar: <Avatar name={m.display_name} color={m.color} src={avatarFor(m, bundle.profiles)} size={24} />,
+            }))} />
           </div>
         </section>
       </div>

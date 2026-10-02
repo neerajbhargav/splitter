@@ -9,7 +9,7 @@ import {FINANCE_MAX_CENTS} from '@/lib/finance-types';
 import {centsToInput,longDate,money,todayISO} from '@/lib/format';
 import {parseMoney} from '@/lib/split';
 import {
- forecastSubscriptionCharges,forecastTotalCents,isValidCalendarDate,nextRenewalDate,
+ budgetForChargeDate,forecastSubscriptionCharges,forecastTotalCents,isValidCalendarDate,nextRenewalDate,
  subscriptionEquivalent,subscriptionEquivalentTotals,validateSubscription,
 } from '@/lib/subscription-planner';
 
@@ -219,7 +219,7 @@ function LogCharge({subscription,context,currentContext,bundle,onClose,onSaved}:
  const [error,setError]=useState<string|null>(null);
  const contextChanged=!sameFinanceContext(context,currentContext);
  useEffect(()=>{setAmount(subscription.amount_cents>0?centsToInput(subscription.amount_cents):'');setDate(todayISO());setCategory('');setError(null);},[subscription]);
- const budget=contextChanged?undefined:bundle.budgets.find(item=>item.month===date.slice(0,7));
+ const budget=contextChanged?undefined:budgetForChargeDate(bundle.budgets,date);
  const categories:BudgetCategory[]=budget?.categories??[];
  async function submit(event:FormEvent){
   event.preventDefault();

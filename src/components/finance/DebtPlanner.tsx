@@ -123,7 +123,7 @@ export function DebtPlanner({ bundle, currency, userId, onRefresh }: FinanceTool
     const minimum = parseMoney(draft.minimum);
     const aprBps = parseAprBps(draft.apr);
     if (!draft.name.trim()) return setFormError("Enter a debt name");
-    if (balance === null || balance < 0 || balance > FINANCE_MAX_CENTS) return setFormError("Enter a balance from 0 to 10,000,000,000.00");
+    if (balance === null || balance <= 0 || balance > FINANCE_MAX_CENTS) return setFormError("Enter a positive balance up to 10,000,000,000.00. Remove a debt once it is paid off.");
     if (minimum === null || minimum <= 0 || minimum > FINANCE_MAX_CENTS) return setFormError("Minimum payment must be greater than zero");
     if (aprBps === null) return setFormError("APR must be from 0% to 1000%, with up to two decimal places");
     setBusy(true);

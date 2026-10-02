@@ -1,4 +1,4 @@
-import type {Subscription,SubscriptionCycle,SubscriptionStatus} from './finance-types.ts';
+import type {BudgetMonth,Subscription,SubscriptionCycle,SubscriptionStatus} from './finance-types.ts';
 import {FINANCE_MAX_CENTS} from './finance-types.ts';
 
 type CalendarDate={year:number;month:number;day:number};
@@ -24,6 +24,18 @@ function formatDate(date:CalendarDate):string|null{
 
 /** Validates a calendar date without constructing a Date, so local/UTC offsets cannot change its day. */
 export function isValidCalendarDate(value:string):boolean{return parseDate(value)!==null;}
+function monthKey(value:string):string|null{
+ const match=/^(\d{4})-(\d{2})(?:-\d{2})?$/.exec(value);
+ if(!match)return null;
+ const year=Number(match[1]),month=Number(match[2]);
+ return year>=1&&year<=9999&&month>=1&&month<=12?`${match[1]}-${match[2]}`:null;
+}
+/** Finds the stored YYYY-MM-01 budget for a charge's YYYY-MM-DD calendar month. */
+export function budgetForChargeDate<T extends Pick<BudgetMonth,'month'>>(budgets:readonly T[],date:string):T|undefined{
+ if(!parseDate(date))return undefined;
+ const target=monthKey(date);
+ return target?budgets.find(budget=>monthKey(budget.month)===target):undefined;
+}
 export function compareCalendarDates(a:string,b:string):number{
  if(!isValidCalendarDate(a)||!isValidCalendarDate(b))throw new Error('Invalid calendar date');
  return a<b?-1:a>b?1:0;

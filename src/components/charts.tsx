@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 // shadcn/ui-style chart building blocks on Recharts.
-import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { money } from "@/lib/format";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { money, moneyShort } from "@/lib/format";
 
 export const CHART_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)"];
 
@@ -68,50 +68,93 @@ export function Donut({ data, currency, center, centerLabel, height = 180 }: {
   );
 }
 
-/** Monthly bars: total spend, with your share highlighted. */
-export function MonthlyBars({ data, currency, height = 200 }: {
+/** Monthly spending: one bar per month for the group total, your share filling it from
+ *  the bottom, amounts printed on the bars. Hover or tap a month to read it in the header
+ *  (no floating tooltip). The latest month is selected by default. */
+export function MonthlyBars({ data, currency, height = 210 }: {
   data: { label: string; total: number; mine: number }[]; currency: string; height?: number;
 }) {
+  const last = data.length - 1;
+  const [active, setActive] = useState<number | null>(null);
+  const i = active ?? last;
+  const cur = data[i];
+  const max = Math.max(1, ...data.map((d) => d.total));
+  const empty = data.every((d) => d.total === 0);
   return (
-    <div className="chart-wrap" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 4, left: 4, bottom: 0 }} barGap={4}>
-          <CartesianGrid vertical={false} stroke="var(--line)" />
-          <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fill: "var(--ink-3)", fontSize: 12 }} />
-          <YAxis hide />
-          <Tooltip wrapperStyle={{ zIndex: 20, outline: "none" }} cursor={{ fill: "var(--hover-fill)" }} content={({ active, payload, label }) => active && payload?.length ? (
-            <Tip title={String(label)} currency={currency} rows={[
-              { name: "Group total", value: Number(payload.find((p) => p.dataKey === "total")?.value ?? 0), color: "var(--bar-muted-2)" },
-              { name: "Your share", value: Number(payload.find((p) => p.dataKey === "mine")?.value ?? 0), color: "var(--chart-1)" },
-            ]} />
-          ) : null} />
-          <Bar dataKey="total" fill="var(--bar-muted)" radius={[6, 6, 2, 2]} maxBarSize={28} isAnimationActive={false} />
-          <Bar dataKey="mine" fill="var(--chart-1)" radius={[6, 6, 2, 2]} maxBarSize={28} isAnimationActive={false} />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="mbars">
+      <div className="mbars-read" aria-live="polite">
+        <span className="mbars-month">{cur?.label ?? ""}</span>
+        <span><i className="sw ghost" /> Group <b className="num">{money(cur?.total ?? 0, currency)}</b></span>
+        <span><i className="sw gold" /> Your share <b className="num">{money(cur?.mine ?? 0, currency)}</b></span>
+      </div>
+      <div className="mbars-plot" style={{ height }} onMouseLeave={() => setActive(null)} role="list">
+        {data.map((d, k) => {
+          const h = (d.total / max) * 100;
+          const m = d.total > 0 ? (Math.min(d.mine, d.total) / d.total) * 100 : 0;
+          return (
+            <button key={d.label + k} type="button" role="listitem" className={`mbar ${k === i ? "on" : ""}`}
+              onMouseEnter={() => setActive(k)} onFocus={() => setActive(k)} onClick={() => setActive(k)}
+              aria-label={`${d.label}: group ${money(d.total, currency)}, your share ${money(d.mine, currency)}`}>
+              <span className="mbar-col">
+                {d.total > 0 && <span className="mbar-val" style={{ bottom: `calc(${h}% + 6px)` }}>{moneyShort(d.total, currency)}</span>}
+                <span className="mbar-total" style={{ height: `${Math.max(h, d.total > 0 ? 2 : 0)}%` }}>
+                  <span className="mbar-mine" style={{ height: `${m}%` }} />
+                </span>
+              </span>
+              <span className="mbar-label">{d.label}</span>
+            </button>
+          );
+        })}
+        {empty && <div className="mbars-empty hint">No spending in these months yet.</div>}
+      </div>
     </div>
   );
 }
 
-/** Diverging horizontal bars: who gets money back (right, green) vs who owes (left, red). */
+/** Diverging bars: who gets money back (right, green) vs who owes (left, red), amounts at the end. */
 export function NetBars({ data, currency }: { data: { name: string; value: number }[]; currency: string }) {
-  const height = Math.max(120, data.length * 34 + 16);
   const max = Math.max(1, ...data.map((d) => Math.abs(d.value)));
+  const rows = [...data].sort((a, b) => b.value - a.value);
   return (
-    <div className="chart-wrap" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 12, left: 4, bottom: 4 }} barCategoryGap={8}>
-          <XAxis type="number" hide domain={[-max, max]} />
-          <YAxis type="category" dataKey="name" width={92} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-2)", fontSize: 12.5 }} />
-          <ReferenceLine x={0} stroke="var(--line-2)" />
-          <Tooltip wrapperStyle={{ zIndex: 20, outline: "none" }} cursor={{ fill: "var(--hover-fill)" }} content={({ active, payload }) => active && payload?.length ? (
-            <Tip title={String(payload[0].payload.name)} currency={currency} rows={[{ name: Number(payload[0].value) >= 0 ? "Gets back" : "Owes", value: Math.abs(Number(payload[0].value)), color: Number(payload[0].value) >= 0 ? "var(--pos)" : "var(--neg)" }]} />
-          ) : null} />
-          <Bar dataKey="value" radius={6} isAnimationActive={false}>
-            {data.map((d) => <Cell key={d.name} fill={d.value >= 0 ? "var(--pos)" : "var(--neg)"} />)}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="nbars">
+      {rows.map((d) => {
+        const w = (Math.abs(d.value) / max) * 50;
+        const pos = d.value >= 0;
+        return (
+          <div className="nbar" key={d.name}>
+            <span className="nbar-name" title={d.name}>{d.name}</span>
+            <span className="nbar-track">
+              <span className={`nbar-fill ${pos ? "pos" : "neg"}`} style={pos ? { left: "50%", width: `${w}%` } : { right: "50%", width: `${w}%` }} />
+            </span>
+            <span className={`nbar-val num ${pos ? "pos" : "neg"}`}>{pos ? "+" : "−"}{money(Math.abs(d.value), currency)}</span>
+          </div>
+        );
+      })}
+      <div className="nbar-axis"><span /><span className="hint">owes</span><span className="hint">gets back</span><span /></div>
+    </div>
+  );
+}
+
+/** Paid vs share per person: two labelled bars on a shared scale, with the difference on the right. */
+export function PaidShareBars({ rows, currency }: {
+  rows: { key: string; name: string; avatar: React.ReactNode; paid: number; share: number }[]; currency: string;
+}) {
+  const max = Math.max(1, ...rows.flatMap((r) => [r.paid, r.share]));
+  return (
+    <div className="psbars">
+      {rows.map((r) => {
+        const net = r.paid - r.share;
+        return (
+          <div className="psrow" key={r.key}>
+            <div className="psrow-head">
+              <span className="row-flex" style={{ gap: 8, minWidth: 0 }}>{r.avatar}<span className="clamp-2">{r.name}</span></span>
+              <span className={`small ${net > 0 ? "pos" : net < 0 ? "neg" : "faint"}`}>{net === 0 ? "even" : net > 0 ? `+${money(net, currency)}` : `−${money(-net, currency)}`}</span>
+            </div>
+            <div className="psbar"><span className="k">Paid</span><span className="t"><span className="f gold" style={{ width: `${(r.paid / max) * 100}%` }} /></span><span className="v num">{money(r.paid, currency)}</span></div>
+            <div className="psbar"><span className="k">Share</span><span className="t"><span className="f blue" style={{ width: `${(r.share / max) * 100}%` }} /></span><span className="v num">{money(r.share, currency)}</span></div>
+          </div>
+        );
+      })}
     </div>
   );
 }

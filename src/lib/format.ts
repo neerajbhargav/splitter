@@ -63,3 +63,10 @@ export function greeting(): string {
 }
 
 export const CURRENCIES = ["USD", "EUR", "GBP", "INR", "CAD", "AUD", "JPY", "SGD", "AED", "CHF", "MXN", "BRL"];
+
+/** Short money for chart labels: $45, $480, $1.2k, $12k. */
+export function moneyShort(cents: number, currency = "USD"): string {
+  const v = Math.abs(cents) / 100;
+  const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency, notation: v >= 1000 ? "compact" : "standard", maximumFractionDigits: v >= 1000 ? 1 : 0, minimumFractionDigits: 0 });
+  return (cents < 0 ? "-" : "") + fmt.format(v);
+}

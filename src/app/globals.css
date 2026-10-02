@@ -833,31 +833,15 @@ svg.lucide { aspect-ratio: 1 / 1; }
 .mbars-month { font-weight: 600; color: var(--ink); font-size: 13.5px; min-width: 32px; }
 .mbars-read .sw { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: 0; }
 .sw.ghost { background: var(--bar-muted-2); } .sw.gold { background: var(--gold); } .sw.blue { background: var(--chart-2); }
-.mbars-plot { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: clamp(6px, 2.4%, 18px); align-items: stretch;
-  border-bottom: 1px solid var(--line-2); padding-top: 22px; }
-.mbar { display: flex; flex-direction: column; align-items: stretch; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; min-width: 0; height: 100%; }
-.mbar-col { position: relative; flex: 1; display: flex; align-items: flex-end; justify-content: center; }
-.mbar-total { position: relative; width: min(100%, 56px); background: var(--bar-muted); border-radius: 8px 8px 3px 3px; overflow: hidden; display: flex; align-items: flex-end; transition: background .15s; }
-.mbar-mine { display: block; width: 100%; background: var(--gold); opacity: .8; border-radius: 0; transition: opacity .15s; }
-.mbar.on .mbar-total { background: var(--bar-muted-2); }
-.mbar.on .mbar-mine, .mbar:hover .mbar-mine { opacity: 1; }
-.mbar-val { position: absolute; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.mbar.on .mbar-val { color: var(--ink); }
-.mbar-label { position: relative; top: 8px; height: 0; text-align: center; font-size: 12px; color: var(--ink-3); }
-.mbar.on .mbar-label { color: var(--ink); font-weight: 600; }
-.mbars { padding-bottom: 22px; }
-.mbars-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.mbar:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 8px; }
-
 /* ---------- net (diverging) bars ---------- */
 .nbars { display: flex; flex-direction: column; gap: 6px; }
 .nbar { display: grid; grid-template-columns: minmax(56px, 92px) minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 4px 0; }
 .nbar-name { font-size: 13px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nbar-track { position: relative; height: 14px; }
+.nbar-track { position: relative; height: 12px; }
 .nbar-track::before { content: ""; position: absolute; left: 50%; top: -5px; bottom: -5px; width: 1px; background: var(--line-2); }
 .nbar-fill { position: absolute; top: 0; bottom: 0; min-width: 3px; }
-.nbar-fill.pos { background: var(--pos); border-radius: 0 7px 7px 0; }
-.nbar-fill.neg { background: var(--neg); border-radius: 7px 0 0 7px; }
+.nbar-fill.pos { background: var(--pos); border-radius: 0 3px 3px 0; }
+.nbar-fill.neg { background: var(--neg); border-radius: 3px 0 0 3px; }
 .nbar-val { font-size: 13px; font-weight: 600; min-width: 84px; text-align: right; }
 .nbar-axis { display: grid; grid-template-columns: minmax(56px, 92px) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; margin-top: 2px; }
 .nbar-axis .hint:nth-child(2) { text-align: right; padding-right: 8px; } .nbar-axis .hint:nth-child(3) { padding-left: 8px; }
@@ -872,7 +856,11 @@ svg.lucide { aspect-ratio: 1 / 1; }
 .psbar { display: grid; grid-template-columns: 40px minmax(0, 1fr) 84px; align-items: center; gap: 10px; font-size: 12px; }
 .psbar + .psbar { margin-top: 5px; }
 .psbar .k { color: var(--ink-3); }
-.psbar .t { height: 8px; border-radius: 4px; background: var(--surface-3); overflow: hidden; }
-.psbar .f { display: block; height: 100%; border-radius: 4px; min-width: 2px; }
+.psbar .t { height: 10px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.psbar .f { display: block; height: 100%; border-radius: 0 3px 3px 0; min-width: 2px; }
 .psbar .f.gold { background: var(--gold); } .psbar .f.blue { background: var(--chart-2); }
 .psbar .v { text-align: right; color: var(--ink-2); font-family: var(--sans); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+
+/* recharts bars: flat base on the axis, only the top corners rounded */
+.recharts-bar-rectangle path { stroke: none; }
+.mbars-empty { height: 100%; display: flex; align-items: center; justify-content: center; }

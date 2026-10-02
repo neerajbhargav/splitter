@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 // shadcn/ui-style chart building blocks on Recharts.
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { money, moneyShort } from "@/lib/format";
 
 export const CHART_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)"];
@@ -68,18 +68,17 @@ export function Donut({ data, currency, center, centerLabel, height = 180 }: {
   );
 }
 
-/** Monthly spending: one bar per month for the group total, your share filling it from
- *  the bottom, amounts printed on the bars. Hover or tap a month to read it in the header
- *  (no floating tooltip). The latest month is selected by default. */
-export function MonthlyBars({ data, currency, height = 210 }: {
+/** Monthly spending as a normal bar chart: bars sit flat on the axis and only the top
+ *  corners are rounded (the shadcn bar chart shape). Two bars per month, group total and
+ *  your share. Hover a month to read exact numbers above the chart. */
+export function MonthlyBars({ data, currency, height = 230 }: {
   data: { label: string; total: number; mine: number }[]; currency: string; height?: number;
 }) {
-  const last = data.length - 1;
+  const last = Math.max(0, data.length - 1);
   const [active, setActive] = useState<number | null>(null);
-  const i = active ?? last;
-  const cur = data[i];
-  const max = Math.max(1, ...data.map((d) => d.total));
-  const empty = data.every((d) => d.total === 0);
+  const cur = data[active ?? last];
+  const empty = !data.length || data.every((d) => d.total === 0);
+  const dim = (k: number) => (active === null || active === k ? 1 : 0.4);
   return (
     <div className="mbars">
       <div className="mbars-read" aria-live="polite">
@@ -87,25 +86,25 @@ export function MonthlyBars({ data, currency, height = 210 }: {
         <span><i className="sw ghost" /> Group <b className="num">{money(cur?.total ?? 0, currency)}</b></span>
         <span><i className="sw gold" /> Your share <b className="num">{money(cur?.mine ?? 0, currency)}</b></span>
       </div>
-      <div className="mbars-plot" style={{ height }} onMouseLeave={() => setActive(null)} role="list">
-        {data.map((d, k) => {
-          const h = (d.total / max) * 100;
-          const m = d.total > 0 ? (Math.min(d.mine, d.total) / d.total) * 100 : 0;
-          return (
-            <button key={d.label + k} type="button" role="listitem" className={`mbar ${k === i ? "on" : ""}`}
-              onMouseEnter={() => setActive(k)} onFocus={() => setActive(k)} onClick={() => setActive(k)}
-              aria-label={`${d.label}: group ${money(d.total, currency)}, your share ${money(d.mine, currency)}`}>
-              <span className="mbar-col">
-                {d.total > 0 && <span className="mbar-val" style={{ bottom: `calc(${h}% + 6px)` }}>{moneyShort(d.total, currency)}</span>}
-                <span className="mbar-total" style={{ height: `${Math.max(h, d.total > 0 ? 2 : 0)}%` }}>
-                  <span className="mbar-mine" style={{ height: `${m}%` }} />
-                </span>
-              </span>
-              <span className="mbar-label">{d.label}</span>
-            </button>
-          );
-        })}
-        {empty && <div className="mbars-empty hint">No spending in these months yet.</div>}
+      <div className="chart-wrap" style={{ height }}>
+        {empty ? <div className="mbars-empty hint">No spending in these months yet.</div> : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }} barGap={3} barCategoryGap="26%"
+              onMouseMove={(st) => { const n = Number(st?.activeTooltipIndex); if (Number.isInteger(n)) setActive(n); }}
+              onMouseLeave={() => setActive(null)}>
+              <CartesianGrid vertical={false} stroke="var(--line)" />
+              <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: "var(--line-2)" }} tick={{ fill: "var(--ink-3)", fontSize: 12 }} dy={4} />
+              <YAxis width={46} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-3)", fontSize: 11 }}
+                tickFormatter={(v) => moneyShort(Number(v), currency)} />
+              <Bar dataKey="total" fill="var(--bar-muted-2)" radius={[4, 4, 0, 0]} maxBarSize={32} isAnimationActive={false}>
+                {data.map((d, k) => <Cell key={d.label + "t"} fillOpacity={dim(k)} />)}
+              </Bar>
+              <Bar dataKey="mine" fill="var(--gold)" radius={[4, 4, 0, 0]} maxBarSize={32} isAnimationActive={false}>
+                {data.map((d, k) => <Cell key={d.label + "m"} fillOpacity={dim(k)} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

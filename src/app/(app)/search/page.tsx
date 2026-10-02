@@ -74,7 +74,7 @@ export default function SearchPage() {
       return {
         expense, groupName, payerNames,
         text: normalized([expense.description, expense.notes ?? "", groupName, involved,
-          expense.category, category(expense.category).label, expense.is_payment ? "payment settlement" : "expense"].join(" ")),
+          expense.category, category(expense.category).label, ...(expense.items ?? []).map(it=>it.description), expense.source_currency ?? "", expense.currency, expense.is_payment ? "payment settlement" : "expense"].join(" ")),
       };
     }).sort((a, b) => b.expense.expense_date.localeCompare(a.expense.expense_date) ||
       b.expense.created_at.localeCompare(a.expense.created_at) || a.expense.id.localeCompare(b.expense.id));

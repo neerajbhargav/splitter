@@ -196,10 +196,10 @@ export function ExpenseDetail({ expense, group, members, onClose, onEdit, allExp
             <span className="label">Itemized bill</span>
             {expense.items.map((it,i)=><div key={i} className="between wrap" style={{padding:"10px 0",borderBottom:"1px solid var(--line)"}}>
               <div style={{minWidth:0}}><b>{it.description}</b><div className="hint">{it.member_ids.map(id=>nm(member(id))).join(", ")}</div></div>
-              <span className="num">{money(it.amount_cents,cur)}</span>
+              <span className="num">{expense.source_currency && expense.source_items?.[i] && <span className="faint">{money(expense.source_items[i].amount_cents,expense.source_currency)} → </span>}{money(it.amount_cents,cur)}</span>
             </div>)}
-            <div className="between" style={{marginTop:12}}><span className="muted">Tax</span><span className="num">{money(expense.tax_cents ?? 0,cur)}</span></div>
-            <div className="between"><span className="muted">Tip</span><span className="num">{money(expense.tip_cents ?? 0,cur)}</span></div>
+            <div className="between" style={{marginTop:12}}><span className="muted">Tax</span><span className="num">{expense.source_currency && !!expense.source_items?.length && <span className="faint">{money(expense.source_tax_cents ?? 0,expense.source_currency)} → </span>}{money(expense.tax_cents ?? 0,cur)}</span></div>
+            <div className="between"><span className="muted">Tip</span><span className="num">{expense.source_currency && !!expense.source_items?.length && <span className="faint">{money(expense.source_tip_cents ?? 0,expense.source_currency)} → </span>}{money(expense.tip_cents ?? 0,cur)}</span></div>
             <p className="hint">Tax and tip are shared in proportion to each person's item subtotal. Odd cents are assigned deterministically.</p>
           </section>
         )}

@@ -7,9 +7,10 @@ import { convertCents, getReferenceRate, parseRate, validateRateDate, type Conve
 type Props = {
   currency: string; amountCents: number; date: string;
   initial?: { source_currency: string | null; source_amount_cents: number | null; fx_rate: number | null; fx_date: string | null };
+  fixedSource?: string; sourceAmountCents?: number;
   onApply: (result: ConversionResult) => void; onClear: () => void;
 };
-export function CurrencyConversion({ currency, amountCents, date, initial, onApply, onClear }: Props) {
+export function CurrencyConversion({ currency, amountCents, date, initial, fixedSource, sourceAmountCents, onApply, onClear }: Props) {
   const [source, setSource] = useState(initial?.source_currency ?? (currency === "EUR" ? "USD" : "EUR"));
   const [amount, setAmount] = useState(initial?.source_amount_cents ? centsToInput(initial.source_amount_cents) : "");
   const [manual, setManual] = useState(false);
@@ -31,7 +32,8 @@ export function CurrencyConversion({ currency, amountCents, date, initial, onApp
     request.current?.abort(); setBusy(false);
     if (!initial?.fx_rate) { setRate(""); setProvenance(""); setRateDate(date > todayISO() ? todayISO() : date); }
   }, [date, currency, initial?.fx_rate]);
-  const sourceCents = parseMoney(amount);
+  useEffect(()=>{if(fixedSource){request.current?.abort();setBusy(false);setSource(fixedSource);setRate(initial?.source_currency===fixedSource && initial.fx_rate ? String(initial.fx_rate) : "");setProvenance(initial?.source_currency===fixedSource && initial.fx_rate ? "Saved rate" : "");}},[fixedSource]);
+  const sourceCents = sourceAmountCents ?? parseMoney(amount);
   const numericRate = parseRate(rate);
   let preview: number | null = null;
   let previewError: string | null = null;
@@ -60,14 +62,14 @@ export function CurrencyConversion({ currency, amountCents, date, initial, onApp
   return <details className="card" style={{ padding: 14 }} open={initial?.source_currency ? true : undefined}>
     <summary className="label" style={{ cursor: "pointer" }}>Convert from another currency</summary>
     <div className="stack" style={{ marginTop: 12, gap: 12 }}>
-      <p className="hint">Your ledger stays in {currency}. Apply a conversion to fill the main amount; splits and payer amounts remain in {currency}.</p>
+      <p className="hint">Your ledger stays in {currency}. {sourceAmountCents === undefined ? "Apply a conversion to fill the main amount; splits and payer amounts remain in " + currency + "." : "Your original total comes from the line items, tax and tip below. Apply a rate to convert the whole bill; payer amounts and final shares are in " + currency + "."}</p>
       <div className="form-row">
         <div className="field"><label className="label" htmlFor="fx-source">Original currency</label>
-          <select id="fx-source" className="select" value={source} onChange={e => { invalidate(); setSource(e.target.value); }}>
+          <select id="fx-source" className="select" value={source} disabled={!!fixedSource} onChange={e => { invalidate(); setSource(e.target.value); }}>
             {Array.from(new Set([...CURRENCIES, source])).filter(c=>c!==currency).map(c => <option key={c} value={c}>{c}</option>)}
           </select></div>
         <div className="field"><label className="label" htmlFor="fx-amount">Original amount ({source})</label>
-          <input id="fx-amount" className="input" inputMode="decimal" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} /></div>
+          <input id="fx-amount" className="input" inputMode="decimal" placeholder="0.00" value={sourceAmountCents === undefined ? amount : centsToInput(sourceAmountCents)} readOnly={sourceAmountCents !== undefined} onChange={e => setAmount(e.target.value)} /></div>
       </div>
       <label className="check"><input type="checkbox" checked={manual} onChange={e => { invalidate(); setManual(e.target.checked); setRateDate(date > todayISO() ? todayISO() : date); }} /> Enter my own rate</label>
       {manual ? <div className="form-row">

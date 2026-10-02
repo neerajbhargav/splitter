@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { Worker } from "tesseract.js";
+import { readReceiptPdf, RECEIPT_DOCUMENT_MAX_BYTES } from "@/lib/receipt-document";
 import { ScanLine } from "lucide-react";
 import { centsToInput } from "@/lib/format";
 import { parseMoney } from "@/lib/split";
@@ -9,8 +10,9 @@ import { parseReceipt, type ReceiptSuggestions } from "@/lib/receipt";
 type Result = { description?: string; amount_cents?: number; date?: string };
 type Props = { file: File | null; onApply: (result: Result) => void };
 
-/** Images stay in this browser. OCR engine and English language assets download on demand. */
+/** Images and PDFs stay in this browser. OCR engine and English language assets download on demand. */
 export function ReceiptScanner({ file, onApply }: Props) {
+  const documentAbort = useRef<AbortController | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const runId = useRef(0);
   const busyRef = useRef(false);
@@ -27,6 +29,8 @@ export function ReceiptScanner({ file, onApply }: Props) {
 
   function stop() {
     runId.current++;
+    documentAbort.current?.abort();
+    documentAbort.current = null;
     busyRef.current = false;
     const worker = workerRef.current;
     workerRef.current = null;
@@ -49,82 +53,90 @@ export function ReceiptScanner({ file, onApply }: Props) {
   }, [file]);
 
   const image = !!file && /\.(?:png|jpe?g|webp|bmp)$/i.test(file.name);
-  const supported = image && (!file.type || /^(?:image\/(?:png|jpeg|webp|bmp|x-ms-bmp))$/i.test(file.type));
+  const pdf = !!file && (/\.pdf$/i.test(file.name) || file.type === "application/pdf");
+  const supported = pdf || (image && (!file.type || /^(?:image\/(?:png|jpeg|webp|bmp|x-ms-bmp))$/i.test(file.type)));
 
   async function scan() {
     if (!file || !supported || busyRef.current) return;
-    if (file.size > 15 * 1024 * 1024) {
-      setError("This image is too large to scan here. Use a receipt photo under 15 MB.");
+    if (file.size > RECEIPT_DOCUMENT_MAX_BYTES) {
+      setError("This file is too large to scan here. Use a receipt photo or PDF under 15 MB.");
       return;
     }
     busyRef.current = true;
     const id = ++runId.current;
-    const active = () => runId.current === id;
-    setBusy(true);
-    setError(null);
-    setSuggestions(null);
-    setApplied(false);
-    setProgress(0);
-    setStatus("Loading English OCR engine");
-    let worker: Worker | null = null;
+    const controller = new AbortController();
+    documentAbort.current = controller;
+    const active = () => runId.current === id && !controller.signal.aborted;
+    setBusy(true); setError(null); setSuggestions(null); setApplied(false);
+    setProgress(0); setStatus(pdf ? "Opening PDF locally" : "Loading English OCR engine");
+    const resources: { worker: Worker | null } = { worker: null };
     let abandoned = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      // Lazy import keeps the OCR engine out of the normal editor bundle.
+    let pdfPhase = "";
+    const timed = <T,>(promise: Promise<T>, ms: number, message: string): Promise<T> => new Promise((resolve,reject)=>{
+      let settled=false;
+      const clear=()=>{clearTimeout(timer);controller.signal.removeEventListener("abort",abort);};
+      const done=(value:T)=>{if(!settled){settled=true;clear();resolve(value);}};
+      const fail=(error:unknown)=>{if(!settled){settled=true;clear();reject(error);}};
+      const abort=()=>fail(new DOMException("Receipt scan canceled","AbortError"));
+      const timer=setTimeout(()=>fail(new Error(message)),ms);
+      controller.signal.addEventListener("abort",abort,{once:true});
+      promise.then(done,fail);
+      if(controller.signal.aborted)abort();
+    });
+    const getWorker = async (): Promise<Worker> => {
+      if (resources.worker) return resources.worker;
       const { createWorker } = await import("tesseract.js");
-      if (!active()) return;
+      if (!active()) throw new DOMException("Receipt scan canceled","AbortError");
       const initializing = createWorker("eng", 1, {
-        logger: (event) => {
+        logger: event => {
           if (!active()) return;
-          setStatus(event.status === "recognizing text" ? "Reading receipt" : "Loading OCR assets");
-          setProgress(Math.max(0, Math.min(100, Math.round(event.progress * 100))));
+          setStatus(event.status === "recognizing text" ? (pdfPhase || "Reading receipt") : "Loading OCR assets");
+          setProgress(Math.max(0,Math.min(100,Math.round(event.progress*100))));
         },
-        errorHandler: () => {
-          if (active()) setError("The OCR engine could not read this image. Cancel and retry with a clearer JPG or PNG.");
-        },
-      }).then((initialized) => {
-        // createWorker has no abort signal. Terminate it as soon as initialization
-        // finishes if this scan was canceled, unmounted or timed out meanwhile.
-        if (abandoned || !active()) void initialized.terminate().catch(() => {});
+        errorHandler: () => { if(active()) setError("The OCR engine could not read this document. Cancel and retry with a clearer PDF, JPG or PNG."); },
+      }).then(initialized => {
+        if(abandoned || !active()) void initialized.terminate().catch(()=>{});
         return initialized;
       });
-      worker = await Promise.race([
-        initializing,
-        new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error("The OCR engine could not finish loading. Check your connection and retry.")), 60_000);
-        }),
-      ]);
-      if (timer) clearTimeout(timer);
-      timer = undefined;
+      resources.worker = await timed(initializing,60_000,"The OCR engine could not finish loading. Check your connection and retry.");
+      if (!active()) throw new DOMException("Receipt scan canceled","AbortError");
+      workerRef.current = resources.worker;
+      return resources.worker;
+    };
+    const recognize = async (input: File | HTMLCanvasElement): Promise<string> => {
+      const engine=await getWorker();
+      const result=await timed(engine.recognize(input),120_000,"Scanning took too long. Retry with a smaller, clearer receipt.");
+      if (!active()) throw new DOMException("Receipt scan canceled","AbortError");
+      return result.data.text;
+    };
+    try {
+      let text: string;
+      let documentWarnings: string[]=[];
+      let complete=true;
+      if (pdf) {
+        const result=await readReceiptPdf(file,{
+          signal:controller.signal,
+          recognize,
+          onProgress:(phase,pct)=>{if(active()){pdfPhase=phase;setStatus(phase);setProgress(pct);}},
+        });
+        text=result.text;documentWarnings=result.warnings;complete=result.complete;
+      } else text=await recognize(file);
       if (!active()) return;
-      workerRef.current = worker;
-      // Release browser memory if an image/worker gets stuck.
-      const result = await Promise.race([
-        worker.recognize(file),
-        new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error("Scanning took too long. Retry with a smaller, clearer receipt photo.")), 120_000);
-        }),
-      ]);
-      if (!active()) return;
-      const parsed = parseReceipt(result.data.text);
-      setRaw(result.data.text);
-      setSuggestions(parsed);
-      setDescription(parsed.description ?? "");
-      setAmount(parsed.amount_cents !== undefined ? centsToInput(parsed.amount_cents) : "");
-      setDate(parsed.date ?? "");
-      setProgress(100);
-      setStatus("Ready to review");
-    } catch (err) {
-      if (active()) setError(err instanceof Error ? err.message : "Scanning failed. Retry with a clearer JPG or PNG.");
+      const parsed=parseReceipt(text);
+      parsed.warnings.push(...documentWarnings);
+      // Never suggest a final total from a PDF we could not inspect completely.
+      if(!complete) delete parsed.amount_cents;
+      setRaw(text);setSuggestions(parsed);setDescription(parsed.description??"");
+      setAmount(parsed.amount_cents!==undefined?centsToInput(parsed.amount_cents):"");
+      setDate(parsed.date??"");setProgress(100);setStatus("Ready to review");
+    } catch(err) {
+      if(active()) setError(err instanceof Error?err.message:"Scanning failed. Retry with a clearer PDF, JPG or PNG.");
     } finally {
-      abandoned = true;
-      if (timer) clearTimeout(timer);
-      if (workerRef.current === worker) workerRef.current = null;
-      if (worker) void worker.terminate().catch(() => {});
-      if (active()) {
-        busyRef.current = false;
-        setBusy(false);
-      }
+      abandoned=true;
+      if(documentAbort.current===controller)documentAbort.current=null;
+      if(workerRef.current===resources.worker)workerRef.current=null;
+      if(resources.worker)void resources.worker.terminate().catch(()=>{});
+      if(runId.current===id){busyRef.current=false;setBusy(false);}
     }
   }
 
@@ -150,7 +162,7 @@ export function ReceiptScanner({ file, onApply }: Props) {
   }
 
   if (!file) return null;
-  if (!supported) return <p className="hint">Scan supports JPG, PNG, WebP and BMP photos. PDFs, HEIC and other files can be attached, but not scanned. English text only for now.</p>;
+  if (!supported) return <p className="hint">Scan supports PDFs and JPG, PNG, WebP or BMP photos. HEIC and other files can be attached, but not scanned. OCR is English only.</p>;
 
   return (
     <div className="stack-sm" style={{ marginTop: 10 }}>
@@ -160,7 +172,7 @@ export function ReceiptScanner({ file, onApply }: Props) {
         </button>
         {busy && <button type="button" className="btn btn-ghost btn-sm" onClick={() => { stop(); setBusy(false); setStatus("Scan canceled"); }}>Cancel scan</button>}
       </div>
-      <p className="hint">English OCR runs on your device. Your receipt is not sent to an OCR service. Engine and language files download on first scan.</p>
+      <p className="hint">PDF text is read on your device; image pages use local English OCR. Your receipt is never sent to an OCR service. Engine/language files download on first OCR scan. PDFs are limited to the first 5 pages; longer PDFs require you to enter the final total yourself.</p>
       {busy && <div role="status" aria-live="polite">
         <span className="hint">{status} · {progress}%</span>
         <div className="progress sm" role="progressbar" aria-label="Receipt scanning progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>

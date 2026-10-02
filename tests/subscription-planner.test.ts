@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import type {Subscription} from '../src/lib/finance-types.ts';
 import {
- addCalendarDays,forecastSubscriptionCharges,forecastTotalCents,isValidCalendarDate,
+ addCalendarDays,budgetForChargeDate,forecastSubscriptionCharges,forecastTotalCents,isValidCalendarDate,
  nextRenewalDate,renewalDatesInWindow,subscriptionEquivalent,subscriptionEquivalentTotals,
  validateSubscription,
 } from '../src/lib/subscription-planner.ts';
@@ -12,6 +12,19 @@ function subscription(overrides:Partial<Subscription>={}):Subscription{return {
  anchor_date:'2025-01-01',status:'active',notes:'',created_at:'2025-01-01',updated_at:'2025-01-01',
  ...overrides,
 };}
+
+test('budget lookup normalizes stored month dates without changing category labels',()=>{
+ const january={month:'2020-01-01',categories:[{id:'rent',name:'Rent'},{id:'food',name:'Dining'}]};
+ const february={month:'2020-02-01',categories:[{id:'travel',name:'Travel'}]};
+ const budgets=[january,february];
+ const matched=budgetForChargeDate(budgets,'2020-01-31');
+ assert.equal(matched,january);
+ assert.deepEqual(matched?.categories.map(category=>category.name),['Rent','Dining']);
+ assert.equal(budgetForChargeDate(budgets,'2020-02-29'),february);
+ assert.equal(budgetForChargeDate(budgets,'2020-03-01'),undefined);
+ assert.equal(budgetForChargeDate([{month:'2020-13-01'}],'2020-01-15'),undefined);
+ assert.equal(budgetForChargeDate(budgets,'2020-02-30'),undefined);
+});
 
 test('monthly schedules preserve the original month-end day',()=>{
  assert.equal(nextRenewalDate('2025-01-31','monthly','2025-02-01'),'2025-02-28');

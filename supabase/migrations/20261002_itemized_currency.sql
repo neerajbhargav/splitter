@@ -17,11 +17,11 @@ begin
     union all select jsonb_array_length(source_items)+1,tax,null::jsonb
     union all select jsonb_array_length(source_items)+2,tip,null::jsonb
   ), raw as (
-    select *,target_total::numeric*amount/source_total exact from components
+    select *,div(target_total::numeric*amount,source_total) base,mod(target_total::numeric*amount,source_total) fraction from components
   ), ranked as (
-    select *,row_number() over(order by exact-floor(exact) desc,i) rank,target_total-sum(floor(exact)) over() remainder from raw
+    select *,row_number() over(order by fraction desc,i) rank,target_total-sum(base) over() remainder from raw
   ), allocated as (
-    select *,floor(exact)::bigint+case when rank<=remainder then 1 else 0 end converted from ranked
+    select *,base::bigint+case when rank<=remainder then 1 else 0 end converted from ranked
   ) select jsonb_build_object('items',jsonb_agg(jsonb_set(item,'{amount_cents}',to_jsonb(converted)) order by i) filter(where item is not null),
     'tax_cents',max(converted) filter(where i=jsonb_array_length(source_items)+1),
     'tip_cents',max(converted) filter(where i=jsonb_array_length(source_items)+2)) into result from allocated;

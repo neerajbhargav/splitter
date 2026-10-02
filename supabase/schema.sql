@@ -543,7 +543,7 @@ begin
   ), ranked as (
     select *, row_number() over(order by exact-floor(exact) desc, member_id) rank,
       (tax::numeric+tip)-sum(floor(exact)) over() remainder from raw
-  ) select jsonb_agg(jsonb_build_object('member_id',member_id,'amount_cents',base+floor(exact)::bigint+case when rank<=remainder then 1 else 0 end) order by member_id)
+  ) select jsonb_agg(jsonb_build_object('member_id',member_id,'amount_cents',base+base::bigint+case when rank<=remainder then 1 else 0 end) order by member_id)
     into result from ranked where base+floor(exact)+case when rank<=remainder then 1 else 0 end > 0;
   return coalesce(result,'[]'::jsonb);
 end $$;
@@ -590,9 +590,9 @@ begin
     union all select jsonb_array_length(source_items)+1,tax,null::jsonb
     union all select jsonb_array_length(source_items)+2,tip,null::jsonb
   ), raw as (
-    select *,target_total::numeric*amount/source_total exact from components
+    select *,div(target_total::numeric*amount,source_total) base,mod(target_total::numeric*amount,source_total) fraction from components
   ), ranked as (
-    select *,row_number() over(order by exact-floor(exact) desc,i) rank,target_total-sum(floor(exact)) over() remainder from raw
+    select *,row_number() over(order by fraction desc,i) rank,target_total-sum(base) over() remainder from raw
   ), allocated as (
     select *,floor(exact)::bigint+case when rank<=remainder then 1 else 0 end converted from ranked
   ) select jsonb_build_object('items',jsonb_agg(jsonb_set(item,'{amount_cents}',to_jsonb(converted)) order by i) filter(where item is not null),

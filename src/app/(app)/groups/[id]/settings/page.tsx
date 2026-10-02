@@ -125,7 +125,7 @@ export default function GroupSettings() {
 
   return (
     <main className="page page-narrow">
-      <Link href={`/groups/${group.id}`} className="back"><ChevronLeft width={14} /> {group.name}</Link>
+      <Link href={`/groups/${group.id}`} className="back"><ChevronLeft width={14} height={14} /> {group.name}</Link>
       <h1 className="page-title">Group settings</h1>
 
       <form onSubmit={saveInfo} className="card" style={{ marginTop: 24 }}>

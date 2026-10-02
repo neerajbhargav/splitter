@@ -45,7 +45,7 @@ export default function NewGroupPage() {
 
   return (
     <main className="page page-narrow">
-      <Link href="/groups" className="back"><ChevronLeft width={14} /> Groups</Link>
+      <Link href="/groups" className="back"><ChevronLeft width={14} height={14} /> Groups</Link>
       <h1 className="page-title">New group</h1>
       <p className="page-sub">You are added automatically. Add everyone else by name, and optionally their email or phone.</p>
 

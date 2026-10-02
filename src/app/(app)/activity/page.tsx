@@ -15,7 +15,7 @@ export default function ActivityPage() {
   useLiveRefresh("activity-page", [{ table: "activity" }], reload);
   if (!data) return <Loading />;
   return (
-    <main className="page page-narrow">
+    <main className="page">
       <div className="page-head">
         <div>
           <div className="eyebrow">Live across all groups</div>

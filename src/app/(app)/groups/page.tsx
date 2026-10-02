@@ -21,7 +21,7 @@ export default function GroupsPage() {
   const sum = useMemo(() => (data ? summarize(data, me.id) : null), [data, me.id]);
   if (!sum) return <Loading />;
   return (
-    <main className="page page-narrow">
+    <main className="page">
       <div className="page-head">
         <div>
           <div className="eyebrow">{sum.groups.length} {sum.groups.length === 1 ? "group" : "groups"}</div>

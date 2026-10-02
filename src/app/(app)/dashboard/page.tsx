@@ -103,7 +103,7 @@ export default function Dashboard() {
     <main className="page">
       <div className="eyebrow">{greeting()}{first ? `, ${first}` : ""}</div>
 
-      <section className="card" style={{ marginTop: 12 }}>
+      <section className="card">
         <div className="hero-bal">
           <div className="hb-label">{balance > 0 ? "You're owed overall" : balance < 0 ? "You owe overall" : "Total balance"}</div>
           <div className={`big ${balance > 0 ? "pos" : balance < 0 ? "neg" : ""}`}><BigMoney cents={balance} currency={cur} /></div>
@@ -119,10 +119,10 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <div className="dash-grid" style={{ marginTop: 16 }}>
+      <div className="dash-grid">
         <div className="dash-col">
           {view.upcoming.length > 0 && (
-            <Card title={<span className="row-flex" style={{ gap: 8 }}><CalendarClock width={16} className="gold" /> Upcoming bills</span>} description="Not in balances yet. Tick your share once you've paid it.">
+            <Card title={<span className="row-flex" style={{ gap: 8 }}><CalendarClock width={16} height={16} className="gold" /> Upcoming bills</span>} description="Not in balances yet. Tick your share once you've paid it.">
               <div className="list">
                 {view.upcoming.map(({ b, g, mine, paidCount, paidAmt }) => {
                   const overdue = b.due_date && b.due_date < new Date().toISOString().slice(0, 10);
@@ -185,7 +185,7 @@ export default function Dashboard() {
                       </div>
                       <div className="item-end">
                         <div className={`v ${p.amount > 0 ? "pos" : "neg"}`} style={{ fontWeight: 700 }}>
-                          {p.amount > 0 ? <ArrowDownLeft width={13} style={{ verticalAlign: -2 }} /> : <ArrowUpRight width={13} style={{ verticalAlign: -2 }} />} {money(Math.abs(p.amount), p.currency)}
+                          {p.amount > 0 ? <ArrowDownLeft width={13} height={13} style={{ verticalAlign: -2 }} /> : <ArrowUpRight width={13} height={13} style={{ verticalAlign: -2 }} />} {money(Math.abs(p.amount), p.currency)}
                         </div>
                         <div className="k">{p.amount > 0 ? "owes you" : "you owe"}</div>
                       </div>

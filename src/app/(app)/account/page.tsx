@@ -82,8 +82,8 @@ export default function AccountPage() {
       <section className="card">
         <div className="card-head"><span className="card-title">Use it like an app</span></div>
         <div className="card-body stack-sm muted">
-          <p style={{ margin: 0 }}><b className="gold" style={{ fontWeight: 500 }}>iPhone:</b> open SPLITTER in Safari, tap Share, then Add to Home Screen.</p>
-          <p style={{ margin: 0 }}><b className="gold" style={{ fontWeight: 500 }}>Android or desktop Chrome:</b> use the Install icon in the address bar.</p>
+          <p><b className="gold" style={{ fontWeight: 500 }}>iPhone:</b> open SPLITTER in Safari, tap Share, then Add to Home Screen.</p>
+          <p><b className="gold" style={{ fontWeight: 500 }}>Android or desktop Chrome:</b> use the Install icon in the address bar.</p>
         </div>
       </section>
 

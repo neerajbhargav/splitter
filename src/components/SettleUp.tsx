@@ -133,7 +133,7 @@ export function SettleUpModal({ open, onClose, group, members, debts, preset, pa
             <div className="pay-visual">
               <div className="pair">
                 <Avatar name={fa?.display_name ?? "?"} color={fa?.color} size={64} />
-                <ArrowRight width={22} />
+                <ArrowRight width={22} height={22} />
                 <Avatar name={ta?.display_name ?? "?"} color={ta?.color} size={64} />
               </div>
               <div className="sentence"><b>{who(fa)}</b> paid <b>{ta?.user_id === me.id ? "you" : ta?.display_name ?? "someone"}</b></div>
@@ -172,7 +172,7 @@ export function SettleUpModal({ open, onClose, group, members, debts, preset, pa
         </div>
         {owed && !payment && (
           <div className="hint row-flex">
-            {name(from)} <ArrowRight width={12} /> {name(to)}: {money(owed.amount, group.currency)} outstanding.
+            {name(from)} <ArrowRight width={12} height={12} /> {name(to)}: {money(owed.amount, group.currency)} outstanding.
             {parseMoney(amount) !== owed.amount && (
               <button type="button" className="link-btn" onClick={() => setAmount(centsToInput(owed.amount))}>Pay in full</button>
             )}
@@ -182,7 +182,7 @@ export function SettleUpModal({ open, onClose, group, members, debts, preset, pa
           <label className="label" htmlFor="pay-notes">Note</label>
           <input id="pay-notes" className="input" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Zelle, Venmo, cash..." maxLength={200} />
         </div>
-        <p className="hint" style={{ margin: 0 }}>This records a payment that already happened outside SPLITTER. No money moves.</p>
+        <p className="hint">This records a payment that already happened outside SPLITTER. No money moves.</p>
         {error && <div className="banner neg">{error}</div>}
       </form>
     </Modal>

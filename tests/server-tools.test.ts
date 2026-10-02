@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import { itemizedSplit } from "../src/lib/itemization.ts";
+import { convertItemizedBill } from "../src/lib/itemized-currency.ts";
 
 test("free expense tools persist securely and match client cents",async()=>{
  const db=new PGlite();
@@ -18,6 +19,7 @@ test("free expense tools persist securely and match client cents",async()=>{
  const schema=fs.readFileSync(new URL('../supabase/schema.sql',import.meta.url),'utf8');
  await db.exec(schema);await db.exec(schema);
  await db.exec(fs.readFileSync(new URL('../supabase/migrations/20261001_free_expense_tools.sql',import.meta.url),'utf8'));
+ await db.exec(fs.readFileSync(new URL('../supabase/migrations/20261002_itemized_currency.sql',import.meta.url),'utf8'));
  const u='11111111-1111-4111-8111-111111111111',outsider='22222222-2222-4222-8222-222222222222';
  await db.query(`insert into auth.users(id,email,raw_user_meta_data) values ($1,'test@example.invalid','{"name":"Test"}'),($2,'outside@example.invalid','{"name":"Outside"}')`,[u,outsider]);
  await db.query(`select set_config('request.jwt.claim.sub',$1,false)`,[u]);
@@ -46,6 +48,16 @@ test("free expense tools persist securely and match client cents",async()=>{
  assert.equal((await db.query<{source_currency:string}>(`select source_currency from expenses where id=$1`,[fxid])).rows[0].source_currency,'EUR');
  await assert.rejects(db.query(`select public.save_expense(null,$1,$2::jsonb)`,[gid,JSON.stringify({...foreign,fx_rate:2})]),/Invalid currency conversion/);
  await assert.rejects(db.query(`select public.update_group($1,null,null,'EUR',null)`,[gid]),/base currency/);
+ // Converted original lines are persisted and independently checked by PostgreSQL.
+ const converted=convertItemizedBill(items,300,600,1.1355);
+ const sqlConverted=(await db.query<{v:unknown}>(`select public.convert_itemized_bill($1,$2::jsonb,300,600,$3) v`,[gid,JSON.stringify(items),converted.total])).rows[0].v;
+ assert.deepEqual(sqlConverted,{items:converted.items,tax_cents:converted.tax_cents,tip_cents:converted.tip_cents});
+ const foreignItems={description:'Foreign itemized',amount_cents:converted.total,items:converted.items,tax_cents:converted.tax_cents,tip_cents:converted.tip_cents,source_items:items,source_tax_cents:300,source_tip_cents:600,source_currency:'EUR',source_amount_cents:3900,fx_rate:1.1355,fx_date:'2026-01-01',payers:[{member_id:ms[0],amount_cents:converted.total}],splits:[]};
+ const foreignItemsId=(await db.query<{id:string}>(`select public.save_expense(null,$1,$2::jsonb) id`,[gid,JSON.stringify(foreignItems)])).rows[0].id;
+ assert.deepEqual((await db.query<{source_items:unknown}>(`select source_items from expenses where id=$1`,[foreignItemsId])).rows[0].source_items,items);
+ const wrongLines=converted.items.map((it,i)=>({...it,amount_cents:it.amount_cents+(i===0?1:-1)}));
+ await assert.rejects(db.query(`select public.save_expense(null,$1,$2::jsonb)`,[gid,JSON.stringify({...foreignItems,items:wrongLines})]),/do not match/);
+ await assert.rejects(db.query(`select public.save_expense(null,$1,$2::jsonb)`,[gid,JSON.stringify({...foreignItems,source_tip_cents:1})]),/source and converted total/);
  // A zero-cent assignee is still part of the historical item, even with no split row.
  const zero='ffffffff-ffff-4fff-8fff-ffffffffffff';
  await db.query(`insert into group_members(id,group_id,display_name) values($1,$2,'Zero share')`,[zero,gid]);

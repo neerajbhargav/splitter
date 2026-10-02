@@ -572,6 +572,36 @@ end $$;
 revoke all on function public.save_default_split(uuid,jsonb) from public, anon;
 grant execute on function public.save_default_split(uuid,jsonb) to authenticated;
 
+
+-- Original receipt lines for foreign-currency itemized bills.
+alter table public.expenses add column if not exists source_items jsonb not null default '[]'::jsonb;
+alter table public.expenses add column if not exists source_tax_cents bigint not null default 0 check(source_tax_cents>=0);
+alter table public.expenses add column if not exists source_tip_cents bigint not null default 0 check(source_tip_cents>=0);
+
+create or replace function public.convert_itemized_bill(gid uuid, source_items jsonb, tax bigint, tip bigint, target_total bigint)
+returns jsonb language plpgsql set search_path=public as $$
+declare source_total numeric; result jsonb;
+begin
+  perform public.itemized_splits(gid,source_items,tax,tip); -- names, members, integers, positive lines
+  select sum((value->>'amount_cents')::bigint)+tax+tip into source_total from jsonb_array_elements(source_items);
+  if source_total>9007199254740991 or target_total<=0 or target_total>9007199254740991 then raise exception 'Bill total is too large or invalid'; end if;
+  with components as (
+    select ordinality i,(value->>'amount_cents')::bigint amount,value item from jsonb_array_elements(source_items) with ordinality
+    union all select jsonb_array_length(source_items)+1,tax,null::jsonb
+    union all select jsonb_array_length(source_items)+2,tip,null::jsonb
+  ), raw as (
+    select *,target_total::numeric*amount/source_total exact from components
+  ), ranked as (
+    select *,row_number() over(order by exact-floor(exact) desc,i) rank,target_total-sum(floor(exact)) over() remainder from raw
+  ), allocated as (
+    select *,floor(exact)::bigint+case when rank<=remainder then 1 else 0 end converted from ranked
+  ) select jsonb_build_object('items',jsonb_agg(jsonb_set(item,'{amount_cents}',to_jsonb(converted)) order by i) filter(where item is not null),
+    'tax_cents',max(converted) filter(where i=jsonb_array_length(source_items)+1),
+    'tip_cents',max(converted) filter(where i=jsonb_array_length(source_items)+2)) into result from allocated;
+  return result;
+end $$;
+revoke all on function public.convert_itemized_bill(uuid,jsonb,bigint,bigint,bigint) from public,anon,authenticated;
+
 -- ---------- expenses ----------------------------------------------------
 
 -- p = { description, amount_cents, category, expense_date, notes, split_type, is_payment,
@@ -601,6 +631,10 @@ declare
   src_amt bigint := (p->>'source_amount_cents')::bigint;
   rate numeric := (p->>'fx_rate')::numeric;
   rate_date date := (p->>'fx_date')::date;
+  src_items jsonb := coalesce(p->'source_items','[]'::jsonb);
+  src_tax bigint := coalesce((p->>'source_tax_cents')::bigint,0);
+  src_tip bigint := coalesce((p->>'source_tip_cents')::bigint,0);
+  converted jsonb;
 begin
   if not public.is_group_member(p_group) then raise exception 'You are not in this group'; end if;
   select * into g from public.groups where id = p_group for share;
@@ -617,6 +651,13 @@ begin
       or rate is null or rate<=0 or rate::text in ('NaN','Infinity','-Infinity') or rate_date is null or rate_date>current_date
       or abs(round(src_amt*rate)-total)>1 then raise exception 'Invalid currency conversion; apply a valid source amount and rate'; end if;
   elsif src_amt is not null or rate is not null or rate_date is not null then raise exception 'Currency conversion needs a source currency'; end if;
+  if jsonb_typeof(src_items) is distinct from 'array' or src_tax<0 or src_tip<0 then raise exception 'Invalid original itemization'; end if;
+  if jsonb_array_length(src_items)>0 then
+    if src is null or jsonb_array_length(item_data)=0 then raise exception 'Original items require a converted itemized bill'; end if;
+    if src_amt <> (select sum((x->>'amount_cents')::bigint) from jsonb_array_elements(src_items) x)+src_tax+src_tip or round(src_amt*rate)<>total then raise exception 'Original items must match the source and converted total'; end if;
+    converted := public.convert_itemized_bill(p_group,src_items,src_tax,src_tip,total);
+    if converted->'items'<>item_data or (converted->>'tax_cents')::bigint<>tax or (converted->>'tip_cents')::bigint<>tip then raise exception 'Converted line amounts do not match the saved exchange rate'; end if;
+  elsif src_tax<>0 or src_tip<>0 then raise exception 'Original tax and tip require original items'; end if;
   if descr = '' then raise exception 'Add a description'; end if;
   if jsonb_typeof(p->'payers') <> 'array' or jsonb_typeof(p->'splits') <> 'array' then
     raise exception 'Payers and splits are required';
@@ -681,7 +722,8 @@ begin
   end if;
 
   update public.expenses set items=item_data, tax_cents=tax, tip_cents=tip,
-    source_currency=src, source_amount_cents=src_amt, fx_rate=rate, fx_date=rate_date where id=eid;
+    source_currency=src, source_amount_cents=src_amt, fx_rate=rate, fx_date=rate_date,
+    source_items=src_items,source_tax_cents=src_tax,source_tip_cents=src_tip where id=eid;
 
   insert into public.expense_payers (expense_id, member_id, amount_cents)
   select eid, (x->>'member_id')::uuid, (x->>'amount_cents')::bigint
@@ -755,9 +797,9 @@ begin
     guard := 0;
     while nxt <= current_date and guard < 60 loop
       insert into public.expenses (group_id, description, amount_cents, currency, category, expense_date,
-        notes, split_type, is_payment, repeat_interval, created_by, items, tax_cents, tip_cents, source_currency, source_amount_cents, fx_rate, fx_date)
+        notes, split_type, is_payment, repeat_interval, created_by, items, tax_cents, tip_cents, source_currency, source_amount_cents, fx_rate, fx_date, source_items, source_tax_cents, source_tip_cents)
       values (r.group_id, r.description, r.amount_cents, r.currency, r.category, nxt,
-        r.notes, r.split_type, false, 'none', r.created_by, r.items, r.tax_cents, r.tip_cents, r.source_currency, r.source_amount_cents, r.fx_rate, r.fx_date)
+        r.notes, r.split_type, false, 'none', r.created_by, r.items, r.tax_cents, r.tip_cents, r.source_currency, r.source_amount_cents, r.fx_rate, r.fx_date, r.source_items, r.source_tax_cents, r.source_tip_cents)
       returning id into newid;
       insert into public.expense_payers (expense_id, member_id, amount_cents)
         select newid, member_id, amount_cents from public.expense_payers where expense_id = r.id;

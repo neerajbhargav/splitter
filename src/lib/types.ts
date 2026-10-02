@@ -44,6 +44,9 @@ export type Share = { member_id: string; amount_cents: number; weight?: number |
 
 export type Expense = Partial<FxMetadata> & {
   items?: ExpenseItem[];
+  source_items?: ExpenseItem[];
+  source_tax_cents?: number;
+  source_tip_cents?: number;
   tax_cents?: number;
   tip_cents?: number;
   id: string;
@@ -101,6 +104,9 @@ export type Invite = {
 
 export type ExpenseInput = Partial<FxMetadata> & {
   items?: ExpenseItem[];
+  source_items?: ExpenseItem[];
+  source_tax_cents?: number;
+  source_tip_cents?: number;
   tax_cents?: number;
   tip_cents?: number;
   description: string;

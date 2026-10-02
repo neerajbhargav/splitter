@@ -5,17 +5,35 @@ export function money(cents: number, currency = "USD", opts: { sign?: boolean } 
   let f = fmtCache.get(key);
   if (!f) {
     try {
-      f = new Intl.NumberFormat("en-US", { style: "currency", currency, signDisplay: opts.sign ? "exceptZero" : "auto" });
+      f = new Intl.NumberFormat("en-US", {
+        style: "currency", currency, signDisplay: opts.sign ? "exceptZero" : "auto",
+        // The ledger stores hundredths for every currency, including JPY.
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      });
     } catch {
-      f = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+      f = new Intl.NumberFormat("en-US", {
+        style: "currency", currency: "USD", signDisplay: opts.sign ? "exceptZero" : "auto",
+        minimumFractionDigits: 2, maximumFractionDigits: 2,
+      });
     }
     fmtCache.set(key, f);
+  }
+  if (Number.isSafeInteger(cents) && !Object.is(cents, -0)) {
+    // Modern Intl formats decimal strings exactly. TypeScript's Intl signature
+    // still only lists number/bigint; this assertion does not coerce the string.
+    return f.format(centsToInput(cents) as unknown as number);
   }
   return f.format(cents / 100);
 }
 
-/** "12.50" style string for inputs. */
+/** "12.50" style string for inputs, without floating-point cent loss. */
 export function centsToInput(cents: number): string {
+  if (Number.isSafeInteger(cents)) {
+    const value = BigInt(cents);
+    const magnitude = value < 0n ? -value : value;
+    return `${value < 0n ? "-" : ""}${magnitude / 100n}.${String(magnitude % 100n).padStart(2, "0")}`;
+  }
+  // Preserve existing behavior for non-ledger values such as nonintegers/NaN.
   return (cents / 100).toFixed(2);
 }
 

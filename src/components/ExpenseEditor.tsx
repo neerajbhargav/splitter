@@ -7,9 +7,10 @@ import { api, loadGroup, uploadReceipt } from "@/lib/data";
 import { CurrencyConversion } from "./CurrencyConversion";
 import { ReceiptScanner } from "./ReceiptScanner";
 import { ItemizationEditor, type ItemDraft } from "./ItemizationEditor";
+import { convertItemizedBill } from "@/lib/itemized-currency";
 import { itemizedSplit } from "@/lib/itemization";
 import { CATEGORIES } from "@/lib/categories";
-import { centsToInput, money, todayISO } from "@/lib/format";
+import { CURRENCIES, centsToInput, money, todayISO } from "@/lib/format";
 import { parseMoney, parseMoneyOrZero, splitByWeights, splitEqual } from "@/lib/split";
 import type { Expense, ExpenseInput, FxMetadata, Group, Member, RepeatInterval, SplitType } from "@/lib/types";
 
@@ -138,14 +139,26 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
   const [error, setError] = useState<string | null>(null);
 
   const [itemMode,setItemMode] = useState(!!expense?.items?.length);
-  const [items,setItems] = useState<ItemDraft[]>(()=>expense?.items?.map(it=>({description:it.description,amount:centsToInput(it.amount_cents),member_ids:it.member_ids})) ?? [{description:"",amount:"",member_ids:[]}]);
-  const [tax,setTax] = useState(centsToInput(expense?.tax_cents ?? 0));
-  const [tip,setTip] = useState(centsToInput(expense?.tip_cents ?? 0));
+  const [items,setItems] = useState<ItemDraft[]>(()=>(expense?.source_items?.length ? expense.source_items : expense?.items)?.map(it=>({description:it.description,amount:centsToInput(it.amount_cents),member_ids:it.member_ids})) ?? [{description:"",amount:"",member_ids:[]}]);
+  const [itemCurrency,setItemCurrency] = useState(expense?.source_items?.length ? expense.source_currency ?? cur : cur);
+  const [tax,setTax] = useState(centsToInput(expense?.source_items?.length ? expense.source_tax_cents ?? 0 : expense?.tax_cents ?? 0));
+  const [tip,setTip] = useState(centsToInput(expense?.source_items?.length ? expense.source_tip_cents ?? 0 : expense?.tip_cents ?? 0));
   const [fx,setFx] = useState<FxMetadata|null>(expense?.source_currency ? {source_currency:expense.source_currency,source_amount_cents:expense.source_amount_cents??null,fx_rate:expense.fx_rate??null,fx_date:expense.fx_date??null} : null);
   const parsedItems = items.map(it=>({description:it.description,amount_cents:parseMoney(it.amount)??-1,member_ids:it.member_ids}));
   const taxCents = tax.trim() ? parseMoney(tax)??-1 : 0;
   const tipCents = tip.trim() ? parseMoney(tip)??-1 : 0;
-  const itemResult = itemizedSplit(parsedItems,taxCents,tipCents,people.map(m=>m.id));
+  const rawItemResult = itemizedSplit(parsedItems,taxCents,tipCents,people.map(m=>m.id));
+  let convertedBill:ReturnType<typeof convertItemizedBill>|null=null;
+  let conversionProblem:string|null=null;
+  const foreignItems=itemMode && itemCurrency!==cur;
+  if(foreignItems && !rawItemResult.problem){
+    if(!fx?.fx_rate || fx.source_currency!==itemCurrency) conversionProblem="Apply an exchange rate for the item currency before saving";
+    else {try{convertedBill=convertItemizedBill(parsedItems,taxCents,tipCents,fx.fx_rate);}catch(e){conversionProblem=e instanceof Error?e.message:String(e);}}
+  }
+  const baseItems=convertedBill?.items ?? parsedItems;
+  const baseTax=convertedBill?.tax_cents ?? taxCents, baseTip=convertedBill?.tip_cents ?? tipCents;
+  const itemResult=foreignItems ? conversionProblem || rawItemResult.problem ? {out:new Map<string,{amount:number;weight:null}>(),total:0,problem:conversionProblem ?? rawItemResult.problem} : itemizedSplit(baseItems,baseTax,baseTip,people.map(m=>m.id)) : rawItemResult;
+  const activeFx=foreignItems && fx ? {...fx,source_amount_cents:rawItemResult.total} : fx;
   const total = itemMode ? itemResult.total : parseMoney(amount) ?? 0;
 
   const regularSplit = useMemo(() => {
@@ -206,8 +219,9 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
     e.preventDefault();
     setError(null);
     if (!description.trim()) return setError("Add a description");
+    if (itemMode && itemResult.problem) return setError(itemResult.problem);
     if (!Number.isSafeInteger(total) || total <= 0) return setError("Enter a valid amount greater than zero");
-    if (fx && (fx.source_amount_cents === null || fx.fx_rate === null || Math.abs(Math.round(fx.source_amount_cents*fx.fx_rate)-total)>1)) return setError("Amount changed. Reapply or remove the currency conversion.");
+    if (activeFx && (activeFx.source_amount_cents === null || activeFx.fx_rate === null || Math.abs(Math.round(activeFx.source_amount_cents*activeFx.fx_rate)-total)>1)) return setError("Amount changed. Reapply or remove the currency conversion.");
     if (payerMode === "multi" && people.some(m=>payerAmts[m.id]?.trim() && (parseMoney(payerAmts[m.id]) === null || (parseMoney(payerAmts[m.id])??0)<0))) return setError("Enter valid nonnegative payer amounts");
     if (!itemMode && splitType === "exact" && people.some(m=>exact[m.id]?.trim() && (parseMoney(exact[m.id]) === null || (parseMoney(exact[m.id])??0)<0))) return setError("Enter valid nonnegative exact amounts");
     if (!itemMode && (splitType === "percent" || splitType === "shares")) {
@@ -228,10 +242,13 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
         expense_date: date,
         notes,
         split_type: itemMode ? "exact" : splitType,
-        items: itemMode ? parsedItems : [],
-        tax_cents: itemMode ? taxCents : 0,
-        tip_cents: itemMode ? tipCents : 0,
-        ...(fx ?? {source_currency:null,source_amount_cents:null,fx_rate:null,fx_date:null}),
+        items: itemMode ? baseItems : [],
+        tax_cents: itemMode ? baseTax : 0,
+        tip_cents: itemMode ? baseTip : 0,
+        source_items: foreignItems ? parsedItems : [],
+        source_tax_cents: foreignItems ? taxCents : 0,
+        source_tip_cents: foreignItems ? tipCents : 0,
+        ...(activeFx ?? {source_currency:null,source_amount_cents:null,fx_rate:null,fx_date:null}),
         is_payment: false,
         repeat_interval: repeat,
         payers: payers.list,
@@ -285,9 +302,10 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
         </div>
       </div>
 
-      {!itemMode && <CurrencyConversion currency={cur} amountCents={total} date={date} initial={fx ?? undefined}
-        onApply={r=>{setAmount(centsToInput(r.amount_cents));setFx(r);}} onClear={()=>setFx(null)} />}
-      {itemMode && <p className="hint">Amount is calculated from items in {cur}. Currency conversion is available with non-itemized splits.</p>}
+      {(!itemMode || foreignItems) && <CurrencyConversion key={itemMode ? "items:"+itemCurrency : "expense"} currency={cur} amountCents={total} date={date} initial={activeFx ?? undefined}
+        fixedSource={foreignItems ? itemCurrency : undefined} sourceAmountCents={foreignItems ? rawItemResult.total : undefined}
+        onApply={r=>{if(itemMode)convertItemizedBill(parsedItems,taxCents,tipCents,r.fx_rate);else setAmount(centsToInput(r.amount_cents));setFx(r);setError(null);}} onClear={()=>setFx(null)} />}
+      {itemMode && <p className="hint">The main amount, payer amounts and final shares are in {cur}. Original line amounts stay in {itemCurrency}; changing items recalculates using the saved rate.</p>}
 
       <div className="field">
         <label className="label" htmlFor="exp-payer">Paid by</label>
@@ -327,7 +345,7 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
           <span className="label">Split</span>
           <Segmented<SplitType | "items">
             value={itemMode ? "items" : splitType}
-            onChange={v=>{if(v==="items"){setItemMode(true);setFx(null);}else{if(itemMode)setAmount(centsToInput(total));setItemMode(false);setSplitType(v);}}}
+            onChange={v=>{if(v==="items"){if(!itemMode){setItemMode(true);if(itemCurrency===cur || fx?.source_currency!==itemCurrency)setFx(null);}}else{if(itemMode){setAmount(centsToInput(total));setFx(activeFx);}setItemMode(false);setSplitType(v);}}}
             options={[
               { id: "equal", label: "Equally" },
               { id: "exact", label: "Exact" },
@@ -338,7 +356,11 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
           />
         </div>
         {!expense && <p className="hint">{validDefault ? "Started from this group's saved default. You can change it for this expense." : def ? "The saved default includes unavailable people. Started with everyone equally; review this split." : "Tip: save a reusable split in group settings."}</p>}
-        {itemMode && <ItemizationEditor items={items} onChange={setItems} tax={tax} tip={tip} onTax={setTax} onTip={setTip} members={people} currency={cur} total={total} problem={itemResult.problem}/>}
+        {itemMode && <>
+          <div className="field"><label className="label" htmlFor="item-currency">Receipt / item currency</label><select id="item-currency" className="select" value={itemCurrency} onChange={e=>{setItemCurrency(e.target.value);setFx(null);}}>{Array.from(new Set([...CURRENCIES,cur,itemCurrency])).map(c=><option key={c} value={c}>{c}</option>)}</select><p className="hint">Choose the receipt currency before entering items. Foreign currencies need an applied rate above.</p></div>
+          <ItemizationEditor items={items} onChange={setItems} tax={tax} tip={tip} onTax={setTax} onTip={setTip} members={people} currency={itemCurrency} total={rawItemResult.total} problem={rawItemResult.problem}/>
+          {foreignItems && <div className="between"><span className={itemResult.problem ? "neg" : "muted"}>{itemResult.problem ?? "Converted group total"}</span><b className="num">{money(total,cur)}</b></div>}
+        </>}
         <div className="card" style={{ padding: "4px 14px", marginTop: 6 }}>
           {people.map((m) => {
             const share = split.out.get(m.id)?.amount ?? 0;

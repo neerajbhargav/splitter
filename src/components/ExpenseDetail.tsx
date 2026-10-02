@@ -184,6 +184,26 @@ export function ExpenseDetail({ expense, group, members, onClose, onEdit, allExp
           );
         })()}
 
+        {expense.source_currency && (
+          <section className="card" style={{padding:14}}>
+            <span className="label">Currency conversion</span>
+            <p className="num">{money(expense.source_amount_cents ?? 0, expense.source_currency)} → {money(expense.amount_cents, cur)}</p>
+            <p className="hint">1 {expense.source_currency} = {expense.fx_rate} {cur} · Rate dated {expense.fx_date}. Saved rate is fixed, not a live revaluation.</p>
+          </section>
+        )}
+        {!!expense.items?.length && (
+          <section className="card" style={{padding:14}}>
+            <span className="label">Itemized bill</span>
+            {expense.items.map((it,i)=><div key={i} className="between wrap" style={{padding:"10px 0",borderBottom:"1px solid var(--line)"}}>
+              <div style={{minWidth:0}}><b>{it.description}</b><div className="hint">{it.member_ids.map(id=>nm(member(id))).join(", ")}</div></div>
+              <span className="num">{money(it.amount_cents,cur)}</span>
+            </div>)}
+            <div className="between" style={{marginTop:12}}><span className="muted">Tax</span><span className="num">{money(expense.tax_cents ?? 0,cur)}</span></div>
+            <div className="between"><span className="muted">Tip</span><span className="num">{money(expense.tip_cents ?? 0,cur)}</span></div>
+            <p className="hint">Tax and tip are shared in proportion to each person's item subtotal. Odd cents are assigned deterministically.</p>
+          </section>
+        )}
+
         {expense.notes && (
           <div className="field">
             <span className="label">Notes</span>

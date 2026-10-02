@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { Activity, LayoutDashboard, LogOut, Plus, Settings, Users } from "lucide-react";
+import { Activity, LayoutDashboard, LogOut, Plus, Search, Settings, Users } from "lucide-react";
 import { MeProvider, useMe, useToast } from "./providers";
 import { Avatar, LogoMark } from "./ui";
 import { ThemeCycle } from "./ThemeToggle";
@@ -73,6 +73,7 @@ function Frame({ children }: { children: ReactNode }) {
   const name = me.profile?.display_name || me.email || "You";
   const nav = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/search", label: "Search", icon: Search },
     { href: "/activity", label: "Activity", icon: Activity },
     { href: "/account", label: "Account", icon: Settings },
   ];
@@ -126,7 +127,11 @@ function Frame({ children }: { children: ReactNode }) {
         <div className="main">
           <header className="topbar">
             <Link href="/dashboard" className="brand-link" style={{ gap: 8 }}><LogoMark size={22} /><span className="wordmark" style={{ fontSize: 19 }}>SPLIT<b>TER</b></span></Link>
-            <span className="row-flex" style={{ gap: 6 }}><ThemeCycle /><Link href="/account" aria-label="Account"><Avatar name={name} src={me.profile?.avatar_url} size={30} /></Link></span>
+            <span className="row-flex" style={{ gap: 6 }}>
+              <Link href="/search" className="btn btn-ghost btn-icon btn-sm" aria-label="Search all groups" title="Search all groups"
+                aria-current={active("/search") ? "page" : undefined} style={active("/search") ? { color: "var(--gold-text)" } : undefined}><Search /></Link>
+              <ThemeCycle /><Link href="/account" aria-label="Account"><Avatar name={name} src={me.profile?.avatar_url} size={30} /></Link>
+            </span>
           </header>
           {children}
         </div>

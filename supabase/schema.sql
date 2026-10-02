@@ -332,7 +332,11 @@ returns void language plpgsql security definer set search_path = public as $$
 declare g public.groups;
 begin
   if not public.is_group_member(gid) then raise exception 'You are not in this group'; end if;
-  select * into g from public.groups where id = gid;
+  select * into g from public.groups where id = gid for update;
+  if upper(coalesce(nullif(trim(p_currency),''),g.currency)) <> g.currency and
+    (exists(select 1 from public.expenses where group_id=gid) or exists(select 1 from public.upcoming_bills where group_id=gid)) then
+    raise exception 'A group with bills cannot change its base currency. Convert foreign expenses when adding them instead.';
+  end if;
   update public.groups set
     name = coalesce(nullif(trim(p_name), ''), name),
     kind = coalesce(nullif(p_kind, ''), kind),
@@ -406,7 +410,8 @@ begin
     perform public.log_activity(m.group_id, 'member_removed', actor || ' removed ' || m.display_name);
   end if;
   if exists (select 1 from public.expense_payers where member_id = mid)
-     or exists (select 1 from public.expense_splits where member_id = mid) then
+     or exists (select 1 from public.expense_splits where member_id = mid)
+     or exists (select 1 from public.expenses e cross join lateral jsonb_array_elements(e.items) it where e.group_id=m.group_id and (it->'member_ids') @> to_jsonb(array[mid::text])) then
     update public.group_members set is_active = false where id = mid;
   else
     delete from public.group_members where id = mid;
@@ -494,6 +499,79 @@ begin
   return g.id;
 end $$;
 
+
+-- Free expense tools. Existing ledger amounts remain in the group's base currency.
+alter table public.groups add column if not exists default_split jsonb;
+alter table public.expenses add column if not exists items jsonb not null default '[]'::jsonb;
+alter table public.expenses add column if not exists tax_cents bigint not null default 0 check (tax_cents >= 0);
+alter table public.expenses add column if not exists tip_cents bigint not null default 0 check (tip_cents >= 0);
+alter table public.expenses add column if not exists source_currency text;
+alter table public.expenses add column if not exists source_amount_cents bigint;
+alter table public.expenses add column if not exists fx_rate numeric;
+alter table public.expenses add column if not exists fx_date date;
+
+-- Recompute item splits on the server, never trusting the client's allocation.
+create or replace function public.itemized_splits(gid uuid, items jsonb, tax bigint, tip bigint)
+returns jsonb language plpgsql set search_path = public as $$
+declare it jsonb; bad int; result jsonb;
+begin
+  if tax is null or tip is null or tax < 0 or tip < 0 then raise exception 'Invalid tax or tip'; end if;
+  if jsonb_typeof(items) is distinct from 'array' then raise exception 'Items must be an array'; end if;
+  if jsonb_array_length(items) not between 1 and 100 then raise exception 'Add between 1 and 100 items'; end if;
+  for it in select value from jsonb_array_elements(items) loop
+    if char_length(trim(coalesce(it->>'description',''))) not between 1 and 100
+      or coalesce((it->>'amount_cents')::bigint,0) <= 0
+      or (it->>'amount_cents')::numeric <> (it->>'amount_cents')::bigint then raise exception 'Invalid item name or amount'; end if;
+    if jsonb_typeof(it->'member_ids') is distinct from 'array' then raise exception 'Assign each item'; end if;
+    if jsonb_array_length(it->'member_ids') = 0 or
+      (select count(distinct value) from jsonb_array_elements_text(it->'member_ids')) <> jsonb_array_length(it->'member_ids') then raise exception 'Invalid item assignments'; end if;
+    select count(*) into bad from jsonb_array_elements_text(it->'member_ids') m
+      where not exists(select 1 from public.group_members where id=public.try_uuid(m.value) and group_id=gid);
+    if bad > 0 then raise exception 'Item assignees must belong to this group'; end if;
+  end loop;
+  with parts as (
+    select it.value, m.value::uuid member_id,
+      row_number() over(partition by it.ordinality order by m.value) rn,
+      jsonb_array_length(it.value->'member_ids')::bigint n
+    from jsonb_array_elements(items) with ordinality it
+    cross join lateral jsonb_array_elements_text(it.value->'member_ids') m
+  ), bases as (
+    select member_id, sum((value->>'amount_cents')::bigint/n + case when rn <= (value->>'amount_cents')::bigint % n then 1 else 0 end)::bigint base
+    from parts group by member_id
+  ), raw as (
+    select *, (tax::numeric+tip)*base/sum(base) over() exact from bases
+  ), ranked as (
+    select *, row_number() over(order by exact-floor(exact) desc, member_id) rank,
+      (tax::numeric+tip)-sum(floor(exact)) over() remainder from raw
+  ) select jsonb_agg(jsonb_build_object('member_id',member_id,'amount_cents',base+floor(exact)::bigint+case when rank<=remainder then 1 else 0 end) order by member_id)
+    into result from ranked where base+floor(exact)+case when rank<=remainder then 1 else 0 end > 0;
+  return coalesce(result,'[]'::jsonb);
+end $$;
+revoke all on function public.itemized_splits(uuid,jsonb,bigint,bigint) from public, anon, authenticated;
+
+create or replace function public.save_default_split(gid uuid, p jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+declare n numeric; bad int;
+begin
+  if not public.is_group_member(gid) then raise exception 'You are not in this group'; end if;
+  if p is not null and p <> 'null'::jsonb then
+    if coalesce(p->>'type','') not in ('equal','percent','shares') or jsonb_typeof(p->'members') is distinct from 'array' then raise exception 'Invalid default split'; end if;
+    if jsonb_array_length(p->'members') = 0 or
+      (select count(distinct value->>'member_id') from jsonb_array_elements(p->'members')) <> jsonb_array_length(p->'members') then raise exception 'Pick unique people'; end if;
+    select count(*),sum((x->>'weight')::numeric) into bad,n from jsonb_array_elements(p->'members') x
+      where (x->>'weight') is null or (x->>'weight')::numeric < 0 or (x->>'weight')::numeric::text in ('NaN','Infinity','-Infinity')
+        or not exists(select 1 from public.group_members where id=public.try_uuid(x->>'member_id') and group_id=gid and is_active);
+    if bad > 0 then raise exception 'Defaults need active group members and nonnegative weights'; end if;
+    select sum((x->>'weight')::numeric) into n from jsonb_array_elements(p->'members') x;
+    if n <= 0 or (p->>'type'='percent' and abs(n-100) > 0.001) then raise exception 'Percentages must add to 100; shares need a positive weight'; end if;
+  else p := null;
+  end if;
+  update public.groups set default_split=p,updated_at=now() where id=gid;
+  perform public.log_activity(gid,'group_updated', public.actor_name(gid)||case when p is null then ' reset the default split' else ' saved the default split' end);
+end $$;
+revoke all on function public.save_default_split(uuid,jsonb) from public, anon;
+grant execute on function public.save_default_split(uuid,jsonb) to authenticated;
+
 -- ---------- expenses ----------------------------------------------------
 
 -- p = { description, amount_cents, category, expense_date, notes, split_type, is_payment,
@@ -516,10 +594,29 @@ declare
   who_paid text;
   who_got text;
   summary text;
+  item_data jsonb := coalesce(p->'items','[]'::jsonb);
+  tax bigint := coalesce((p->>'tax_cents')::bigint,0);
+  tip bigint := coalesce((p->>'tip_cents')::bigint,0);
+  src text := nullif(p->>'source_currency','');
+  src_amt bigint := (p->>'source_amount_cents')::bigint;
+  rate numeric := (p->>'fx_rate')::numeric;
+  rate_date date := (p->>'fx_date')::date;
 begin
   if not public.is_group_member(p_group) then raise exception 'You are not in this group'; end if;
-  select * into g from public.groups where id = p_group;
-  if total is null or total <= 0 then raise exception 'Amount must be greater than zero'; end if;
+  select * into g from public.groups where id = p_group for share;
+  if total is null or total <= 0 or total > 9007199254740991 then raise exception 'Amount must be positive and within the supported range'; end if;
+  if jsonb_typeof(item_data) is distinct from 'array' then raise exception 'Items must be an array'; end if;
+  if tax < 0 or tip < 0 then raise exception 'Tax and tip cannot be negative'; end if;
+  if jsonb_array_length(item_data)>0 then
+    if is_pay then raise exception 'Payments cannot be itemized'; end if;
+    if total <> (select sum((x->>'amount_cents')::bigint) from jsonb_array_elements(item_data) x)+tax+tip then raise exception 'Items, tax and tip must match the total'; end if;
+    p := jsonb_set(jsonb_set(p,'{splits}',public.itemized_splits(p_group,item_data,tax,tip)),'{split_type}','"exact"'::jsonb);
+  elsif tax<>0 or tip<>0 then raise exception 'Tax and tip require items'; end if;
+  if src is not null then
+    if is_pay or src !~ '^[A-Z]{3}$' or src=g.currency or src_amt is null or src_amt<=0 or src_amt>9007199254740991
+      or rate is null or rate<=0 or rate::text in ('NaN','Infinity','-Infinity') or rate_date is null or rate_date>current_date
+      or abs(round(src_amt*rate)-total)>1 then raise exception 'Invalid currency conversion; apply a valid source amount and rate'; end if;
+  elsif src_amt is not null or rate is not null or rate_date is not null then raise exception 'Currency conversion needs a source currency'; end if;
   if descr = '' then raise exception 'Add a description'; end if;
   if jsonb_typeof(p->'payers') <> 'array' or jsonb_typeof(p->'splits') <> 'array' then
     raise exception 'Payers and splits are required';
@@ -582,6 +679,9 @@ begin
     delete from public.expense_splits where expense_id = p_id;
     eid := p_id;
   end if;
+
+  update public.expenses set items=item_data, tax_cents=tax, tip_cents=tip,
+    source_currency=src, source_amount_cents=src_amt, fx_rate=rate, fx_date=rate_date where id=eid;
 
   insert into public.expense_payers (expense_id, member_id, amount_cents)
   select eid, (x->>'member_id')::uuid, (x->>'amount_cents')::bigint
@@ -655,9 +755,9 @@ begin
     guard := 0;
     while nxt <= current_date and guard < 60 loop
       insert into public.expenses (group_id, description, amount_cents, currency, category, expense_date,
-        notes, split_type, is_payment, repeat_interval, created_by)
+        notes, split_type, is_payment, repeat_interval, created_by, items, tax_cents, tip_cents, source_currency, source_amount_cents, fx_rate, fx_date)
       values (r.group_id, r.description, r.amount_cents, r.currency, r.category, nxt,
-        r.notes, r.split_type, false, 'none', r.created_by)
+        r.notes, r.split_type, false, 'none', r.created_by, r.items, r.tax_cents, r.tip_cents, r.source_currency, r.source_amount_cents, r.fx_rate, r.fx_date)
       returning id into newid;
       insert into public.expense_payers (expense_id, member_id, amount_cents)
         select newid, member_id, amount_cents from public.expense_payers where expense_id = r.id;
@@ -831,6 +931,7 @@ declare
   bad int;
 begin
   if not public.is_group_member(p_group) then raise exception 'You are not in this group'; end if;
+  perform 1 from public.groups where id=p_group for share;
   if total is null or total <= 0 then raise exception 'Amount must be greater than zero'; end if;
   if ttl = '' then raise exception 'Add a name for the bill'; end if;
   if jsonb_typeof(p->'shares') <> 'array' or jsonb_array_length(p->'shares') = 0 then raise exception 'Choose who splits this bill'; end if;
@@ -1120,6 +1221,7 @@ declare
   kept jsonb := '[]'::jsonb;
 begin
   if not public.is_group_member(p_group) then raise exception 'You are not in this group'; end if;
+  perform 1 from public.groups where id=p_group for share;
   if total is null or total <= 0 then raise exception 'Amount must be greater than zero'; end if;
   if ttl = '' then raise exception 'Add a name for the bill'; end if;
   if jsonb_typeof(p->'shares') <> 'array' or jsonb_array_length(p->'shares') = 0 then raise exception 'Choose who splits this bill'; end if;

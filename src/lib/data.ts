@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { supabaseBrowser } from "./supabase/client";
-import type { ActivityItem, Comment, Expense, ExpenseInput, Group, Invite, Member, Profile, UpcomingBill, UpcomingInput } from "./types";
+import type { ActivityItem, Comment, DefaultSplit, Expense, ExpenseInput, Group, Invite, Member, Profile, UpcomingBill, UpcomingInput } from "./types";
 
 const sb = () => supabaseBrowser();
 
@@ -126,6 +126,7 @@ export const api = {
     call<null>("update_group", {
       gid, p_name: patch.name ?? null, p_kind: patch.kind ?? null, p_currency: patch.currency ?? null, p_simplify: patch.simplify ?? null,
     }),
+  saveDefaultSplit: (gid: string, value: DefaultSplit | null) => call<null>("save_default_split", { gid, p: value }),
   deleteGroup: (gid: string) => call<null>("delete_group", { gid }),
   leaveGroup: (gid: string) => call<null>("leave_group", { gid }),
   regenerateInvite: (gid: string) => call<string>("regenerate_invite", { gid }),

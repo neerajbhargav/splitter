@@ -113,3 +113,13 @@ tests/                     node:test suite for the math
 - SPLITTER records who owes whom. It never moves money.
 - Changing a group's currency relabels amounts; it does not convert them.
 - People can only be removed, or leave, once their balance is zero.
+
+## Free expense tools
+
+- **Global search:** Search opens every expense/payment you can access through RLS. Filter by group, category, dates or entry type. Deleted entries are excluded.
+- **Saved group splits:** Group settings saves equal subsets, percentages or shares. New expenses start with that preset; old expenses never change. If a preset references inactive people, the editor falls back to equal splitting with a review warning.
+- **Currency conversion:** The expense editor can fetch an ECB reference rate for the expense date through Frankfurter, or accept a manual rate for unsupported currencies/exact bank charges. Apply explicitly. The original amount, fixed rate and rate date are retained. Weekends use the preceding published rate. Fees/spreads are not included. Balances and splits remain in the group's currency; a group with bills cannot relabel its base currency.
+- **Itemization:** Choose By item. Enter line totals in the group currency and assign people. Shared lines split equally; tax/tip are proportional to each person's subtotal with exact, deterministic cent allocation. The server independently recomputes the final shares. Currency conversion is available on non-itemized expenses.
+- **Receipt scanning:** Attach a JPG, PNG, WebP or BMP and choose Scan. English OCR runs locally using Tesseract.js; engine/language files download from CDN, but the image/text are not sent to an external OCR service. Review/edit suggestions before applying. PDFs/HEIC can be attached, not scanned. Ambiguous dates and conflicting totals are left blank. Receipt files are uploaded to private Supabase storage only when the expense is saved.
+
+For existing deployments, apply `supabase/migrations/20261001_free_expense_tools.sql` before deploying this version. Fresh deployments can use the complete idempotent schema. `npm test` includes isolated PostgreSQL/WASM permission and calculation regressions using synthetic data, not production records.

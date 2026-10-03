@@ -63,8 +63,13 @@ export default function SubscriptionsPage() {
   }, [subs, today]);
 
   const suggestions = useMemo(
-    () => detectRecurring(bundle.transactions, today, subs.map((s) => s.name)).filter((x) => !hidden.has(x.key)),
-    [bundle.transactions, today, subs, hidden],
+    () => {
+      // Savings and investing contributions repeat too, but they are your own money moving, not a bill.
+      const savingsIds = new Set(bundle.categories.filter((c) => c.kind === "savings").map((c) => c.id));
+      const bills = bundle.transactions.filter((t) => !(t.category_id && savingsIds.has(t.category_id)));
+      return detectRecurring(bills, today, subs.map((s) => s.name)).filter((x) => !hidden.has(x.key));
+    },
+    [bundle.transactions, bundle.categories, today, subs, hidden],
   );
   const subsCat = bundle.categories.find((c) => !c.archived && c.name.trim().toLowerCase() === "subscriptions");
 

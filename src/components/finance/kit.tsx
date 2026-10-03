@@ -36,7 +36,7 @@ export function relativeDay(date: string, today: string): string {
   if (d === 0) return "Today";
   if (d === 1) return "Tomorrow";
   if (d === -1) return "Yesterday";
-  if (d > 1 && d < 7) return `In ${d} days`;
+  if (d > 1 && d <= 31) return `In ${d} days`;
   if (d < -1 && d > -7) return `${-d} days ago`;
   return shortDay(date);
 }

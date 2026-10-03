@@ -142,6 +142,7 @@ export default function DebtPage() {
     if (mine?.is_finite && other?.is_finite) {
       const diff = other.estimated_interest_cents - mine.estimated_interest_cents;
       if (diff > 0n) return `Saves ${bigMoney(diff, currency)}`;
+      if (diff === 0n && mine.months === other.months) return "Same result";
     }
     return "Recommended";
   };

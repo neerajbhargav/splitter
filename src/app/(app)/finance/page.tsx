@@ -8,7 +8,7 @@ import { DailyBars } from "@/components/finance/charts";
 import { TransactionEditor } from "@/components/finance/TransactionEditor";
 import { CategoryTile, Hero, Pill, StatusChip, TxAmount, monthLong, relativeDay, shortDay } from "@/components/finance/kit";
 import { compareDebtPlans } from "@/lib/debt-planner";
-import { currentBudgetMonth, summarizeBudget } from "@/lib/budget-planner";
+import { PACE_MIN_DAYS, currentBudgetMonth, summarizeBudget } from "@/lib/budget-planner";
 import { dailySpending, evaluateHealth, healthScore, monthActivity, netWorth } from "@/lib/finance-insights";
 import { forecastSubscriptionCharges, forecastTotalCents } from "@/lib/subscription-planner";
 import { categoryLookup, debtsMissingTerms, isEmptyWorkspace, payoffDebts, sortTransactions } from "@/lib/finance-selectors";
@@ -193,7 +193,8 @@ function paceLine(summary: ReturnType<typeof summarizeBudget>, currency: string)
   if (!flex) return "";
   const pace = flex.pace;
   if (pace.status === "past" || pace.status === "future") return "";
-  if (pace.safePerDayCents !== null && pace.status !== "over") return `${money(pace.safePerDayCents, currency)}/day for wants`;
+  const elapsed = pace.daysInMonth - pace.daysLeft + 1;
+  if (pace.safePerDayCents !== null && (pace.status !== "over" || elapsed < PACE_MIN_DAYS)) return `${money(pace.safePerDayCents, currency)}/day for wants`;
   return `Wants on pace for ${money(pace.projectedCents, currency)}`;
 }
 

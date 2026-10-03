@@ -11,8 +11,7 @@ import { useFinance } from "@/components/finance/FinanceProvider";
 import { CategoryTile, Hero, MoneyInput, Pill, moneyTight, monthLong } from "@/components/finance/kit";
 import {
   addBudgetMonths, budgetInsights, copyLimits, currentBudgetMonth, monthFromInput, starterLimits, summarizeBudget,
-  type BudgetInsight, type BudgetRow, type FlexiblePace,
-} from "@/lib/budget-planner";
+  type BudgetInsight, type BudgetRow, type FlexiblePace, PACE_MIN_DAYS } from "@/lib/budget-planner";
 import { CATEGORY_KIND_LABEL, type BudgetLimit, type CategoryKind } from "@/lib/finance-types";
 import { payoffDebts } from "@/lib/finance-selectors";
 import { subscriptionEquivalentTotals } from "@/lib/subscription-planner";
@@ -249,7 +248,9 @@ export default function BudgetPage() {
 
 function paceNote(flex: FlexiblePace, currency: string): string {
   const p = flex.pace;
-  if (p.status === "over") return `Wants are running ahead: on pace for ${money(p.projectedCents, currency)} of ${money(flex.planned_cents, currency)}.`;
+  // A few days of data make straight-line projections look alarming, so only project after a week.
+  const elapsed = p.daysInMonth - p.daysLeft + 1;
+  if (p.status === "over" && elapsed >= PACE_MIN_DAYS) return `Wants are running ahead: on pace for ${money(p.projectedCents, currency)} of ${money(flex.planned_cents, currency)}.`;
   if ((p.safePerDayCents ?? 0) > 0) return `About ${money(p.safePerDayCents ?? 0, currency)} a day left for wants.`;
   return "Your wants plan is used up for this month.";
 }

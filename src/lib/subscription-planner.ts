@@ -172,7 +172,7 @@ export function validateSubscription(values:Pick<Subscription,'name'|'amount_cen
  if(!values.name.trim())return 'Add a subscription name';
  if(!Number.isSafeInteger(values.amount_cents)||values.amount_cents<0||values.amount_cents>FINANCE_MAX_CENTS)return 'Enter an amount from 0 to 10,000,000,000.00';
  if(!CYCLES.includes(values.cycle))return 'Choose a valid billing cycle';
- if(!isValidCalendarDate(values.anchor_date))return 'Choose a valid anchor date';
+ if(!isValidCalendarDate(values.anchor_date))return 'Choose a valid next billing date';
  if(!STATUSES.includes(values.status))return 'Choose a valid status';
  return null;
 }

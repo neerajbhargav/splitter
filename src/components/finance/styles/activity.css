@@ -1,0 +1,15 @@
+/* ================= Finance v2: Activity (WP-ACTIVITY) ================= */
+.fin-act-filters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; flex: 1 1 100%; }
+.fin-act-filters .select { width: 100%; min-width: 0; }
+@media (max-width: 560px) { .fin-act-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.fin-act-nudge { width: 100%; justify-content: space-between; cursor: pointer; font: inherit; text-align: left; min-height: 44px; }
+.fin-act-steps { font-size: 12px; color: var(--ink-3); }
+.fin-act-map { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+@media (max-width: 480px) { .fin-act-map { grid-template-columns: minmax(0, 1fr); } }
+.fin-act-counts { display: flex; flex-wrap: wrap; gap: 6px; }
+.fin-act-preview .item { padding: 9px 0; }
+.fin-act-preview .item-title { font-size: 13.5px; }
+.fin-act-err { color: var(--neg); }
+.fin-act-check { display: flex; align-items: center; gap: 10px; min-height: 36px; font-size: 14px; cursor: pointer; }
+.fin-act-check input { width: 18px; height: 18px; accent-color: var(--gold); flex: none; }
+.fin-act-input-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; }

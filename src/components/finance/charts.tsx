@@ -1,0 +1,80 @@
+"use client";
+import { useState } from "react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { CHART_COLORS } from "@/components/charts";
+import { money, moneyShort } from "@/lib/format";
+import { shortDay } from "./kit";
+
+/** Copilot-style daily spending: flat-bottom bars, the hovered/tapped day is read out above the chart. */
+export function DailyBars({ data, currency, height = 150 }: { data: { date: string; cents: number }[]; currency: string; height?: number }) {
+  const [active, setActive] = useState<number | null>(null);
+  const total = data.reduce((a, d) => a + d.cents, 0);
+  const days = data.filter((d) => d.cents > 0).length;
+  const peak = data.reduce<{ date: string; cents: number } | null>((m, d) => (!m || d.cents > m.cents ? d : m), null);
+  const cur = active !== null ? data[active] : null;
+  return (
+    <div>
+      <div className="mbars-read" aria-live="polite">
+        {cur ? (
+          <><span className="mbars-month">{shortDay(cur.date)}</span><span>Spent <b className="num">{money(cur.cents, currency)}</b></span></>
+        ) : (
+          <>
+            <span>Avg per day <b className="num">{money(Math.round(total / Math.max(1, data.length)), currency)}</b></span>
+            {peak && peak.cents > 0 && <span>Biggest day <b className="num">{money(peak.cents, currency)}</b> <span className="faint">{shortDay(peak.date)}</span></span>}
+            <span className="faint">{days} of {data.length} days with spending</span>
+          </>
+        )}
+      </div>
+      <div className="chart-wrap" style={{ height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap="18%"
+            onMouseMove={(st) => { const n = Number(st?.activeTooltipIndex); if (Number.isInteger(n)) setActive(n); }}
+            onMouseLeave={() => setActive(null)}>
+            <CartesianGrid vertical={false} stroke="var(--line)" />
+            <XAxis dataKey="date" tickLine={false} axisLine={{ stroke: "var(--line-2)" }} tick={{ fill: "var(--ink-3)", fontSize: 11 }}
+              interval="preserveStartEnd" minTickGap={28} tickFormatter={(d: string) => shortDay(d)} />
+            <YAxis width={44} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-3)", fontSize: 11 }} tickFormatter={(v) => moneyShort(Number(v), currency)} />
+            <Bar dataKey="cents" fill="var(--gold)" radius={[3, 3, 0, 0]} isAnimationActive={false}>
+              {data.map((d, k) => <Cell key={d.date} fillOpacity={active === null || active === k ? 1 : 0.4} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+/** Stacked remaining balance per debt, so you can see each one disappear in payoff order. */
+export function PayoffChart({ data, series, currency, height = 240 }: {
+  data: Record<string, number | string>[]; series: { key: string; name: string }[]; currency: string; height?: number;
+}) {
+  return (
+    <div>
+      <div className="row-flex wrap" style={{ gap: "6px 14px", marginBottom: 10 }}>
+        {series.map((s, i) => <span key={s.key} className="fin-legend-row"><i style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />{s.name}</span>)}
+      </div>
+      <div className="chart-wrap" style={{ height }} role="img" aria-label="Remaining balance of each debt over time">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="var(--line)" />
+            <XAxis dataKey="label" tickLine={false} axisLine={{ stroke: "var(--line-2)" }} tick={{ fill: "var(--ink-3)", fontSize: 11 }} interval="preserveStartEnd" minTickGap={30} />
+            <YAxis width={50} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-3)", fontSize: 11 }} tickFormatter={(v) => moneyShort(Number(v), currency)} />
+            <Tooltip cursor={{ stroke: "var(--line-2)" }} content={({ active, payload, label }) => active && payload?.length ? (
+              <div className="chart-tip">
+                <div className="t">{label}</div>
+                {payload.filter((p) => Number(p.value) > 0).map((p) => (
+                  <div className="r" key={String(p.dataKey)}><span><i className="sw" style={{ background: String(p.color) }} />{p.name}</span><b className="num">{money(Number(p.value), currency)}</b></div>
+                ))}
+                {payload.every((p) => Number(p.value) === 0) && <div className="r"><span>Debt-free</span></div>}
+              </div>
+            ) : null} />
+            {series.map((s, i) => (
+              <Area key={s.key} type="monotone" dataKey={s.key} name={s.name} stackId="debt" stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.22} strokeWidth={1.5} isAnimationActive={false} />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}

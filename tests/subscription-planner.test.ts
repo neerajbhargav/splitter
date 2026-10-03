@@ -9,7 +9,7 @@ import {
 
 function subscription(overrides:Partial<Subscription>={}):Subscription{return {
  id:'sub-1',user_id:'user-1',name:'Example',amount_cents:1000,cycle:'monthly',
- anchor_date:'2025-01-01',status:'active',notes:'',created_at:'2025-01-01',updated_at:'2025-01-01',
+ anchor_date:'2025-01-01',status:'active',notes:'',category_id:null,account_id:null,created_at:'2025-01-01',updated_at:'2025-01-01',
  ...overrides,
 };}
 
@@ -94,7 +94,7 @@ test('invalid calendar dates and unsafe amounts are rejected safely',()=>{
  for(const value of ['','2025-2-01','2025-02-29','2024-04-31','0000-01-01','10000-01-01'])assert.equal(isValidCalendarDate(value),false,value);
  assert.equal(nextRenewalDate('2025-02-29','monthly','2025-03-01'),null);
  assert.deepEqual(renewalDatesInWindow('2025-01-01','monthly','bad','2025-03-01'),[]);
- assert.match(validateSubscription(subscription({anchor_date:'2025-02-29'}))??'',/valid anchor date/);
+ assert.match(validateSubscription(subscription({anchor_date:'2025-02-29'}))??'',/valid next billing date/);
  assert.match(validateSubscription(subscription({amount_cents:-1}))??'',/Enter an amount/);
  assert.match(validateSubscription(subscription({amount_cents:1_000_000_000_001}))??'',/Enter an amount/);
 });

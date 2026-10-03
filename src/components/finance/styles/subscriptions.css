@@ -1,0 +1,5 @@
+/* ================= Finance v2: Subscriptions (WP-SUBS) ================= */
+.fin-sub-suggest .item-end { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.fin-sub-manage .item-title.neg { color: var(--neg); }
+.fin-sub-chips .chip { min-height: 36px; height: auto; }
+.fin-sub-suggest .btn-icon { min-width: 36px; min-height: 36px; }

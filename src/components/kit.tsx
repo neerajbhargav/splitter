@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { money } from "@/lib/format";
 
 export function Card({ title, description, action, children, className = "", style }: {
-  title?: ReactNode; description?: ReactNode; action?: ReactNode; children: ReactNode; className?: string; style?: React.CSSProperties;
+  title?: ReactNode; description?: ReactNode; action?: ReactNode; children?: ReactNode; className?: string; style?: React.CSSProperties;
 }) {
   return (
     <section className={`card ${className}`} style={style}>
@@ -16,7 +16,7 @@ export function Card({ title, description, action, children, className = "", sty
           {action}
         </div>
       )}
-      <div className="card-body">{children}</div>
+      {children != null && children !== false && <div className="card-body">{children}</div>}
     </section>
   );
 }

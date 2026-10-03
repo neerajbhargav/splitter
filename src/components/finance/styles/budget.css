@@ -1,0 +1,13 @@
+/* ================= Finance v2: Budget (WP-BUDGET) ================= */
+.fin-bud-month { display: flex; align-items: center; gap: 6px; }
+.fin-bud-mlabel { font-family: var(--serif); font-weight: 400; font-size: 24px; margin: 0 4px; min-width: 0; white-space: nowrap; }
+.fin-bud-month .btn-sm { margin-left: auto; min-height: 36px; }
+a.item.clickable { width: calc(100% + 24px); color: inherit; text-decoration: none; }
+.fin-bud-ready { position: sticky; top: calc(var(--card-y) * -1); z-index: 1; display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  padding: 10px 12px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line-2); }
+.fin-bud-ready b { font-family: var(--serif); font-weight: 400; font-size: 22px; }
+.fin-bud-prow { display: grid; grid-template-columns: auto minmax(0, 1fr) 132px; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.fin-bud-prow .fin-money .input { height: 38px; font-size: 14px; }
+.fin-bud-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 8px 0 4px; }
+@media (min-width: 760px) { .fin-compare.fin-bud-three { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .fin-compare.fin-bud-three { grid-template-columns: minmax(0, 1fr); } .fin-bud-prow { grid-template-columns: auto minmax(0, 1fr) 112px; } }

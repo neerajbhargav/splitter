@@ -124,16 +124,39 @@ tests/                     node:test suite for the math
 
 For existing deployments, apply `supabase/migrations/20261001_free_expense_tools.sql` then `supabase/migrations/20261002_itemized_currency.sql` before deploying this version. Fresh deployments can use the complete idempotent schema. `npm test` includes isolated PostgreSQL/WASM permission and calculation regressions using synthetic data, not production records.
 
-## Private personal finance tools
+## Personal finance (private)
 
-The authenticated `/finance` workspace is private to each account and independent of shared group balances:
+SPLITTER Finance v2 lives at `/finance` and absorbed the standalone Folio app. It is private to each account and independent of shared group balances.
 
-- **Debt payoff planner:** save balances, nominal APRs and fixed monthly minimums; compare avalanche/snowball with extra monthly payments, rolled-over minimums, estimated payoff months, interest and an amortization schedule. Monthly interest uses exact half-up BigInt-cent arithmetic. It models up to 600 months and does not promise payoff when the plan cannot finish. What-if settings are calculator drafts, not bank instructions.
-- **Budgeting assistant:** monthly take-home income, category limits, optional 50/30/20 starter, manual spending and savings contributions, category progress and local rule-based guidance. Subscription costs/debt minimums are reminders, not silently deducted a second time. Nothing is sent to an AI service.
-- **Subscription tracker:** weekly, monthly, quarterly and yearly recurrence, original-day-preserving renewal dates, actual scheduled 30-day forecast, monthly/yearly estimates, paused/canceled states and manual charge logging into Budget. Marking canceled does not cancel a merchant's service. Notifications are on-page only.
+- **Overview:** net worth, this month's budget pace, upcoming renewals and recent activity.
+- **Activity:** the full transaction ledger with search and filters. Import a bank CSV (columns and date order are detected, signs can be inverted), preview every row, then import. Rows already imported are skipped by a stable per-row id, so re-importing the same file adds nothing. Each import is a batch that can be undone in one step.
+- **Budget:** a plan per month with income and per-category limits, spending pace, and category progress. Categories are needs, wants or savings.
+- **Accounts:** checking, savings, cards, loans and investments, with holdings (symbol, shares, price) and a net worth total. Liabilities are stored as the amount owed.
+- **Debt payoff:** avalanche or snowball with extra monthly payments, payoff month, interest and a month-by-month schedule. Interest uses exact BigInt-cent arithmetic and the plan stops at 600 months rather than promising a payoff it cannot reach.
+- **Subscriptions:** weekly, monthly, quarterly and yearly items with renewal dates, a 30-day forecast and monthly/yearly equivalents. Recurring charges are detected from imported activity and offered as suggestions you accept or hide. Marking one canceled does not cancel the merchant.
+- **Health:** Folio's six rules, each shown as pass, warn, fail or unknown.
+- **Ask:** questions about your finances answered by an AI model with your own API key. The request goes from your browser straight to the provider, and the key stays on your device.
+- **Settings:** profile (income, currency), categories (rename, archive, delete with reassignment) and the sample-data toggle.
 
-All amounts use integer hundredths in one personal-finance currency. Choose it before entering records; it is locked afterward to prevent silent relabeling. Group currencies remain independent. No real financial data is prefilled, no bank/payment providers are connected, and forecasts never update balances or create expense entries automatically.
+**Sample data:** choose Explore with sample data to preview every page. Nothing is saved in this mode and every write is refused until you exit it.
 
-For an existing database, apply `supabase/migrations/20261003_personal_finance.sql`. Its five tables enforce owner-only read access; validated RPCs are the only authenticated write path. Every mutation locks/touches the owner's `finance_settings` row as a private realtime invalidation signal. Tests cover cross-account read/write isolation, hidden helper privileges, duplicate charge protection, valid categories, currency locking and exact money/date calculations.
+**Privacy model**
 
-Finance reads and drafts bind to a specific authenticated account; every RPC checks the expected owner and draft currency under the per-owner lock. Switching accounts or changing currency on another device cannot silently reuse an old money draft. Client regressions cover paginated account switches and both pre/post-request authentication races.
+- Integer cents everywhere, in one finance currency that is locked once chosen. Group currencies are unaffected.
+- Reads are owner-only through row level security, and the client also filters every query by `user_id` and paginates.
+- Writes go only through validated RPCs. Every draft is bound to the account and currency it was opened in, and each RPC re-checks both under a per-owner lock. Switching accounts or changing currency elsewhere cannot reuse an old draft.
+- Bank sync (Plaid) is optional. Access tokens are encrypted with AES-GCM on the server, stored in a table the browser cannot read, and never sent to the browser. The browser reads only a safe connection list (institution, status, last sync).
+
+**Setup**
+
+For an existing database, apply `supabase/migrations/20261004_finance_ledger.sql` after `20261003_personal_finance.sql`. It adds accounts, holdings, categories, a unified ledger and the Plaid tables, and moves existing v1 debts, budget transactions and subscription data into them. Fresh deployments can run `supabase/schema.sql`, which already includes it.
+
+Bank sync needs these server-only variables (never prefix them with `NEXT_PUBLIC_`). Leave them blank to hide bank linking.
+
+| Variable | Value |
+| --- | --- |
+| `PLAID_CLIENT_ID` | Plaid client id |
+| `PLAID_SECRET` | Plaid secret for the chosen environment |
+| `PLAID_ENV` | `sandbox` or `production` |
+| `PLAID_TOKEN_KEY` | 32 random bytes, base64. Generate with `openssl rand -base64 32` |
+| `PLAID_REDIRECT_URI` | Optional, for OAuth banks. Must be https (localhost is allowed in sandbox) |

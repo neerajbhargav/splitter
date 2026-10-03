@@ -9,3 +9,7 @@
 .fin-debt-line .num { text-align: right; }
 @media (max-width: 420px) { .fin-debt-line { grid-template-columns: minmax(0, 1fr) auto; } .fin-debt-line > span:nth-child(3) { grid-column: 2; } .fin-debt-line > span:nth-child(2) { grid-column: 2; } }
 .fin-debt-more { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; }
+
+/* keep strategy badges on one line at phone width */
+.fin-option .t { flex-wrap: wrap; }
+.fin-option .badge { white-space: nowrap; }

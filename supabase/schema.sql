@@ -1780,7 +1780,7 @@ begin
 
  if to_regclass('public.personal_debts') is not null then
   insert into public.finance_accounts(id,user_id,name,institution,type,balance_cents,apr_bps,minimum_cents,in_payoff,source,created_at,updated_at)
-  select d.id,d.user_id,d.name,'',case when d.name ~* '(loan|mortgage|auto|car|student|personal|lending)' then 'loan' else 'credit' end,
+  select d.id,d.user_id,d.name,'',case when d.name ~* '\m(loans?|mortgages?|auto|cars?|student|personal|lending)\M' then 'loan' else 'credit' end,
          d.balance_cents,d.apr_bps,d.minimum_cents,true,'manual',d.created_at,d.updated_at
   from public.personal_debts d on conflict(id) do nothing;
  end if;

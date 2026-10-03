@@ -35,7 +35,7 @@ test("v1 finance data migrates into the unified ledger without loss", async () =
   const db = await setup();
   try {
     await db.query(`insert into finance_settings(user_id,currency) values($1,'USD')`, [A]);
-    await db.query(`insert into personal_debts(id,user_id,name,balance_cents,apr_bps,minimum_cents) values($1,$2,'Student loan',1234567,499,15000)`, [OLD_DEBT, A]);
+    await db.query(`insert into personal_debts(id,user_id,name,balance_cents,apr_bps,minimum_cents) values($1,$2,'Student loan',1234567,499,15000),('99999999-9999-4999-8999-999999999999',$2,'CREDIT CARDS',560000,0,560000)`, [OLD_DEBT, A]);
     await db.query(`insert into personal_subscriptions(id,user_id,name,amount_cents,cycle,anchor_date) values($1,$2,'Music',1099,'monthly','2020-01-15')`, [OLD_SUB, A]);
     await db.query(`insert into budget_months(user_id,month,income_cents,categories) values
       ($1,'2020-01-01',300000,$2::jsonb),($1,'2020-02-01',310000,$3::jsonb),($1,'2020-03-01',320000,'[]'::jsonb)`, [A,
@@ -51,6 +51,7 @@ test("v1 finance data migrates into the unified ledger without loss", async () =
     }
     const account = (await db.query(`select type,balance_cents::text,apr_bps,minimum_cents::text,in_payoff from finance_accounts where id=$1`, [OLD_DEBT])).rows[0];
     assert.deepEqual(account, { type: "loan", balance_cents: "1234567", apr_bps: 499, minimum_cents: "15000", in_payoff: true });
+    assert.equal((await db.query<{ type: string }>(`select type from finance_accounts where name='CREDIT CARDS'`)).rows[0].type, "credit", "\"car\" inside CARDS is not a car loan");
 
     const cats = (await db.query<{ id: string; name: string; kind: string }>(`select id,name,kind from finance_categories where user_id=$1 order by sort,name`, [A])).rows;
     assert.equal(cats.filter((c) => c.name.toLowerCase() === "groceries").length, 1, "same-name categories merge");

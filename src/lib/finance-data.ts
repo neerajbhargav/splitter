@@ -2,7 +2,7 @@
 import { supabaseBrowser } from "./supabase/client";
 import { friendly, notifyChanged } from "./data";
 import type {
-  BudgetMonth, BudgetMonthInput, FinanceAccount, FinanceAccountInput, FinanceBundle, FinanceCategory, FinanceCategoryInput,
+  BudgetMonth, BudgetMonthInput, CreditScore, CreditScoreInput, DebtPlanInput, DebtPlanSettings, Paycheck, PaycheckInput, PayScheduleInput, FinanceAccount, FinanceAccountInput, FinanceBundle, FinanceCategory, FinanceCategoryInput,
   FinanceConnection, FinanceContext, FinanceHolding, FinanceHoldingInput, FinanceProfileInput, FinanceSettings, FinanceTransaction,
   FinanceTransactionInput, ImportTransactionInput, Subscription, SubscriptionInput,
 } from "./finance-types";
@@ -42,7 +42,7 @@ const HOLDING_COLUMNS = "id,user_id,account_id,symbol,name,shares::text,price_ce
 
 export async function loadFinance(userId: string): Promise<FinanceBundle> {
   await requireUser(userId);
-  const [settings, accounts, holdings, categories, budgets, transactions, subscriptions, connections] = await Promise.all([
+  const [settings, accounts, holdings, categories, budgets, transactions, subscriptions, connections, debtPlan, paychecks, creditScores] = await Promise.all([
     sb().from("finance_settings").select("*").eq("user_id", userId).maybeSingle(),
     all<FinanceAccount>("finance_accounts", "*", "created_at", userId),
     all<FinanceHolding>("finance_holdings", HOLDING_COLUMNS, "created_at", userId),
@@ -51,7 +51,11 @@ export async function loadFinance(userId: string): Promise<FinanceBundle> {
     all<FinanceTransaction>("finance_transactions", "*", "date", userId),
     all<Subscription>("personal_subscriptions", "*", "created_at", userId),
     all<FinanceConnection>("finance_connections", "id,user_id,provider,institution,status,last_synced_at,error,created_at,updated_at", "created_at", userId),
+    sb().from("finance_debt_plans").select("*").eq("user_id", userId).maybeSingle(),
+    all<Paycheck>("finance_paychecks", "*", "pay_date", userId),
+    all<CreditScore>("finance_credit_scores", "*", "as_of", userId),
   ]);
+  const plan = unwrap(debtPlan as Result<DebtPlanSettings | null>);
   await requireUser(userId);
   return {
     user_id: userId,
@@ -63,6 +67,15 @@ export async function loadFinance(userId: string): Promise<FinanceBundle> {
     transactions,
     subscriptions,
     connections,
+    debt_plan: plan && {
+      ...plan,
+      priority: Array.isArray(plan.priority) ? plan.priority : [],
+      payments: Array.isArray(plan.payments) ? plan.payments : [],
+      extra_changes: Array.isArray(plan.extra_changes) ? plan.extra_changes : [],
+      lump_sums: Array.isArray(plan.lump_sums) ? plan.lump_sums : [],
+    },
+    paychecks: paychecks.map((p) => ({ ...p, pay_date: String(p.pay_date).slice(0, 10), allocations: Array.isArray(p.allocations) ? p.allocations : [] })),
+    credit_scores: creditScores.map((c) => ({ ...c, as_of: String(c.as_of).slice(0, 10) })),
   };
 }
 
@@ -101,6 +114,13 @@ export const financeApi = {
 
   saveSubscription: (p: SubscriptionInput, context: FinanceContext) => call<string>("save_personal_subscription", { p }, context),
   deleteSubscription: (id: string, context: FinanceContext) => call<void>("delete_personal_subscription", { p_id: id }, context),
+
+  savePaySchedule: (p: PayScheduleInput, context: FinanceContext) => call<void>("save_finance_pay_schedule", { p }, context),
+  saveDebtPlan: (p: DebtPlanInput, context: FinanceContext) => call<void>("save_finance_debt_plan", { p }, context),
+  savePaycheck: (p: PaycheckInput, context: FinanceContext) => call<string>("save_finance_paycheck", { p }, context),
+  deletePaycheck: (id: string, context: FinanceContext) => call<void>("delete_finance_paycheck", { p_id: id }, context),
+  saveCreditScore: (p: CreditScoreInput, context: FinanceContext) => call<string>("save_finance_credit_score", { p }, context),
+  deleteCreditScore: (id: string, context: FinanceContext) => call<void>("delete_finance_credit_score", { p_id: id }, context),
 
   deleteConnection: (id: string, context: FinanceContext) => call<void>("delete_finance_connection", { p_connection: id }, context),
 };

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ArrowRight, Check, Eye, FileUp, Landmark, Plus, Repeat, Wallet } from "lucide-react";
+import { ArrowRight, CalendarClock, Check, Eye, FileUp, Landmark, Plus, Repeat, Wallet } from "lucide-react";
 import { Card, Progress } from "@/components/kit";
 import { useFinance } from "@/components/finance/FinanceProvider";
 import { DailyBars } from "@/components/finance/charts";
@@ -13,6 +13,7 @@ import { dailySpending, evaluateHealth, healthScore, monthActivity, netWorth } f
 import { forecastSubscriptionCharges, forecastTotalCents } from "@/lib/subscription-planner";
 import { categoryLookup, debtsMissingTerms, isEmptyWorkspace, payoffDebts, sortTransactions } from "@/lib/finance-selectors";
 import { money } from "@/lib/format";
+import { paycheckTotals, paydaysFrom, scheduleFromSettings } from "@/lib/paycheck-planner";
 import type { FinanceTransaction } from "@/lib/finance-types";
 
 export default function FinanceOverview() {
@@ -44,7 +45,11 @@ export default function FinanceOverview() {
         payoff = plan.is_finite ? plan.payoff_month : null;
       } catch { payoff = null; }
     }
-    return { worth, summary, activity, topCategories, daily, rules, known, score: known >= 3 ? healthScore(rules) : null, charges, chargesTotal: Number(forecastTotalCents(charges)), debts, payoff };
+    const schedule = scheduleFromSettings(bundle.settings);
+    const nextPayday = schedule ? paydaysFrom(schedule, today, 1)[0] ?? null : null;
+    const nextPaycheck = nextPayday ? bundle.paychecks.find((p) => p.pay_date === nextPayday) ?? null : null;
+    const paycheckLeft = nextPaycheck ? paycheckTotals(nextPaycheck.amount_cents, nextPaycheck.allocations).left_cents : null;
+    return { worth, summary, activity, topCategories, daily, rules, known, score: known >= 3 ? healthScore(rules) : null, charges, chargesTotal: Number(forecastTotalCents(charges)), debts, payoff, nextPayday, nextPaycheck, paycheckLeft };
   }, [bundle, month, today, currency, cats]);
 
   if (isEmptyWorkspace(bundle)) return <Welcome />;
@@ -147,6 +152,23 @@ export default function FinanceOverview() {
               ))}
             </div>
             {view.score === null && <button type="button" className="btn btn-sm" style={{ marginTop: 10 }} onClick={() => f.settings.show("profile")}>Add income details</button>}
+          </Card>
+
+          <Card title="Next paycheck" action={<Link href="/finance/paycheck" className="btn btn-sm">{view.nextPaycheck ? "Open" : "Plan it"} <ArrowRight /></Link>}>
+            {view.nextPayday ? (
+              <div className="list">
+                <div className="item">
+                  <span className="icon-tile sm"><CalendarClock /></span>
+                  <div className="item-main">
+                    <div className="item-title">{relativeDay(view.nextPayday, today)} · {shortDay(view.nextPayday)}</div>
+                    <div className="item-sub">{view.nextPaycheck
+                      ? view.paycheckLeft! < 0 ? `Over by ${money(-view.paycheckLeft!, currency)}` : view.paycheckLeft === 0 ? "Every dollar assigned" : `${money(view.paycheckLeft!, currency)} left to assign`
+                      : "Not planned yet"}</div>
+                  </div>
+                  <div className="item-end"><div className="v">{money(view.nextPaycheck?.amount_cents ?? bundle.settings?.paycheck_cents ?? 0, currency)}</div></div>
+                </div>
+              </div>
+            ) : <p className="hint">Set up your pay schedule to plan where each paycheck goes before it lands.</p>}
           </Card>
 
           <Card title="Coming up" description={view.charges.length ? `${money(view.chargesTotal, currency)} in the next 14 days` : "Next 14 days"}

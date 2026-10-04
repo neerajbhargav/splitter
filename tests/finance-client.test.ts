@@ -16,11 +16,11 @@ type FinanceModule = typeof import('../src/lib/finance-data.ts');
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
 const context: FinanceContext = { userId: A, currency: 'USD' };
-const tables = ['finance_settings', 'finance_accounts', 'finance_holdings', 'finance_categories', 'budget_months', 'finance_transactions', 'personal_subscriptions', 'finance_connections'];
+const tables = ['finance_settings', 'finance_accounts', 'finance_holdings', 'finance_categories', 'budget_months', 'finance_transactions', 'personal_subscriptions', 'finance_connections', 'finance_debt_plans', 'finance_paychecks', 'finance_credit_scores'];
 const HOLDING_COLUMNS = 'id,user_id,account_id,symbol,name,shares::text,price_cents,created_at,updated_at';
 const CONNECTION_COLUMNS = 'id,user_id,provider,institution,status,last_synced_at,error,created_at,updated_at';
 const expectedColumns: Record<string, string> = { finance_holdings: HOLDING_COLUMNS, finance_connections: CONNECTION_COLUMNS };
-const expectedOrder: Record<string, string> = { finance_accounts: 'created_at', finance_holdings: 'created_at', finance_categories: 'sort', budget_months: 'month', finance_transactions: 'date', personal_subscriptions: 'created_at', finance_connections: 'created_at' };
+const expectedOrder: Record<string, string> = { finance_accounts: 'created_at', finance_holdings: 'created_at', finance_categories: 'sort', budget_months: 'month', finance_transactions: 'date', personal_subscriptions: 'created_at', finance_connections: 'created_at', finance_paychecks: 'pay_date', finance_credit_scores: 'as_of' };
 type Row = { id?: string; user_id: string; [key: string]: unknown };
 type Query = { table: string; columns: string; filters: [string, unknown][]; orders: [string, unknown][]; from: number; to: number; single: boolean; actor: string | null };
 type Rpc = { name: string; args: Record<string, unknown>; actor: string | null };
@@ -126,6 +126,12 @@ const writes: { name: string; args: Record<string, unknown>; invoke: (api: Api) 
   { name: 'save_personal_subscription', args: { p: subscription }, invoke: api => api.saveSubscription(subscription as never, context) },
   { name: 'delete_personal_subscription', args: { p_id: 'x' }, invoke: api => api.deleteSubscription('x', context) },
   { name: 'delete_finance_connection', args: { p_connection: 'c' }, invoke: api => api.deleteConnection('c', context) },
+  { name: 'save_finance_pay_schedule', args: { p: { pay_cycle: 'biweekly', pay_anchor: '2026-10-09', paycheck_cents: 100 } }, invoke: api => api.savePaySchedule({ pay_cycle: 'biweekly', pay_anchor: '2026-10-09', paycheck_cents: 100 }, context) },
+  { name: 'save_finance_debt_plan', args: { p: { strategy: 'custom' } }, invoke: api => api.saveDebtPlan({ strategy: 'custom' } as never, context) },
+  { name: 'save_finance_paycheck', args: { p: { pay_date: '2026-10-09' } }, invoke: api => api.savePaycheck({ pay_date: '2026-10-09' } as never, context) },
+  { name: 'delete_finance_paycheck', args: { p_id: 'x' }, invoke: api => api.deletePaycheck('x', context) },
+  { name: 'save_finance_credit_score', args: { p: { bureau: 'experian', score: 720 } }, invoke: api => api.saveCreditScore({ bureau: 'experian', score: 720 } as never, context) },
+  { name: 'delete_finance_credit_score', args: { p_id: 'x' }, invoke: api => api.deleteCreditScore('x', context) },
 ];
 const isContextError = (error: unknown) => !!error && typeof error === 'object' && 'name' in error && error.name === 'FinanceContextError';
 const plain = (value: unknown) => JSON.parse(JSON.stringify(value));
@@ -159,7 +165,7 @@ test('finance load selects the expected columns, ordering and read shape per tab
     assert.ok(queries.length > 0, table);
     for (const query of queries) {
       assert.equal(query.columns, expectedColumns[table] ?? '*', table);
-      if (table === 'finance_settings') {
+      if (table === 'finance_settings' || table === 'finance_debt_plans') {
         assert.equal(query.single, true);
         assert.deepEqual(query.orders, []);
         assert.deepEqual([query.from, query.to], [0, 999]);
@@ -250,8 +256,8 @@ for (const write of writes) {
 test('every financeApi method is covered by the write table', () => {
   const { api } = harness();
   const covered = new Set(writes.map(w => w.name));
-  assert.equal(Object.keys(api.financeApi).length, 19);
-  assert.equal(covered.size, 19);
+  assert.equal(Object.keys(api.financeApi).length, 25);
+  assert.equal(covered.size, 25);
   assert.ok(Object.values(api.financeApi).every(fn => typeof fn === 'function'));
 });
 

@@ -11,6 +11,7 @@ const SECTIONS = [
   { href: "/finance", label: "Overview" },
   { href: "/finance/activity", label: "Activity" },
   { href: "/finance/budget", label: "Budget" },
+  { href: "/finance/paycheck", label: "Paycheck" },
   { href: "/finance/accounts", label: "Accounts" },
   { href: "/finance/debt", label: "Debt" },
   { href: "/finance/subscriptions", label: "Subscriptions" },

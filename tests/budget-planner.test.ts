@@ -41,7 +41,7 @@ function budget(month: string, income: number, limits: BudgetLimit[]): BudgetMon
   return { id: `b-${month}`, user_id: USER, month, income_cents: income, limits, created_at: STAMP, updated_at: STAMP };
 }
 function settings(net: number): FinanceSettings {
-  return { user_id: USER, currency: 'USD', monthly_gross_cents: 0, monthly_net_cents: net, housing_cents: 0, car_cents: 0, categories_seeded: true, created_at: STAMP, updated_at: STAMP };
+  return { user_id: USER, currency: 'USD', monthly_gross_cents: 0, monthly_net_cents: net, housing_cents: 0, car_cents: 0, categories_seeded: true, pay_cycle: null, pay_anchor: null, pay_day2: null, paycheck_cents: 0, created_at: STAMP, updated_at: STAMP };
 }
 const fmt = (c: number) => `${c < 0 ? '-' : ''}$${(Math.abs(c) / 100).toFixed(2)}`;
 

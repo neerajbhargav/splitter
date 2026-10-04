@@ -62,7 +62,7 @@ export function isUuid(v: unknown): v is string {
 }
 
 /** Same-origin check for browsers that send Origin. JSON content-type already forces a CORS preflight. */
-function assertSameOrigin(req: Request) {
+export function assertSameOrigin(req: Request) {
   const origin = req.headers.get("origin");
   if (!origin) return;
   const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? new URL(req.url).host;
@@ -75,7 +75,7 @@ function assertSameOrigin(req: Request) {
   if (originHost !== host) throw new HttpError(403, "Request blocked.", "forbidden");
 }
 
-async function readJsonBody(req: Request): Promise<Record<string, unknown>> {
+export async function readJsonBody(req: Request): Promise<Record<string, unknown>> {
   const type = req.headers.get("content-type") ?? "";
   if (!/^application\/json\b/i.test(type)) throw new HttpError(415, "Send JSON.", "bad_request");
   const text = await req.text();

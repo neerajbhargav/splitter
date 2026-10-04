@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 import { Card } from "@/components/kit";
 import { Pill, StatusChip } from "@/components/finance/kit";
 import { useFinance } from "@/components/finance/FinanceProvider";
+import { CreditScores } from "@/components/finance/CreditScores";
 import { money } from "@/lib/format";
 import { evaluateHealth, healthScore, netWorth, type RuleResult } from "@/lib/finance-insights";
 import { isLiability } from "@/lib/finance-types";
@@ -120,6 +121,8 @@ export default function HealthPage() {
           )}
         </div>
       </section>
+
+      <CreditScores />
 
       <div className="dash-grid">
         <Card title="Six checks" description="Measured on this calendar month.">

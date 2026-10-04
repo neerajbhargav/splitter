@@ -5,6 +5,8 @@
 import type {
   BudgetLimit,
   BudgetMonth,
+  CreditScore,
+  DebtPlanSettings,
   FinanceAccount,
   FinanceBundle,
   FinanceCategory,
@@ -162,6 +164,10 @@ export function demoBundle(today: string, userId = "demo"): FinanceBundle {
     housing_cents: 185_000,
     car_cents: 0,
     categories_seeded: true,
+    pay_cycle: "biweekly",
+    pay_anchor: must(addCalendarDays(today, -5)),
+    pay_day2: null,
+    paycheck_cents: 249_231,
     created_at: setupStamp,
     updated_at: setupStamp,
   };
@@ -357,5 +363,39 @@ export function demoBundle(today: string, userId = "demo"): FinanceBundle {
     };
   });
 
-  return { user_id: userId, settings, accounts, holdings, categories, budgets, transactions, subscriptions, connections: [] };
+  /* custom payoff plan: card first at a fixed $250, loan on its minimum, a tax refund lump sum */
+  const debt_plan: DebtPlanSettings = {
+    user_id: userId,
+    strategy: "custom",
+    extra_monthly_cents: 5_000,
+    rollover: true,
+    priority: [acct("credit"), acct("student-loan")],
+    payments: [
+      { account_id: acct("credit"), monthly_cents: 25_000, due_day: 12 },
+      { account_id: acct("student-loan"), monthly_cents: null, due_day: 25 },
+    ],
+    extra_changes: [{ month: addMonths(current, 4), extra_monthly_cents: 15_000 }],
+    lump_sums: [{ id: "demo-lump-1", month: addMonths(current, 3), account_id: acct("credit"), amount_cents: 60_000, note: "Tax refund" }],
+    created_at: setupStamp,
+    updated_at: setupStamp,
+  };
+
+  /* credit scores: six monthly readings per bureau, gently improving */
+  const SCORE_PATH: Record<CreditScore["bureau"], { model: string; source: string; values: number[] }> = {
+    experian: { model: "FICO 8", source: "Experian app", values: [702, 708, 706, 715, 722, 731] },
+    equifax: { model: "VantageScore 3.0", source: "Bank app", values: [698, 701, 709, 712, 719, 724] },
+    transunion: { model: "VantageScore 3.0", source: "Bank app", values: [690, 694, 693, 701, 706, 711] },
+  };
+  const credit_scores: CreditScore[] = [];
+  for (const bureau of ["equifax", "experian", "transunion"] as const) {
+    SCORE_PATH[bureau].values.forEach((score, i) => {
+      const date = must(addCalendarDays(today, -(5 - i) * 30 - 2));
+      credit_scores.push({
+        id: `demo-score-${bureau}-${i}`, user_id: userId, bureau, score, model: SCORE_PATH[bureau].model, as_of: date,
+        source: SCORE_PATH[bureau].source, note: "", created_at: stamp(date, 12), updated_at: stamp(date, 12),
+      });
+    });
+  }
+
+  return { user_id: userId, settings, accounts, holdings, categories, budgets, transactions, subscriptions, connections: [], debt_plan, paychecks: [], credit_scores };
 }

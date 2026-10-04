@@ -685,6 +685,20 @@ export function buildAiContext(bundle: FinanceBundle, today: string): string {
     lines.push("Profile: not provided");
   }
 
+  if (settings?.pay_cycle) {
+    lines.push(`Pay: ${settings.pay_cycle}, about ${settings.paycheck_cents > 0 ? money(settings.paycheck_cents) : "an unknown amount"} per paycheck`);
+  }
+  const plan = bundle.debt_plan;
+  if (plan) {
+    const extras = plan.extra_monthly_cents > 0 ? `, ${money(plan.extra_monthly_cents)} extra a month` : "";
+    lines.push(`Debt plan: ${plan.strategy}${extras}${plan.lump_sums?.length ? `, ${plan.lump_sums.length} one-time payments planned` : ""}`);
+  }
+  const latestScores = (bundle.credit_scores ?? [])
+    .reduce((m, c) => { const prev = m.get(c.bureau); if (!prev || cmp(prev.as_of, c.as_of) < 0) m.set(c.bureau, c); return m; }, new Map<string, { bureau: string; score: number; as_of: string; model: string }>());
+  if (latestScores.size) {
+    lines.push(`Credit scores: ${[...latestScores.values()].sort((a, b) => cmp(a.bureau, b.bureau)).map((c) => `${c.bureau} ${c.score}${c.model ? ` (${clean(c.model, 40)})` : ""} as of ${c.as_of}`).join("; ")}`);
+  }
+
   const worth = netWorth(bundle.accounts, bundle.holdings);
   lines.push(
     `Net worth ${money(worth.net)} (assets ${money(worth.assets)}, liabilities ${money(worth.liabilities)}), liquid cash ${money(worth.liquid)}, investments ${money(worth.investments)}`,

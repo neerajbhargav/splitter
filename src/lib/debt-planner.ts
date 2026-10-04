@@ -3,7 +3,7 @@ import { FINANCE_MAX_CENTS } from "./finance-types.ts";
 export const DEBT_PLAN_MAX_MONTHS = 600;
 const MONTHLY_APR_DENOMINATOR = 120_000n;
 
-export type DebtStrategy = "avalanche" | "snowball";
+export type DebtStrategy = "avalanche" | "snowball" | "custom";
 export type DebtPlanStatus = "paid_off" | "negative_amortization" | "month_limit";
 
 /** A saved debt or an unsaved debt-shaped input accepted by the payoff engine. */
@@ -15,11 +15,24 @@ export type DebtPlannerDebt = {
   minimum_cents: number;
 };
 
+/** From `month` onward, the extra amount becomes `extra_monthly_cents` (a raise, a new bill ending). */
+export type DebtExtraChange = { month: string; extra_monthly_cents: number };
+/** A one-time payment in a month. `debt_id: null` follows the payoff order. */
+export type DebtLumpSum = { month: string; debt_id: string | null; amount_cents: number };
+
 export type DebtPlannerInput = {
   debts: DebtPlannerDebt[];
   strategy: DebtStrategy;
   extra_monthly_cents: number;
   first_payment_month: string;
+  /** Custom strategy only: debt ids in the order extra money goes. Unlisted debts follow in input order. */
+  priority?: readonly string[];
+  /** Your own monthly payment per debt id. Anything under the minimum is raised to the minimum. */
+  payments?: Readonly<Record<string, number>>;
+  extra_changes?: readonly DebtExtraChange[];
+  lump_sums?: readonly DebtLumpSum[];
+  /** When a debt is paid off, keep paying its amount toward the next one. Defaults to true. */
+  rollover?: boolean;
 };
 
 export type DebtMonthPayment = {
@@ -82,6 +95,9 @@ type DebtState = {
   minimum: bigint;
   inputIndex: number;
   interest: bigint;
+  /** Planned monthly payment: the larger of the minimum and your own amount. */
+  base: bigint;
+  rank: number;
 };
 
 function assertSafeInteger(value: number, label: string, min: number, max: number): void {
@@ -91,7 +107,7 @@ function assertSafeInteger(value: number, label: string, min: number, max: numbe
 }
 
 function normalize(input: DebtPlannerInput): DebtState[] {
-  if (input.strategy !== "avalanche" && input.strategy !== "snowball") throw new RangeError("Unknown debt payoff strategy");
+  if (input.strategy !== "avalanche" && input.strategy !== "snowball" && input.strategy !== "custom") throw new RangeError("Unknown debt payoff strategy");
   assertSafeInteger(input.extra_monthly_cents, "Extra monthly amount", 0, FINANCE_MAX_CENTS);
   validatePaymentMonth(input.first_payment_month);
   const ids = new Set<string>();
@@ -101,6 +117,9 @@ function normalize(input: DebtPlannerInput): DebtState[] {
     assertSafeInteger(debt.balance_cents, `${debt.name || "Debt"} balance`, 0, FINANCE_MAX_CENTS);
     assertSafeInteger(debt.minimum_cents, `${debt.name || "Debt"} minimum`, 1, FINANCE_MAX_CENTS);
     assertSafeInteger(debt.apr_bps, `${debt.name || "Debt"} APR`, 0, 100_000);
+    const own = input.payments?.[debt.id];
+    if (own !== undefined) assertSafeInteger(own, `${debt.name || "Debt"} payment`, 1, FINANCE_MAX_CENTS);
+    const rank = input.priority ? input.priority.indexOf(debt.id) : -1;
     return {
       id: debt.id,
       name: debt.name.trim() || "Debt",
@@ -109,8 +128,33 @@ function normalize(input: DebtPlannerInput): DebtState[] {
       minimum: BigInt(debt.minimum_cents),
       inputIndex,
       interest: 0n,
+      base: own !== undefined && own > debt.minimum_cents ? BigInt(own) : BigInt(debt.minimum_cents),
+      rank: rank < 0 ? Number.MAX_SAFE_INTEGER : rank,
     };
   });
+}
+
+function normalizeSchedule(input: DebtPlannerInput) {
+  const changes = [...(input.extra_changes ?? [])].map((c) => {
+    validatePaymentMonth(c.month);
+    assertSafeInteger(c.extra_monthly_cents, "Extra monthly amount", 0, FINANCE_MAX_CENTS);
+    return c;
+  }).sort((a, b) => a.month.localeCompare(b.month));
+  const lumps = (input.lump_sums ?? []).map((l) => {
+    validatePaymentMonth(l.month);
+    assertSafeInteger(l.amount_cents, "One-time payment", 1, FINANCE_MAX_CENTS);
+    return l;
+  });
+  return {
+    extraFor(month: string): bigint {
+      let extra = input.extra_monthly_cents;
+      for (const c of changes) if (c.month <= month) extra = c.extra_monthly_cents;
+      return BigInt(extra);
+    },
+    lumpsFor(month: string) {
+      return lumps.filter((l) => l.month === month);
+    },
+  };
 }
 
 /** Monthly nominal APR interest, rounded half up to the nearest cent. */
@@ -148,8 +192,10 @@ export function addCalendarMonths(month: string, offset: number): string {
 function priority(a: DebtState, b: DebtState, strategy: DebtStrategy): number {
   if (strategy === "avalanche") {
     if (a.aprBps !== b.aprBps) return a.aprBps > b.aprBps ? -1 : 1;
-  } else if (a.balance !== b.balance) {
-    return a.balance < b.balance ? -1 : 1;
+  } else if (strategy === "snowball") {
+    if (a.balance !== b.balance) return a.balance < b.balance ? -1 : 1;
+  } else if (a.rank !== b.rank) {
+    return a.rank - b.rank;
   }
   return a.inputIndex - b.inputIndex || a.id.localeCompare(b.id);
 }
@@ -161,8 +207,12 @@ function totalBalance(states: DebtState[]): bigint {
 /** Simulates one strategy for at most 600 payments. */
 export function simulateDebtPlan(input: DebtPlannerInput): DebtPlan {
   const states = normalize(input);
+  const schedule = normalizeSchedule(input);
+  const rollover = input.rollover ?? true;
   const totalBalanceCents = totalBalance(states);
-  const monthlyCommitment = states.reduce((sum, debt) => sum + debt.minimum, BigInt(input.extra_monthly_cents));
+  const commitmentFor = (month: string) => states.reduce((sum, debt) => (rollover || debt.balance > 0n ? sum + debt.base : sum), schedule.extraFor(month));
+  const monthlyCommitment = commitmentFor(input.first_payment_month);
+  let lastCommitment = monthlyCommitment;
   const timeline: DebtPlanMonth[] = [];
   const payoffOrder: DebtPayoff[] = [];
 
@@ -198,13 +248,27 @@ export function simulateDebtPlan(input: DebtPlannerInput): DebtPlan {
       monthPayments.set(debt.id, 0n);
     }
 
-    let available = monthlyCommitment;
+    // Debts paid off in an earlier month only keep their payment in the pool when rolling over.
+    let available = commitmentFor(month);
+    lastCommitment = available;
     for (const debt of states) {
       if (debt.balance === 0n || available === 0n) continue;
-      const payment = debt.balance < debt.minimum ? debt.balance : debt.minimum;
+      const due = debt.balance < debt.base ? debt.balance : debt.base;
+      const payment = due < available ? due : available;
       debt.balance -= payment;
       available -= payment;
       monthPayments.set(debt.id, (monthPayments.get(debt.id) ?? 0n) + payment);
+    }
+    for (const lump of schedule.lumpsFor(month)) {
+      const target = lump.debt_id ? states.find((debt) => debt.id === lump.debt_id && debt.balance > 0n) : undefined;
+      let amount = BigInt(lump.amount_cents);
+      if (target) {
+        const payment = target.balance < amount ? target.balance : amount;
+        target.balance -= payment;
+        amount -= payment;
+        monthPayments.set(target.id, (monthPayments.get(target.id) ?? 0n) + payment);
+      }
+      available += amount;
     }
 
     while (available > 0n) {
@@ -257,7 +321,7 @@ export function simulateDebtPlan(input: DebtPlannerInput): DebtPlan {
   // that debt cannot shrink under either ordering. Other long plans remain a
   // neutral month-limit result rather than being called unaffordable.
   const cannotCoverInterest = states.some((debt) => debt.balance > 0n
-    && monthlyInterestCents(debt.balance, debt.aprBps) >= monthlyCommitment);
+    && monthlyInterestCents(debt.balance, debt.aprBps) >= lastCommitment);
   const status: DebtPlanStatus = isFinite ? "paid_off" : cannotCoverInterest ? "negative_amortization" : "month_limit";
   return {
     strategy: input.strategy,
@@ -275,10 +339,10 @@ export function simulateDebtPlan(input: DebtPlannerInput): DebtPlan {
   };
 }
 
-/** Runs the requested plan and a no-extra baseline. Savings exist only when both finish. */
+/** Runs the requested plan and a minimums-only baseline. Savings exist only when both finish. */
 export function compareDebtPlans(input: DebtPlannerInput): DebtPlanComparison {
   const plan = simulateDebtPlan(input);
-  const baseline = simulateDebtPlan({ ...input, extra_monthly_cents: 0 });
+  const baseline = simulateDebtPlan({ debts: input.debts, strategy: input.strategy, priority: input.priority, extra_monthly_cents: 0, first_payment_month: input.first_payment_month });
   if (!plan.is_finite || !baseline.is_finite || plan.months === null || baseline.months === null) {
     return { plan, baseline, interest_saved_cents: null, months_saved: null };
   }

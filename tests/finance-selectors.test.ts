@@ -9,7 +9,7 @@ const acct = (o: Partial<FinanceAccount> = {}): FinanceAccount => ({
 } as FinanceAccount);
 
 const bundle = (o: Partial<FinanceBundle> = {}): FinanceBundle => ({
-  user_id: "u", settings: null, accounts: [], holdings: [], categories: [], budgets: [], transactions: [], subscriptions: [], connections: [], ...o,
+  user_id: "u", settings: null, accounts: [], holdings: [], categories: [], budgets: [], transactions: [], subscriptions: [], connections: [], debt_plan: null, paychecks: [], credit_scores: [], ...o,
 } as FinanceBundle);
 
 test("a card with a zero minimum is missing terms, not planned", () => {

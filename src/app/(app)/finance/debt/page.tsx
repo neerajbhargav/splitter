@@ -1,19 +1,20 @@
 "use client";
 import "@/components/finance/styles/debt.css";
-import { useMemo, useState } from "react";
-import { CircleAlert, Plus } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CircleAlert, Pencil, Plus } from "lucide-react";
 import { Card } from "@/components/kit";
 import { Empty } from "@/components/ui";
-import { useFinance } from "@/components/finance/FinanceProvider";
+import { DEMO_MESSAGE, useFinance } from "@/components/finance/FinanceProvider";
 import { AccountEditor } from "@/components/finance/AccountEditor";
+import { DebtPlanEditor, ordinal } from "@/components/finance/DebtPlanEditor";
 import { DebtSchedule } from "@/components/finance/DebtSchedule";
 import { PayoffChart } from "@/components/finance/charts";
-import { AccountIcon, AmountChips, HeroText, MoneyInput, Pill, currencySymbol, monthLong, monthShort } from "@/components/finance/kit";
+import { AccountIcon, AmountChips, HeroText, MoneyInput, Pill, currencySymbol, errorText, monthLong, monthShort } from "@/components/finance/kit";
 import { compareDebtPlans, type DebtPlan, type DebtPlanComparison, type DebtStrategy } from "@/lib/debt-planner";
-import { debtsMissingTerms, payoffDebts } from "@/lib/finance-selectors";
+import { debtsMissingTerms, payoffDebts, plannerInput } from "@/lib/finance-selectors";
 import { centsToInput, money } from "@/lib/format";
 import { parseMoney } from "@/lib/split";
-import { FINANCE_MAX_CENTS, isLiability, type FinanceAccount, type FinanceAccountInput } from "@/lib/finance-types";
+import { FINANCE_MAX_CENTS, isLiability, type DebtPlanInput, type DebtPlanSettings, type FinanceAccount, type FinanceAccountInput, type FinanceContext } from "@/lib/finance-types";
 
 function bigMoney(c: bigint, currency: string): string {
   const n = Number(c);
@@ -27,20 +28,138 @@ function presets(minimums: number): number[] {
   return [...new Set(out)].sort((a, b) => a - b).slice(0, 5);
 }
 
-const STRATEGY_NAME: Record<DebtStrategy, string> = { avalanche: "Avalanche", snowball: "Snowball" };
-const STRATEGY_RULE: Record<DebtStrategy, string> = { avalanche: "Highest APR first", snowball: "Smallest balance first" };
+const STRATEGY_NAME: Record<DebtStrategy, string> = { avalanche: "Avalanche", snowball: "Snowball", custom: "Custom" };
+const STRATEGY_RULE: Record<DebtStrategy, string> = { avalanche: "Highest APR first", snowball: "Smallest balance first", custom: "Your order and amounts" };
 
 type Editing = { account: FinanceAccount | null; defaults?: Partial<FinanceAccountInput> };
+type PlanFields = Pick<DebtPlanSettings, "strategy" | "extra_monthly_cents" | "rollover" | "priority" | "payments" | "extra_changes" | "lump_sums">;
+type SaveState = { kind: "idle" } | { kind: "saving" } | { kind: "saved" } | { kind: "error"; message: string };
+
+const EMPTY_PLAN: PlanFields = { strategy: "avalanche", extra_monthly_cents: 0, rollover: true, priority: [], payments: [], extra_changes: [], lump_sums: [] };
+
+function toInput(p: PlanFields): DebtPlanInput {
+  return {
+    strategy: p.strategy, extra_monthly_cents: p.extra_monthly_cents, rollover: p.rollover, priority: p.priority,
+    payments: p.payments, extra_changes: p.extra_changes,
+    lump_sums: p.lump_sums.map((l) => ({ id: l.id.startsWith("local-") ? undefined : l.id, month: l.month, account_id: l.account_id, amount_cents: l.amount_cents, note: l.note })),
+  };
+}
+let localSeq = 0;
+function fromInput(i: DebtPlanInput): PlanFields {
+  return { ...i, lump_sums: i.lump_sums.map((l) => ({ ...l, id: l.id ?? `local-${++localSeq}` })) };
+}
+
+function SaveNote({ state, demoNote }: { state: SaveState; demoNote: boolean }) {
+  if (demoNote) return <div className="hint fin-plan-status">{DEMO_MESSAGE}</div>;
+  if (state.kind === "saving") return <div className="hint fin-plan-status" aria-live="polite">Saving…</div>;
+  if (state.kind === "saved") return <div className="hint fin-plan-status" aria-live="polite">Saved</div>;
+  if (state.kind === "error") return <div className="hint neg fin-plan-status" role="alert">{state.message}</div>;
+  return null;
+}
+
+type SummaryLine = { key: string; title: string; sub: string; value?: string; past?: boolean };
+
+function planSummary(plan: PlanFields, debts: { id: string; name: string; minimum_cents: number }[], names: Map<string, string>, month: string, currency: string): SummaryLine[] {
+  const lines: SummaryLine[] = [];
+  const order = plan.priority.filter((id) => debts.some((d) => d.id === id));
+  for (const d of debts) {
+    const pay = plan.payments.find((p) => p.account_id === d.id);
+    if (!pay || (!pay.monthly_cents && !pay.due_day)) continue;
+    const amount = pay.monthly_cents ? Math.max(pay.monthly_cents, d.minimum_cents) : d.minimum_cents;
+    const rank = order.indexOf(d.id);
+    const bits = [pay.monthly_cents ? "Your amount" : "Minimum"];
+    if (pay.due_day) bits.push(`due the ${pay.due_day === 31 ? "last day" : ordinal(pay.due_day)}`);
+    if (rank >= 0 && plan.strategy === "custom") bits.unshift(`#${rank + 1}`);
+    lines.push({ key: `pay-${d.id}`, title: d.name, sub: bits.join(" · "), value: `${money(amount, currency)}/mo` });
+  }
+  for (const c of plan.extra_changes) {
+    const now = c.month <= month;
+    lines.push({ key: `chg-${c.month}`, title: now ? `Since ${monthShort(c.month)}` : `From ${monthShort(c.month)}`, sub: c.extra_monthly_cents ? "Extra each month" : "Stop paying extra", value: money(c.extra_monthly_cents, currency) });
+  }
+  for (const l of plan.lump_sums) {
+    const past = l.month < month;
+    const to = l.account_id ? names.get(l.account_id) ?? "a removed debt, so it follows your order" : "your payoff order";
+    lines.push({ key: `lump-${l.id}`, title: l.note || "One-time payment", sub: past ? `${monthShort(l.month)} has passed, skipped` : `${monthShort(l.month)} to ${to}`, value: money(l.amount_cents, currency), past });
+  }
+  if (!plan.rollover) lines.push({ key: "roll", title: "No rollover", sub: "Paid-off payments stop instead of moving to the next debt" });
+  return lines;
+}
 
 export default function DebtPage() {
-  const { bundle, currency, today } = useFinance();
+  const { bundle, currency, today, api, ctx, demo } = useFinance();
+  const saved = bundle.debt_plan;
   const [editing, setEditing] = useState<Editing | null>(null);
-  const [strategy, setStrategy] = useState<DebtStrategy | null>(null);
-  const [extraText, setExtraText] = useState("");
+  const [planOpen, setPlanOpen] = useState(false);
+  // Local copy of the plan so changes show instantly (and keep working in sample mode). Cleared when a newer saved plan arrives.
+  const [local, setLocal] = useState<PlanFields | null>(null);
+  const [extraText, setExtraText] = useState(() => (saved?.extra_monthly_cents ? centsToInput(saved.extra_monthly_cents) : ""));
+  const [save, setSave] = useState<SaveState>({ kind: "idle" });
+  const [demoNoted, setDemoNoted] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pending = useRef<{ input: DebtPlanInput; context: FinanceContext } | null>(null);
+  const savedStamp = useRef(saved?.updated_at);
+
+  useEffect(() => {
+    if (saved?.updated_at === savedStamp.current) return;
+    savedStamp.current = saved?.updated_at;
+    if (pending.current) return;
+    setLocal(null);
+    // Only rewrite the box when the saved amount really differs, so "50" never turns into "50.00" under your cursor.
+    const savedExtra = saved?.extra_monthly_cents ?? 0;
+    setExtraText((text) => ((parseMoney(text) ?? 0) === savedExtra ? text : savedExtra ? centsToInput(savedExtra) : ""));
+  }, [saved?.updated_at, saved?.extra_monthly_cents]);
+
+  const planFields: PlanFields = local ?? saved ?? EMPTY_PLAN;
 
   const parsed = parseMoney(extraText);
-  const extraInvalid = extraText.trim() !== "" && parsed === null;
+  const extraInvalid = extraText.trim() !== "" && (parsed === null || parsed < 0 || parsed > FINANCE_MAX_CENTS);
   const extra = Math.min(Math.max(parsed ?? 0, 0), FINANCE_MAX_CENTS);
+
+  /** Saves now. Returns a message to show instead of "Saved", or null. */
+  const persist = useCallback(async (input: DebtPlanInput, context: FinanceContext): Promise<string | null> => {
+    if (demo) {
+      setDemoNoted(true);
+      return demoNoted ? null : DEMO_MESSAGE;
+    }
+    setSave({ kind: "saving" });
+    try {
+      await api.saveDebtPlan(input, context);
+      setSave({ kind: "saved" });
+      return null;
+    } catch (e) {
+      const message = errorText(e);
+      setSave({ kind: "error", message });
+      return message;
+    }
+  }, [api, demo, demoNoted]);
+
+  const flush = useCallback(() => {
+    if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+    const job = pending.current;
+    pending.current = null;
+    if (job) void persist(job.input, job.context);
+  }, [persist]);
+
+  // Save anything still waiting when you leave the page.
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+  useEffect(() => () => flushRef.current(), []);
+
+  /** Applies a change on screen right away and saves it (debounced for typing). */
+  const update = useCallback((next: PlanFields, delay: number) => {
+    setLocal(next);
+    pending.current = { input: toInput(next), context: { ...ctx } };
+    if (timer.current) clearTimeout(timer.current);
+    if (delay <= 0) flush();
+    else timer.current = setTimeout(flush, delay);
+  }, [ctx, flush]);
+
+  const onExtraChange = (text: string) => {
+    setExtraText(text);
+    const c = parseMoney(text);
+    if (text.trim() !== "" && (c === null || c < 0 || c > FINANCE_MAX_CENTS)) return;
+    update({ ...planFields, extra_monthly_cents: c ?? 0 }, 700);
+  };
 
   const view = useMemo(() => {
     const liabilities = bundle.accounts.filter((a) => isLiability(a.type));
@@ -49,12 +168,14 @@ export default function DebtPage() {
     const month = today.slice(0, 7);
     let avalanche: DebtPlanComparison | null = null;
     let snowball: DebtPlanComparison | null = null;
+    let custom: DebtPlanComparison | null = null;
     let failed = false;
     if (debts.length) {
       try {
-        avalanche = compareDebtPlans({ debts, strategy: "avalanche", extra_monthly_cents: extra, first_payment_month: month });
-        snowball = compareDebtPlans({ debts, strategy: "snowball", extra_monthly_cents: extra, first_payment_month: month });
-      } catch { failed = true; avalanche = null; snowball = null; }
+        avalanche = compareDebtPlans(plannerInput(debts, planFields, "avalanche", month, extra));
+        snowball = compareDebtPlans(plannerInput(debts, planFields, "snowball", month, extra));
+        custom = compareDebtPlans(plannerInput(debts, planFields, "custom", month, extra));
+      } catch { failed = true; avalanche = null; snowball = null; custom = null; }
     }
     let recommended: DebtStrategy = "avalanche";
     if (avalanche && snowball) {
@@ -66,12 +187,14 @@ export default function DebtPage() {
     }
     const minimumsTotal = debts.reduce((sum, d) => sum + d.minimum_cents, 0);
     const sorted = [...liabilities].sort((x, y) => Number(y.in_payoff) - Number(x.in_payoff) || y.balance_cents - x.balance_cents);
-    return { liabilities: sorted, debts, missing, avalanche, snowball, failed, recommended, minimumsTotal };
-  }, [bundle.accounts, extra, today]);
+    return { liabilities: sorted, debts, missing, avalanche, snowball, custom, failed, recommended, minimumsTotal, month };
+  }, [bundle.accounts, extra, today, planFields]);
 
-  const { liabilities, debts, missing, avalanche, snowball, failed, recommended, minimumsTotal } = view;
-  const effective: DebtStrategy = strategy ?? recommended;
-  const chosen = effective === "avalanche" ? avalanche : snowball;
+  const { liabilities, debts, missing, avalanche, snowball, custom, failed, recommended, minimumsTotal, month } = view;
+  // A saved plan sets the strategy; before anything is saved, show the better of Avalanche and Snowball.
+  const effective: DebtStrategy = local || saved ? planFields.strategy : recommended;
+  const comparisonFor = (s: DebtStrategy) => (s === "avalanche" ? avalanche : s === "snowball" ? snowball : custom);
+  const chosen = comparisonFor(effective);
   const plan: DebtPlan | null = chosen?.plan ?? null;
 
   const chart = useMemo(() => {
@@ -88,7 +211,17 @@ export default function DebtPage() {
   }, [plan, debts]);
 
   const editor = (
-    <AccountEditor open={editing !== null} account={editing?.account ?? null} defaults={editing?.defaults} onClose={() => setEditing(null)} />
+    <>
+      <AccountEditor open={editing !== null} account={editing?.account ?? null} defaults={editing?.defaults} onClose={() => setEditing(null)} />
+      <DebtPlanEditor open={planOpen} plan={planFields} debts={view.debts} strategy={effective} extraCents={extra} onClose={() => setPlanOpen(false)}
+        onSave={async (input, context) => {
+          if (timer.current) { clearTimeout(timer.current); timer.current = null; }
+          pending.current = null;
+          setLocal(fromInput(input));
+          if (demo) { setDemoNoted(true); return DEMO_MESSAGE; }
+          return persist(input, context);
+        }} />
+    </>
   );
   const addDebt = () => setEditing({ account: null, defaults: { type: "credit", in_payoff: true } });
 
@@ -119,10 +252,10 @@ export default function DebtPage() {
     );
     if (plan.is_finite && plan.payoff_month) {
       let note: string;
-      if (extra > 0 && chosen.interest_saved_cents !== null) {
-        const saved = bigMoney(chosen.interest_saved_cents, currency);
-        const ms = chosen.months_saved ?? 0;
-        note = ms > 0 ? `${ms === 1 ? "1 month" : `${ms} months`} sooner and ${saved} less interest than paying minimums only.` : `${saved} less interest than paying minimums only.`;
+      const ms = chosen.months_saved ?? 0;
+      if (chosen.interest_saved_cents !== null && (chosen.interest_saved_cents > 0n || ms > 0)) {
+        const savedText = bigMoney(chosen.interest_saved_cents, currency);
+        note = ms > 0 ? `${ms === 1 ? "1 month" : `${ms} months`} sooner and ${savedText} less interest than paying minimums only.` : `${savedText} less interest than paying minimums only.`;
       } else if (extra === 0) {
         note = "Paying minimums only. Add a little extra below to see what it saves.";
       } else note = "";
@@ -134,8 +267,20 @@ export default function DebtPage() {
     return <HeroText label="Debt-free by" value="Over 50 years" note="At this pace it takes more than 50 years. Add more each month to see a payoff date.">{pills}</HeroText>;
   })();
 
-  const options: DebtStrategy[] = ["avalanche", "snowball"];
+  const options: DebtStrategy[] = ["avalanche", "snowball", "custom"];
   const optionBadge = (s: DebtStrategy): string | null => {
+    if (s === "custom") {
+      const mine = custom?.plan;
+      const presets = [avalanche?.plan, snowball?.plan].filter((p): p is DebtPlan => !!p?.is_finite);
+      if (!mine?.is_finite || !presets.length) return null;
+      const best = presets.reduce((a, b) => (b.estimated_interest_cents < a.estimated_interest_cents ? b : a));
+      const diff = mine.estimated_interest_cents - best.estimated_interest_cents;
+      if (diff > 0n) return `+${bigMoney(diff, currency)} interest`;
+      if (diff < 0n) return `Saves ${bigMoney(-diff, currency)}`;
+      if (mine.months === best.months) return "Same result";
+      const m = (best.months ?? 0) - (mine.months ?? 0);
+      return m > 0 ? `${m} mo sooner` : `${-m} mo later`;
+    }
     if (s !== recommended) return null;
     const mine = (s === "avalanche" ? avalanche : snowball)?.plan;
     const other = (s === "avalanche" ? snowball : avalanche)?.plan;
@@ -165,12 +310,12 @@ export default function DebtPage() {
             <>
               <Card title="Pick a strategy">
                 <div className="stack">
-                  <div className="fin-compare" role="group" aria-label="Payoff strategy">
+                  <div className="fin-compare three" role="group" aria-label="Payoff strategy">
                     {options.map((s) => {
-                      const p = (s === "avalanche" ? avalanche : snowball)?.plan;
+                      const p = comparisonFor(s)?.plan;
                       const badge = optionBadge(s);
                       return (
-                        <button key={s} type="button" className={`fin-option ${effective === s ? "on" : ""}`} aria-pressed={effective === s} onClick={() => setStrategy(s)} style={{ minHeight: 36 }}>
+                        <button key={s} type="button" className={`fin-option ${effective === s ? "on" : ""}`} aria-pressed={effective === s} onClick={() => { if (effective !== s || !(local || saved)) update({ ...planFields, extra_monthly_cents: extra, strategy: s }, 0); }} style={{ minHeight: 36 }}>
                           <div className="t">{STRATEGY_NAME[s]}{badge && <span className="badge gold">{badge}</span>}</div>
                           <div className="d">{p?.is_finite && p.payoff_month ? monthShort(p.payoff_month) : "No end date"}</div>
                           <div className="s">{p?.is_finite ? `${STRATEGY_RULE[s]} · ${bigMoney(p.estimated_interest_cents, currency)} interest` : STRATEGY_RULE[s]}</div>
@@ -180,12 +325,13 @@ export default function DebtPage() {
                   </div>
                   <div className="stack-sm">
                     <label className="label" htmlFor="fin-debt-extra">Extra each month</label>
-                    <MoneyInput id="fin-debt-extra" value={extraText} onChange={setExtraText} currency={currency} />
-                    <AmountChips values={presets(minimumsTotal)} currency={currency} current={extra} onPick={(c) => setExtraText(c ? centsToInput(c) : "")} />
+                    <MoneyInput id="fin-debt-extra" value={extraText} onChange={onExtraChange} currency={currency} />
+                    <AmountChips values={presets(minimumsTotal)} currency={currency} current={extra} onPick={(c) => { setExtraText(c ? centsToInput(c) : ""); update({ ...planFields, extra_monthly_cents: c }, 0); }} />
                     {extraInvalid
                       ? <div className="hint neg">Enter an amount like 50 or 125.50.</div>
-                      : <div className="hint">On top of {money(minimumsTotal, currency)} in minimums.</div>}
+                      : <div className="hint">On top of {money(minimumsTotal, currency)} in minimums{effective === "custom" ? " and your own amounts" : ""}.</div>}
                   </div>
+                  <SaveNote state={save} demoNote={demo && demoNoted} />
                 </div>
               </Card>
 
@@ -203,6 +349,31 @@ export default function DebtPage() {
           )}
         </div>
         <div className="dash-col">
+          {debts.length > 0 && (() => {
+            const names = new Map(liabilities.map((a) => [a.id, a.name]));
+            const lines = planSummary(planFields, debts, names, month, currency);
+            return (
+              <Card title="Your payment plan" description={effective === "custom" ? "In use now" : `Using ${STRATEGY_NAME[effective]}. Changes and one-time payments still apply.`}
+                action={<button type="button" className="btn btn-sm" style={{ minHeight: 36 }} onClick={() => setPlanOpen(true)}><Pencil /> Edit plan</button>}>
+                {lines.length ? (
+                  <div className="list">
+                    {lines.map((l) => (
+                      <div key={l.key} className={`item ${l.past ? "fin-plan-past" : ""}`}>
+                        <div className="item-main">
+                          <div className="item-title">{l.title}</div>
+                          <div className="item-sub">{l.sub}</div>
+                        </div>
+                        {l.value && <div className="item-end"><div className="v">{l.value}</div></div>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="hint">Set your own payment for each debt, the order to pay them in, due days, and one-time payments like a tax refund.</p>
+                )}
+              </Card>
+            );
+          })()}
+
           {debts.length > 0 && plan && !failed && (
             <Card title="Payoff order" description={`${plan.payoff_order.length} ${plan.payoff_order.length === 1 ? "debt" : "debts"}, paid off in this order`}>
               {plan.is_finite || plan.payoff_order.length > 0 ? (

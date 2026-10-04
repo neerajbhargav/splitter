@@ -34,7 +34,7 @@ function tx(date:string,amount:number,kind:TxKind,categoryId:string|null=null,ex
 }
 function settings(extra:Partial<FinanceSettings>={}):FinanceSettings{return {
  user_id:USER,currency:'USD',monthly_gross_cents:0,monthly_net_cents:0,housing_cents:0,car_cents:0,categories_seeded:true,
- created_at:STAMP,updated_at:STAMP,...extra,
+ pay_cycle:null,pay_anchor:null,pay_day2:null,paycheck_cents:0,created_at:STAMP,updated_at:STAMP,...extra,
 };}
 
 const CATS:FinanceCategory[]=[
@@ -370,6 +370,7 @@ function bundle(extra:Partial<FinanceBundle>={}):FinanceBundle{
  ];
  const budgets:BudgetMonth[]=[{id:'bud-SECRET',user_id:USER,month:'2026-03-01',income_cents:500_000,limits:[{category_id:'c-groc',limit_cents:40_000}],created_at:STAMP,updated_at:STAMP}];
  return {
+  debt_plan:null,paychecks:[],credit_scores:[],
   user_id:USER,
   settings:settings({monthly_gross_cents:700_000,monthly_net_cents:500_000,housing_cents:180_000}),
   accounts:[

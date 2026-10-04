@@ -19,6 +19,14 @@ export type FinanceSettings = {
   car_cents: number;
   /** Server flag: Folio's default categories were created once for this account. */
   categories_seeded: boolean;
+  /** Pay schedule. Null cycle means not set up yet. */
+  pay_cycle: PayCycle | null;
+  /** Any known payday (YYYY-MM-DD). Its day of month is the first payday for monthly and twice-monthly pay. */
+  pay_anchor: string | null;
+  /** Twice-monthly only: the second payday of the month (31 means the last day). */
+  pay_day2: number | null;
+  /** Usual take-home per paycheck. 0 means not set. */
+  paycheck_cents: number;
   created_at: string;
   updated_at: string;
 };
@@ -199,6 +207,71 @@ export type FinanceConnection = {
   updated_at: string;
 };
 
+/* ---------- paychecks ---------- */
+export type PayCycle = "weekly" | "biweekly" | "semimonthly" | "monthly";
+export type PayScheduleInput = { pay_cycle: PayCycle | null; pay_anchor?: string; pay_day2?: number | null; paycheck_cents?: number };
+export type AllocationKind = "bill" | "debt" | "spending" | "savings" | "other";
+export type PaycheckAllocation = {
+  id: string;
+  label: string;
+  kind: AllocationKind;
+  /** Subscription (bill), liability account (debt) or category (spending/savings). */
+  ref_id: string | null;
+  amount_cents: number;
+  /** Ticked off once it's paid or moved. */
+  done: boolean;
+};
+export type Paycheck = {
+  id: string;
+  user_id: string;
+  pay_date: string;
+  amount_cents: number;
+  allocations: PaycheckAllocation[];
+  note: string;
+  received: boolean;
+  created_at: string;
+  updated_at: string;
+};
+export type PaycheckInput = Pick<Paycheck, "pay_date" | "amount_cents" | "allocations" | "note" | "received"> & { id?: string };
+
+/* ---------- custom debt plan ---------- */
+export type DebtPlanPayment = { account_id: string; monthly_cents: number | null; due_day: number | null };
+export type DebtPlanLumpSum = { id: string; month: string; account_id: string | null; amount_cents: number; note: string };
+export type DebtPlanSettings = {
+  user_id: string;
+  strategy: "avalanche" | "snowball" | "custom";
+  extra_monthly_cents: number;
+  rollover: boolean;
+  priority: string[];
+  payments: DebtPlanPayment[];
+  extra_changes: { month: string; extra_monthly_cents: number }[];
+  lump_sums: DebtPlanLumpSum[];
+  created_at: string;
+  updated_at: string;
+};
+export type DebtPlanInput = Pick<DebtPlanSettings, "strategy" | "extra_monthly_cents" | "rollover" | "priority" | "payments" | "extra_changes"> & {
+  lump_sums: (Omit<DebtPlanLumpSum, "id"> & { id?: string })[];
+};
+
+/* ---------- credit scores ---------- */
+export type CreditBureau = "equifax" | "experian" | "transunion";
+export const CREDIT_BUREAUS: readonly CreditBureau[] = ["equifax", "experian", "transunion"];
+export const BUREAU_LABEL: Record<CreditBureau, string> = { equifax: "Equifax", experian: "Experian", transunion: "TransUnion" };
+export type CreditScore = {
+  id: string;
+  user_id: string;
+  bureau: CreditBureau;
+  score: number;
+  /** "FICO 8", "VantageScore 3.0", or blank. */
+  model: string;
+  as_of: string;
+  source: string;
+  note: string;
+  created_at: string;
+  updated_at: string;
+};
+export type CreditScoreInput = Pick<CreditScore, "bureau" | "score" | "model" | "as_of" | "source" | "note"> & { id?: string };
+
 export type FinanceBundle = {
   user_id: string;
   settings: FinanceSettings | null;
@@ -209,6 +282,9 @@ export type FinanceBundle = {
   transactions: FinanceTransaction[];
   subscriptions: Subscription[];
   connections: FinanceConnection[];
+  debt_plan: DebtPlanSettings | null;
+  paychecks: Paycheck[];
+  credit_scores: CreditScore[];
 };
 
 /** Every write is bound to the account and currency that were on screen when the draft opened. */

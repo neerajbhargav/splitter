@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CHART_COLORS } from "@/components/charts";
 import { money, moneyShort } from "@/lib/format";
 import { shortDay } from "./kit";
@@ -73,6 +73,56 @@ export function PayoffChart({ data, series, currency, height = 240 }: {
                 fill={CHART_COLORS[i % CHART_COLORS.length]} fillOpacity={0.22} strokeWidth={1.5} isAnimationActive={false} />
             ))}
           </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+/** Credit score history, one line per bureau. Scores are points, not money. */
+export type ScorePoint = { date: string; equifax?: number; experian?: number; transunion?: number };
+const SCORE_LINES = [
+  { key: "equifax", name: "Equifax", color: "var(--chart-1)" },
+  { key: "experian", name: "Experian", color: "var(--chart-2)" },
+  { key: "transunion", name: "TransUnion", color: "var(--chart-3)" },
+] as const;
+
+export function ScoreChart({ data, height = 220 }: { data: ScorePoint[]; height?: number }) {
+  const values = data.flatMap((d) => SCORE_LINES.map((l) => d[l.key]).filter((v): v is number => typeof v === "number"));
+  const lo = values.length ? Math.min(...values) : 600;
+  const hi = values.length ? Math.max(...values) : 800;
+  const pad = Math.max(10, Math.round((hi - lo) * 0.25));
+  const domain: [number, number] = [Math.max(250, Math.floor((lo - pad) / 10) * 10), Math.min(900, Math.ceil((hi + pad) / 10) * 10)];
+  const present = SCORE_LINES.filter((l) => data.some((d) => typeof d[l.key] === "number"));
+  const multiYear = data.length > 0 && data[0].date.slice(0, 4) !== data[data.length - 1].date.slice(0, 4);
+  const tick = (d: string) => multiYear
+    ? new Date(`${d}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "2-digit" })
+    : shortDay(d);
+  return (
+    <div>
+      <div className="row-flex wrap" style={{ gap: "6px 14px", marginBottom: 10 }}>
+        {present.map((l) => <span key={l.key} className="fin-legend-row"><i style={{ background: l.color }} />{l.name}</span>)}
+      </div>
+      <div className="chart-wrap" style={{ height }} role="img" aria-label="Credit scores over time for each bureau">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+            <CartesianGrid vertical={false} stroke="var(--line)" />
+            <XAxis dataKey="date" tickLine={false} axisLine={{ stroke: "var(--line-2)" }} tick={{ fill: "var(--ink-3)", fontSize: 11 }}
+              interval="preserveStartEnd" minTickGap={30} tickFormatter={tick} />
+            <YAxis width={36} domain={domain} allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-3)", fontSize: 11 }} />
+            <Tooltip cursor={{ stroke: "var(--line-2)" }} content={({ active, payload, label }) => active && payload?.length ? (
+              <div className="chart-tip">
+                <div className="t">{new Date(`${String(label)}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                {payload.filter((p) => typeof p.value === "number").map((p) => (
+                  <div className="r" key={String(p.dataKey)}><span><i className="sw" style={{ background: String(p.color) }} />{p.name}</span><b className="num">{String(p.value)}</b></div>
+                ))}
+              </div>
+            ) : null} />
+            {present.map((l) => (
+              <Line key={l.key} type="monotone" dataKey={l.key} name={l.name} stroke={l.color} strokeWidth={2} connectNulls
+                dot={{ r: 2.5, fill: l.color, strokeWidth: 0 }} activeDot={{ r: 4 }} isAnimationActive={false} />
+            ))}
+          </LineChart>
         </ResponsiveContainer>
       </div>
     </div>

@@ -1,0 +1,55 @@
+/* Credit scores (Health) */
+.fin-credit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.fin-credit-tile { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2); }
+.fin-credit-tile.empty { justify-content: space-between; gap: 10px; border-style: dashed; background: transparent; }
+.fin-credit-hit { position: absolute; inset: 0; border: 0; background: transparent; border-radius: inherit; cursor: pointer; padding: 0; }
+.fin-credit-hit:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.fin-credit-hit:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.fin-credit-update { position: relative; z-index: 1; margin-top: 6px; min-height: 32px; }
+.fin-credit-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; flex-wrap: wrap; }
+.fin-credit-name { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.fin-credit-none { font-size: 13px; }
+.fin-credit-tile.empty .btn { width: 100%; justify-content: center; white-space: nowrap; }
+.fin-credit-big { font-family: var(--serif); font-size: 48px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 6px; }
+.fin-credit-change { display: inline-flex; align-items: center; gap: 2px; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fin-credit-change svg { width: 14px; height: 14px; }
+.fin-credit-change.pos { color: var(--pos); }
+.fin-credit-change.neg { color: var(--neg); }
+.fin-credit-change.faint { font-weight: 500; color: var(--ink-3); }
+.fin-credit-meta { font-size: 12px; color: var(--ink-3); line-height: 1.35; overflow-wrap: anywhere; }
+
+.fin-credit-overview { display: flex; flex-direction: column; gap: 10px; }
+.fin-credit-insights { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+
+.fin-credit-dot { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
+.fin-credit-dot.equifax { color: var(--chart-1); }
+.fin-credit-dot.experian { color: var(--chart-2); }
+.fin-credit-dot.transunion { color: var(--chart-3); }
+.fin-credit-band.pass { color: var(--pos); }
+.fin-credit-band.warn { color: var(--gold-text); }
+.fin-credit-band.fail { color: var(--neg); }
+
+.fin-credit-show-sm { display: none; }
+
+/* editor */
+.fin-credit-input { font-variant-numeric: tabular-nums; }
+.fin-credit-rows { display: flex; flex-direction: column; gap: 12px; }
+.fin-credit-row { display: grid; grid-template-columns: 96px 90px minmax(0, 1fr); gap: 8px; align-items: start; }
+.fin-credit-row-name { align-self: center; font-weight: 600; font-size: 14px; }
+.fin-credit-row-err { grid-column: 1 / -1; margin: 0; }
+
+@media (max-width: 640px) {
+  .fin-credit-grid { gap: 8px; }
+  .fin-credit-tile { padding: 10px; border-radius: 14px; }
+  .fin-credit-top { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .fin-credit-top .fin-status { height: 20px; padding: 0 7px; font-size: 11px; }
+  .fin-credit-name { font-size: 12px; }
+  .fin-credit-big { font-size: 34px; margin-top: 2px; }
+  .fin-credit-change { font-size: 12px; }
+  .fin-credit-meta { font-size: 11px; }
+  .fin-credit-tile.empty .btn { padding: 0 8px; font-size: 12px; }
+  .fin-credit-hide-sm { display: none; }
+  .fin-credit-show-sm { display: inline; }
+  .fin-credit-row { grid-template-columns: 1fr 88px; }
+  .fin-credit-row > .stack-sm { grid-column: 1 / -1; }
+}

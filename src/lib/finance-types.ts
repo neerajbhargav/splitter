@@ -267,6 +267,9 @@ export type CreditScore = {
   as_of: string;
   source: string;
   note: string;
+  /** "sync" when read from a bureau site by the score sync, "manual" when typed in. */
+  origin?: "manual" | "sync";
+  synced_at?: string | null;
   created_at: string;
   updated_at: string;
 };

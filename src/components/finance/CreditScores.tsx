@@ -152,7 +152,7 @@ export function CreditScores() {
                       <span className={`icon-tile sm fin-credit-dot ${h.bureau}`} aria-hidden>{BUREAU_LABEL[h.bureau].slice(0, 2)}</span>
                       <div className="item-main">
                         <div className="item-title">{BUREAU_LABEL[h.bureau]}</div>
-                        <div className="item-sub">{[fullDate(h.as_of), h.model, h.source].filter(Boolean).join(" · ")}</div>
+                        <div className="item-sub">{[fullDate(h.as_of), h.model, h.origin === "sync" ? `Synced${h.source ? ` from ${h.source}` : ""}` : h.source].filter(Boolean).join(" · ")}</div>
                         {h.note && <div className="item-sub faint">{h.note}</div>}
                       </div>
                       <div className="item-end"><div className="v num">{h.score}</div><div className={`k fin-credit-band ${band.tone}`}>{band.label}</div></div>

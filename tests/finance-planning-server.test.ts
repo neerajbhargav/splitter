@@ -9,6 +9,7 @@ const read = (name: string) => fs.readFileSync(new URL(`../supabase/migrations/$
 const v1 = read("20261003_personal_finance.sql");
 const v2 = read("20261004_finance_ledger.sql");
 const v3 = read("20261005_finance_planning.sql");
+const v4 = read("20261006_credit_score_sync.sql");
 
 async function setup() {
   const db = new PGlite();
@@ -21,6 +22,8 @@ async function setup() {
   await db.exec(v2);
   await db.exec(v3);
   await db.exec(v3); // idempotent
+  await db.exec(v4);
+  await db.exec(v4);
   return db;
 }
 
@@ -142,6 +145,38 @@ test("planning RPCs validate debt plans, paychecks, pay schedules and credit sco
     assert.equal((await one<{ n: number }>(`select count(*)::int n from finance_paychecks`)).n, 0);
     await rpc("save_finance_pay_schedule", { pay_cycle: null });
     assert.deepEqual(await one(`select pay_cycle,paycheck_cents::text p from finance_settings`), { pay_cycle: null, p: "0" });
+  } finally {
+    await db.close();
+  }
+});
+
+test("score sync upserts by bureau, day and model without duplicates", async () => {
+  const db = await setup();
+  try {
+    await as(db, A);
+    const sync = async (rows: unknown, user = A) => (await db.query<{ r: { inserted: number; updated: number; unchanged: number } }>(`select public.sync_finance_credit_scores($1::jsonb,$2::uuid,'USD') r`, [JSON.stringify(rows), user])).rows[0].r;
+    const rows = [
+      { bureau: "experian", score: 731, model: "FICO 8", as_of: "2020-02-01", source: "Experian" },
+      { bureau: "equifax", score: 724, model: "VantageScore 3.0", as_of: "2020-02-01", source: "Credit Karma" },
+      { bureau: "transunion", score: 711, model: "VantageScore 3.0", as_of: "2020-02-01", source: "Credit Karma" },
+    ];
+    assert.deepEqual(await sync(rows), { inserted: 3, updated: 0, unchanged: 0 });
+    assert.deepEqual(await sync(rows), { inserted: 0, updated: 0, unchanged: 3 }, "re-running is a no-op");
+    assert.deepEqual(await sync([{ ...rows[0], score: 735 }, { ...rows[0], score: 740 }]), { inserted: 0, updated: 1, unchanged: 0 }, "duplicate rows in one batch count once");
+    const all = (await db.query<{ bureau: string; score: number; origin: string; synced: boolean }>(`select bureau,score,origin,synced_at is not null synced from finance_credit_scores order by bureau`)).rows;
+    assert.equal(all.length, 3);
+    assert.ok(all.every((r) => r.origin === "sync" && r.synced));
+    assert.equal(all.find((r) => r.bureau === "experian")!.score, 735);
+    await db.query(`select save_finance_credit_score($1::jsonb,$2,'USD')`, [JSON.stringify({ bureau: "experian", score: 700, model: "FICO 8", as_of: "2020-03-01", source: "", note: "" }), A]);
+    assert.equal((await db.query<{ o: string }>(`select origin o from finance_credit_scores where as_of='2020-03-01'`)).rows[0].o, "manual");
+    await assert.rejects(sync([]), /1 to 20/);
+    await assert.rejects(sync([{ ...rows[0], score: 1000 }]), /250 to 900/);
+    await assert.rejects(sync([{ ...rows[0], bureau: "fico" }]), /Equifax/);
+    await assert.rejects(sync([{ ...rows[0], as_of: "2199-01-01" }]), /hasn't happened/);
+    await assert.rejects(sync(rows, B), /account changed/, "cannot write as someone else");
+    await as(db, B);
+    assert.deepEqual(await sync(rows, B), { inserted: 3, updated: 0, unchanged: 0 }, "each person has their own scores");
+    assert.equal((await db.query<{ n: number }>(`select count(*)::int n from finance_credit_scores`)).rows[0].n, 3, "B sees only B's rows");
   } finally {
     await db.close();
   }

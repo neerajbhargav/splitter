@@ -374,8 +374,8 @@ export function demoBundle(today: string, userId = "demo"): FinanceBundle {
       { account_id: acct("credit"), monthly_cents: 25_000, due_day: 12 },
       { account_id: acct("student-loan"), monthly_cents: null, due_day: 25 },
     ],
-    extra_changes: [{ month: addMonths(current, 4), extra_monthly_cents: 15_000 }],
-    lump_sums: [{ id: "demo-lump-1", month: addMonths(current, 3), account_id: acct("credit"), amount_cents: 60_000, note: "Tax refund" }],
+    extra_changes: [{ month: addMonths(current, 4).slice(0, 7), extra_monthly_cents: 15_000 }],
+    lump_sums: [{ id: "demo-lump-1", month: addMonths(current, 3).slice(0, 7), account_id: acct("credit"), amount_cents: 60_000, note: "Tax refund" }],
     created_at: setupStamp,
     updated_at: setupStamp,
   };

@@ -41,13 +41,15 @@ export function plannerInput(
   extraOverride?: number,
 ): DebtPlannerInput {
   const ids = new Set(debts.map((d) => d.id));
+  const ym = (m: string) => m.slice(0, 7);
+  firstMonth = ym(firstMonth);
   const input: DebtPlannerInput = {
     debts,
     strategy,
     extra_monthly_cents: extraOverride ?? plan?.extra_monthly_cents ?? 0,
     first_payment_month: firstMonth,
-    extra_changes: (plan?.extra_changes ?? []).filter((c) => c.month > firstMonth),
-    lump_sums: (plan?.lump_sums ?? []).filter((l) => l.month >= firstMonth).map((l) => ({ month: l.month, debt_id: l.account_id && ids.has(l.account_id) ? l.account_id : null, amount_cents: l.amount_cents })),
+    extra_changes: (plan?.extra_changes ?? []).map((c) => ({ ...c, month: ym(c.month) })).filter((c) => c.month > firstMonth),
+    lump_sums: (plan?.lump_sums ?? []).map((l) => ({ ...l, month: ym(l.month) })).filter((l) => l.month >= firstMonth).map((l) => ({ month: l.month, debt_id: l.account_id && ids.has(l.account_id) ? l.account_id : null, amount_cents: l.amount_cents })),
   };
   if (strategy === "custom" && plan) {
     input.priority = plan.priority.filter((id) => ids.has(id));

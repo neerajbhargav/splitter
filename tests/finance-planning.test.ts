@@ -6,7 +6,7 @@ import {
   scheduleFromSettings, suggestAllocations,
 } from "../src/lib/paycheck-planner.ts";
 import { creditOverview, scoreBand, scoreSeries, summarizeBureaus, validateScore } from "../src/lib/credit-scores.ts";
-import { planPaymentLookup, plannerInput } from "../src/lib/finance-selectors.ts";
+import { payoffDebts, planPaymentLookup, plannerInput } from "../src/lib/finance-selectors.ts";
 import { demoBundle } from "../src/lib/finance-demo.ts";
 import type { CreditScore, FinanceCategory, Subscription } from "../src/lib/finance-types.ts";
 
@@ -170,6 +170,12 @@ test("sample data plans a paycheck end to end", () => {
   const [next] = paydaysFrom(schedule, "2026-10-01", 1);
   assert.equal(next, "2026-10-10");
   assert.ok(b.debt_plan && b.credit_scores.length === 18);
+  const debts = payoffDebts(b.accounts);
+  for (const strategy of ["avalanche", "snowball", "custom"] as const) {
+    const plan = simulateDebtPlan(plannerInput(debts, b.debt_plan, strategy, "2026-10"));
+    assert.equal(plan.is_finite, true, `${strategy} sample plan pays off`);
+  }
+  assert.ok(b.debt_plan!.lump_sums.every((l) => /^\d{4}-\d{2}$/.test(l.month)) && b.debt_plan!.extra_changes.every((c) => /^\d{4}-\d{2}$/.test(c.month)));
 });
 
 /* ---------- credit scores ---------- */

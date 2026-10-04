@@ -78,7 +78,7 @@ export type CreditOverview = {
   /** Average of each bureau's latest reading, rounded to a whole point. */
   average: number | null;
   reported: number;
-  /** Gap between the highest and lowest latest reading. */
+  /** Gap between the highest and lowest latest reading among bureaus using the same model family. */
   spread: number | null;
   lowest: BureauSummary | null;
   insights: string[];
@@ -88,11 +88,21 @@ export function creditOverview(summaries: readonly BureauSummary[]): CreditOverv
   const have = summaries.filter((s) => s.latest);
   const values = have.map((s) => s.latest!.score);
   const average = values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
-  const spread = values.length >= 2 ? Math.max(...values) - Math.min(...values) : null;
-  const lowest = have.length ? have.reduce((a, b) => (b.latest!.score < a.latest!.score ? b : a)) : null;
+  // Spread only means something between scores from the same model; FICO and VantageScore differ by design.
+  const family = (m: string) => (/vantage/i.test(m) ? "vantage" : /fico/i.test(m) ? "fico" : m.trim().toLowerCase());
+  const groups = new Map<string, BureauSummary[]>();
+  for (const s of have) groups.set(family(s.latest!.model), [...(groups.get(family(s.latest!.model)) ?? []), s]);
+  const comparable = [...groups.values()].sort((a, b) => b.length - a.length)[0] ?? [];
+  const cvals = comparable.map((s) => s.latest!.score);
+  const spread = cvals.length >= 2 ? Math.max(...cvals) - Math.min(...cvals) : null;
+  const lowest = comparable.length >= 2 ? comparable.reduce((a, b) => (b.latest!.score < a.latest!.score ? b : a)) : have.length ? have.reduce((a, b) => (b.latest!.score < a.latest!.score ? b : a)) : null;
   const insights: string[] = [];
   const missing = summaries.filter((s) => !s.latest);
   if (have.length && missing.length) insights.push(`Add ${missing.map((s) => label(s.bureau)).join(" and ")} to see all three side by side.`);
+  if (groups.size > 1) {
+    const odd = [...groups.values()].filter((g) => g !== comparable).flat();
+    insights.push(`${odd.map((s) => `${label(s.bureau)} uses ${s.latest!.model || "a different model"}`).join(", ")}, so compare it with its own history rather than the other bureaus.`);
+  }
   if (spread !== null && spread >= 40 && lowest) {
     insights.push(`${label(lowest.bureau)} is ${spread} points below your highest score. Pull that report and check for an error or an account the others don't show.`);
   }

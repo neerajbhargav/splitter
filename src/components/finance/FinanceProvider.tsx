@@ -105,7 +105,10 @@ export function FinanceProvider({ children, fallback, failure }: {
     return () => data.subscription.unsubscribe();
   }, [me.id]);
 
-  useLiveRefresh("personal-finance", [{ table: "finance_settings", filter: `user_id=eq.${me.id}` }], () => void reload(), !demo);
+  useLiveRefresh("personal-finance", [
+    { table: "finance_settings", filter: `user_id=eq.${me.id}` },
+    { table: "finance_credit_scores", filter: `user_id=eq.${me.id}` },
+  ], () => void reload(), !demo);
 
   const setDemo = useCallback((on: boolean) => {
     setDemoState(on);

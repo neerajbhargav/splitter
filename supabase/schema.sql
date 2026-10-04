@@ -2431,5 +2431,8 @@ end $$;
 
 revoke all on function public.sync_finance_credit_scores(jsonb,uuid,text) from public,anon,authenticated;
 grant execute on function public.sync_finance_credit_scores(jsonb,uuid,text) to authenticated;
+do $$ begin
+ if exists(select 1 from pg_publication where pubname='supabase_realtime') and not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='finance_credit_scores') then alter publication supabase_realtime add table public.finance_credit_scores;end if;
+end $$;
 notify pgrst,'reload schema';
 commit;

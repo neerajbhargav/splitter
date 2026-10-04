@@ -208,6 +208,15 @@ test("bureau summaries compare like with like and flag gaps", () => {
   assert.match(wide.insights.join(" "), /TransUnion is 100 points below/);
 });
 
+test("spread ignores bureaus on a different scoring model", () => {
+  const sums = summarizeBureaus([score("experian", 511, "2026-10-04", "FICO 8"), score("equifax", 563, "2026-10-04", "VantageScore 3.0"), score("transunion", 619, "2026-10-04", "VantageScore 3.0")], "2026-10-04");
+  const o = creditOverview(sums);
+  assert.equal(o.spread, 56);
+  assert.equal(o.lowest!.bureau, "equifax");
+  assert.match(o.insights.join(" "), /Experian uses FICO 8, so compare it with its own history/);
+  assert.doesNotMatch(o.insights.join(" "), /Experian is \d+ points below/);
+});
+
 test("bands, chart rows and validation", () => {
   assert.equal(scoreBand(800).label, "Exceptional");
   assert.equal(scoreBand(739).label, "Good");

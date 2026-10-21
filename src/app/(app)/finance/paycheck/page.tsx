@@ -10,6 +10,7 @@ import { useToast } from "@/components/providers";
 import { DEMO_MESSAGE, STALE_DRAFT, sameContext, useFinance } from "@/components/finance/FinanceProvider";
 import { Hero, Pill, errorText, relativeDay, shortDay } from "@/components/finance/kit";
 import { PayScheduleEditor } from "@/components/finance/PayScheduleEditor";
+import { TransactionEditor, type TxDefaults } from "@/components/finance/TransactionEditor";
 import { PaycheckDetailsEditor, PaycheckLineEditor, type LineDraft } from "@/components/finance/PaycheckLineEditor";
 import { simulateDebtPlan } from "@/lib/debt-planner";
 import { dueDayFor, payoffDebts, planPaymentLookup, plannerInput } from "@/lib/finance-selectors";
@@ -53,6 +54,7 @@ export default function PaycheckPage() {
   const [lineEditing, setLineEditing] = useState<LineDraft | null>(null);
   const [lineOpen, setLineOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [income, setIncome] = useState<TxDefaults | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Writes are bound to the account + currency on screen when the page opened.
@@ -229,9 +231,23 @@ export default function PaycheckPage() {
 
   const savingsCat = bundle.categories.find((c) => c.kind === "savings" && !c.archived && /saving/i.test(c.name)) ?? bundle.categories.find((c) => c.kind === "savings" && !c.archived);
   const debts = payoffDebts(bundle.accounts);
-  const priority = bundle.debt_plan?.strategy === "custom" ? bundle.debt_plan.priority : [];
+  // The extra goes where your saved strategy sends it: your own order, the smallest balance, or the highest APR.
+  const strategy = bundle.debt_plan?.strategy ?? "avalanche";
+  const priority = strategy === "custom" ? bundle.debt_plan!.priority : [];
   const topDebt = debts.find((d) => d.id === priority.find((id) => debts.some((x) => x.id === id)))
-    ?? [...debts].sort((a, b) => b.apr_bps - a.apr_bps || a.balance_cents - b.balance_cents)[0];
+    ?? [...debts].sort((a, b) => strategy === "snowball"
+      ? a.balance_cents - b.balance_cents || b.apr_bps - a.apr_bps
+      : b.apr_bps - a.apr_bps || a.balance_cents - b.balance_cents)[0];
+
+  /** Marking a paycheck received offers to log it as income, unless that deposit is already in Activity. */
+  function markReceived() {
+    if (!working) return;
+    void update({ received: !working.received }, working.received ? "Marked as not received" : "Marked as received");
+    if (working.received) return;
+    const near = (d: string) => Math.abs(Date.parse(d) - Date.parse(working.pay_date)) <= 3 * 864e5;
+    const logged = bundle.transactions.some((t) => t.kind === "income" && t.amount_cents === working.amount_cents && near(t.date));
+    if (!logged && working.pay_date <= today) setIncome({ kind: "income", amount_cents: working.amount_cents, date: working.pay_date, description: "Paycheck" });
+  }
 
   function putRest(kind: "savings" | "debt") {
     if (!working || totals.left_cents <= 0) return;
@@ -261,7 +277,7 @@ export default function PaycheckPage() {
             <button type="button" className="btn btn-sm" onClick={() => setDetailsOpen(true)}>Edit amount</button>
             {isSaved && (
               <button type="button" className={`btn btn-sm ${working.received ? "btn-primary" : ""}`} aria-pressed={working.received}
-                onClick={() => void update({ received: !working.received }, working.received ? "Marked as not received" : "Marked as received")}>
+                onClick={markReceived}>
                 <CircleCheck /> {working.received ? "Received" : "Mark received"}
               </button>
             )}
@@ -458,6 +474,7 @@ export default function PaycheckPage() {
       <p className="fin-foot">Bills and debt payments due before your next payday come out of this paycheck. Budget categories get this paycheck&apos;s share of the month.</p>
 
       <PayScheduleEditor open={scheduleOpen} onClose={() => setScheduleOpen(false)} />
+      <TransactionEditor open={income !== null} tx={null} defaults={income ?? undefined} onClose={() => setIncome(null)} />
       <PaycheckLineEditor open={lineOpen} line={lineEditing} onClose={() => setLineOpen(false)} onSave={saveLine}
         onDelete={lineEditing?.id ? () => deleteLine(lineEditing.id!) : undefined} />
       <PaycheckDetailsEditor open={detailsOpen} amountCents={working.amount_cents} note={working.note} title={`Paycheck on ${shortDay(working.pay_date)}`}

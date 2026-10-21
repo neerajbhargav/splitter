@@ -139,6 +139,9 @@ export const api = {
   updateMember: (mid: string, name: string, email?: string | null, phone?: string | null) =>
     call<null>("update_member", { mid, p_name: name, p_email: email || null, p_phone: phone || null }),
   removeMember: (mid: string) => call<null>("remove_member", { mid }),
+  tokenStatus: () => call<Record<string, { created_at: string; last_used_at: string | null }>>("personal_token_status", {}, false),
+  createToken: (kind: "calendar" | "scores") => call<string>("create_personal_token", { p_kind: kind }, false),
+  revokeToken: (kind: "calendar" | "scores") => call<null>("revoke_personal_token", { p_kind: kind }, false),
   setMemberStay: (mid: string, from: string | null, to: string | null) =>
     call<null>("set_member_stay", { mid, p_from: from || null, p_to: to || null }),
   saveExpense: (id: string | null, gid: string, input: ExpenseInput) => call<string>("save_expense", { p_id: id, p_group: gid, p: input }),

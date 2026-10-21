@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   addCalendarMonths,
   compareDebtPlans,
+  consolidationWhatIf,
   monthlyInterestCents,
   simulateDebtPlan,
   type DebtPlannerDebt,
@@ -141,4 +142,20 @@ test("rejects unsafe, negative, zero-minimum, over-limit, duplicate, and invalid
   assert.throws(() => plan([debt(), debt({ name: "Duplicate" })]), /unique id/);
   assert.throws(() => plan([debt()], Number.NaN), /Extra monthly/);
   assert.throws(() => plan([debt()], Number.MAX_SAFE_INTEGER), /Extra monthly/);
+});
+
+test("consolidating cards into one loan is priced against keeping them", () => {
+  // Textbook amortization: $10,000 at 12% for 36 months is $332.14 a month and $1,957.15 interest.
+  const loanOnly = consolidationWhatIf([{ id: "c", name: "Card", balance_cents: 1_000_000, apr_bps: 2_400, minimum_cents: 30_000 }],
+    { apr_bps: 1_200, fee_bps: 0, months: 36, extra_cents: 0, first_month: "2026-11", strategy: "avalanche" });
+  assert.equal(loanOnly.payment_cents, 33_215, "payment rounds up a cent so it finishes on time");
+  assert.equal(loanOnly.loan.months, 36);
+  assert.ok(loanOnly.loan.cost_cents >= 195_600 && loanOnly.loan.cost_cents <= 195_800, String(loanOnly.loan.cost_cents));
+  assert.ok(loanOnly.saves_cents > 0, "12% beats 24% on the same balance");
+
+  const withFee = consolidationWhatIf([{ id: "c", name: "Card", balance_cents: 1_000_000, apr_bps: 2_400, minimum_cents: 30_000 }],
+    { apr_bps: 1_200, fee_bps: 500, months: 36, extra_cents: 0, first_month: "2026-11", strategy: "avalanche" });
+  assert.equal(withFee.fee_cents, 50_000);
+  assert.equal(withFee.principal_cents, 1_050_000, "the fee is borrowed on top of the balance");
+  assert.ok(withFee.loan.cost_cents > loanOnly.loan.cost_cents + 50_000, "fee plus interest on the fee");
 });

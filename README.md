@@ -77,6 +77,8 @@ https://<your-project-ref>.supabase.co/auth/v1/callback
 
 If the env vars are missing, the app shows a setup screen instead of crashing.
 
+A daily Vercel cron (`vercel.json`) calls `/api/keepalive`, one tiny query that keeps a free Supabase project from pausing after a quiet week.
+
 ### Local development
 
 ```bash
@@ -124,7 +126,7 @@ tests/                     node:test suite for the math
 - **Itemization:** Choose By item. Enter line totals in the group currency and assign people. Shared lines split equally; tax/tip are proportional to each person's subtotal with exact, deterministic cent allocation. The server independently recomputes the final shares. Foreign-currency bills retain the original lines, tax and tip alongside the converted group-currency amounts. One whole-bill conversion is allocated across components to preserve the exact converted total; the database checks both source and converted line amounts.
 - **Receipt scanning:** Attach a JPG, PNG, WebP, BMP or PDF and choose Scan. English OCR runs locally using Tesseract.js; engine/language files download from CDN, but the image/text are not sent to an external OCR service. Review/edit suggestions before applying. PDFs use local selectable-text extraction first, with local OCR fallback for image pages. At most five pages are read; longer PDFs warn and leave the final total blank. Encrypted PDFs require an unlocked copy. HEIC can be attached, not scanned. Ambiguous dates and conflicting totals are left blank. Receipt files are uploaded to private Supabase storage only when the expense is saved.
 
-For existing deployments, apply `supabase/migrations/20261001_free_expense_tools.sql` then `supabase/migrations/20261002_itemized_currency.sql` before deploying this version. Then apply `supabase/migrations/20261021_group_fixes.sql` (split by days, owner-only group delete, first-name joining, check marks that survive edits; safe to re-run). Fresh deployments can use the complete idempotent schema. `npm test` includes isolated PostgreSQL/WASM permission and calculation regressions using synthetic data, not production records.
+For existing deployments, apply `supabase/migrations/20261001_free_expense_tools.sql` then `supabase/migrations/20261002_itemized_currency.sql` before deploying this version. Then apply `supabase/migrations/20261021_group_fixes.sql` (split by days, owner-only group delete, first-name joining, check marks that survive edits) and `supabase/migrations/20261021_personal_tokens.sql` (calendar and score-sync links). Both are safe to re-run. Fresh deployments can use the complete idempotent schema. `npm test` includes isolated PostgreSQL/WASM permission and calculation regressions using synthetic data, not production records.
 
 ## Personal finance (private)
 
@@ -139,6 +141,9 @@ SPLITTER Finance v2 lives at `/finance` and absorbed the standalone Folio app. I
 - **Health:** Folio's six rules, each shown as pass, warn, fail or unknown.
 - **Ask:** questions about your finances answered by an AI model with your own API key. The request goes from your browser straight to the provider, and the key stays on your device.
 - **Settings:** profile (income, currency), categories (rename, archive, delete with reassignment) and the sample-data toggle.
+- **Reminders in your calendar:** Account > Links for other apps > Reminders makes a private calendar link (Apple, Google or Outlook). It lists group bills you still owe, subscription renewals, card due days from your payoff plan and paydays, each with an alert at 9am the day before, and refreshes itself.
+- **Card consolidation what-if:** on Debt, compare keeping your cards against one fixed-rate loan (APR, fee, term): interest plus fee, monthly payment and payoff date side by side.
+- **Credit score sync link:** Account > Links for other apps > Credit score sync makes a token so a scheduled job on your own machine can `POST /api/finance/credit-scores/sync` with `Authorization: Bearer <token>` (no browser session). It can only add scores.
 - **Apple Pay logging:** an iPhone Shortcut opens SPLITTER after every Apple Pay tap with the amount, merchant and card filled in. Add it to your spending (the category you last used at that merchant is picked for you) or tap **Split with a group**. Setup is below.
 
 **Sample data:** choose Explore with sample data to preview every page. Nothing is saved in this mode and every write is refused until you exit it.

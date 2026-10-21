@@ -357,3 +357,43 @@ export function compareDebtPlans(input: DebtPlannerInput): DebtPlanComparison {
 }
 
 export const calculateDebtPlan = simulateDebtPlan;
+
+export type ConsolidationWhatIf = {
+  balance_cents: number;
+  fee_cents: number;
+  principal_cents: number;
+  payment_cents: number;
+  keep: { months: number | null; payoff_month: string | null; cost_cents: number; monthly_cents: number };
+  loan: { months: number | null; payoff_month: string | null; cost_cents: number };
+  /** Positive: the loan costs less in interest and fees than keeping the cards. */
+  saves_cents: number;
+};
+
+/**
+ * What-if: move these card balances into one fixed-rate loan. The fee is borrowed on top
+ * of the balance; the payment is the amortized amount rounded up a cent so the loan ends on time.
+ * Keeping the cards runs your current strategy and extra on them alone.
+ */
+export function consolidationWhatIf(
+  cards: DebtPlannerDebt[],
+  o: { apr_bps: number; fee_bps: number; months: number; extra_cents: number; first_month: string; strategy: DebtStrategy },
+): ConsolidationWhatIf {
+  const balance = cards.reduce((a, d) => a + d.balance_cents, 0);
+  const fee = Math.round((balance * o.fee_bps) / 10_000);
+  const principal = balance + fee;
+  const r = o.apr_bps / 10_000 / 12;
+  const payment = Math.ceil(r === 0 ? principal / o.months : (principal * r) / (1 - Math.pow(1 + r, -o.months)));
+  const keep = simulateDebtPlan({ debts: cards, strategy: o.strategy === "custom" ? "avalanche" : o.strategy, extra_monthly_cents: o.extra_cents, first_payment_month: o.first_month });
+  const loan = simulateDebtPlan({
+    debts: [{ id: "loan", name: "Consolidation loan", balance_cents: principal, apr_bps: o.apr_bps, minimum_cents: payment }],
+    strategy: "avalanche", extra_monthly_cents: 0, first_payment_month: o.first_month,
+  });
+  const keepCost = Number(keep.estimated_interest_cents);
+  const loanCost = Number(loan.estimated_interest_cents) + fee;
+  return {
+    balance_cents: balance, fee_cents: fee, principal_cents: principal, payment_cents: payment,
+    keep: { months: keep.months, payoff_month: keep.payoff_month, cost_cents: keepCost, monthly_cents: cards.reduce((a, d) => a + d.minimum_cents, 0) + o.extra_cents },
+    loan: { months: loan.months, payoff_month: loan.payoff_month, cost_cents: loanCost },
+    saves_cents: keep.is_finite ? keepCost - loanCost : Number.MAX_SAFE_INTEGER,
+  };
+}

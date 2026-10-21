@@ -1,5 +1,7 @@
 import { type NextRequest } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { supabaseServer } from "@/lib/supabase/server";
+import { SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase/env";
 import { HttpError, assertSameOrigin, json, readJsonBody } from "@/lib/plaid-server";
 
 export const runtime = "nodejs";
@@ -8,12 +10,21 @@ export const dynamic = "force-dynamic";
 // POST { scores: [{ bureau, score, model, as_of, source }] } -> { inserted, updated, unchanged }
 // Used by the owner's score sync, which reads scores from bureau sites in their own signed-in browser.
 // Runs with the caller's Supabase session; the RPC enforces ownership and validates every row.
+// A runner without a session (a scheduled job on an always-on machine) sends
+// "Authorization: Bearer <sync token>" instead; make the token in Account > Links for other apps.
 export async function POST(req: NextRequest) {
   try {
-    assertSameOrigin(req);
+    const bearer = /^Bearer ([0-9a-f]{64})$/.exec(req.headers.get("authorization") ?? "")?.[1];
+    if (!bearer) assertSameOrigin(req);
     const body = await readJsonBody(req);
     if (!Array.isArray(body.scores) || body.scores.length === 0 || body.scores.length > 20) {
       return json({ error: "Send 1 to 20 scores.", code: "bad_request" }, 400);
+    }
+    if (bearer) {
+      const anon = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+      const { data, error } = await anon.rpc("sync_credit_scores_with_token", { p_token: bearer, p_rows: body.scores });
+      if (error) return json({ error: String(error.message ?? "Couldn't save those scores.").slice(0, 200), code: /link/i.test(error.message ?? "") ? "unauthorized" : "db_error" }, /link/i.test(error.message ?? "") ? 401 : 400);
+      return json(data);
     }
     const supabase = await supabaseServer();
     const { data: auth, error: authError } = await supabase.auth.getUser();

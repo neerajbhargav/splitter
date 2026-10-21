@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { centsToInput, money } from "../src/lib/format.ts";
+import { centsToInput, money, rangeLabel } from "../src/lib/format.ts";
 import { parseMoney } from "../src/lib/split.ts";
 
 test("money exposes ledger hundredths for every currency", () => {
@@ -53,4 +53,11 @@ test("noninteger and nonfinite input behavior stays compatible", () => {
   for (const cents of [0.5, -0.5, 100.25, NaN, Infinity, -Infinity]) {
     assert.equal(centsToInput(cents), (cents / 100).toFixed(2));
   }
+});
+
+test("rangeLabel reads naturally with open ends and across years", () => {
+  assert.equal(rangeLabel("2026-09-12", "2026-10-11"), "Sep 12 – Oct 11, 2026");
+  assert.equal(rangeLabel("2025-12-10", "2026-01-12"), "Dec 10, 2025 – Jan 12, 2026");
+  assert.equal(rangeLabel("2026-08-01", null), "From Aug 1, 2026");
+  assert.equal(rangeLabel(null, "2026-07-31"), "Until Jul 31, 2026");
 });

@@ -10,7 +10,7 @@ import { DebtPlanEditor, ordinal } from "@/components/finance/DebtPlanEditor";
 import { DebtSchedule } from "@/components/finance/DebtSchedule";
 import { PayoffChart } from "@/components/finance/charts";
 import { AccountIcon, AmountChips, HeroText, MoneyInput, Pill, currencySymbol, errorText, monthLong, monthShort } from "@/components/finance/kit";
-import { compareDebtPlans, type DebtPlan, type DebtPlanComparison, type DebtStrategy } from "@/lib/debt-planner";
+import { compareDebtPlans, consolidationWhatIf, type DebtPlan, type DebtPlanComparison, type DebtStrategy, type DebtPlannerDebt } from "@/lib/debt-planner";
 import { debtsMissingTerms, payoffDebts, plannerInput, extraInEffect } from "@/lib/finance-selectors";
 import { centsToInput, money } from "@/lib/format";
 import { parseMoney } from "@/lib/split";
@@ -399,6 +399,8 @@ export default function DebtPage() {
             </Card>
           )}
 
+          <Consolidate cards={payoffDebts(bundle.accounts.filter((a) => a.type === "credit"))} extra={extra} strategy={effective} month={thisMonth} currency={currency} />
+
           <Card title="Your debts" action={<button type="button" className="btn btn-sm" style={{ minHeight: 36 }} onClick={addDebt}><Plus /> Add debt</button>}>
             <div className="list">
               {liabilities.map((a) => {
@@ -427,5 +429,48 @@ export default function DebtPage() {
       <p className="fin-foot">Estimates use today's balances, APRs and minimums with interest added monthly. Your statements will differ a little.</p>
       {editor}
     </>
+  );
+}
+
+/** Credit card consolidator: would one fixed-rate loan beat paying the cards down? */
+function Consolidate({ cards, extra, strategy, month, currency }: { cards: DebtPlannerDebt[]; extra: number; strategy: DebtStrategy; month: string; currency: string }) {
+  const [apr, setApr] = useState("12");
+  const [fee, setFee] = useState("3");
+  const [months, setMonths] = useState(36);
+  if (!cards.length) return null;
+  const aprBps = Math.round(Number(apr) * 100), feeBps = Math.round(Number(fee) * 100);
+  const valid = Number.isFinite(aprBps) && aprBps >= 0 && aprBps <= 10_000 && Number.isFinite(feeBps) && feeBps >= 0 && feeBps <= 2_000;
+  let w: ReturnType<typeof consolidationWhatIf> | null = null;
+  try { if (valid) w = consolidationWhatIf(cards, { apr_bps: aprBps, fee_bps: feeBps, months, extra_cents: extra, first_month: month, strategy }); } catch { w = null; }
+  const when = (m: string | null) => (m ? monthShort(m) : "never");
+  return (
+    <Card title="Consolidate your cards?" description={`${cards.length} card${cards.length === 1 ? "" : "s"}, ${money(cards.reduce((a, d) => a + d.balance_cents, 0), currency)} owed. Try a personal loan or balance-transfer offer.`}>
+      <div className="stack">
+        <div className="form-row" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
+          <label className="field"><span className="label">Loan APR %</span><input className="input" inputMode="decimal" value={apr} onChange={(e) => setApr(e.target.value)} /></label>
+          <label className="field"><span className="label">Fee %</span><input className="input" inputMode="decimal" value={fee} onChange={(e) => setFee(e.target.value)} /></label>
+          <label className="field"><span className="label">Term</span>
+            <select className="select" value={months} onChange={(e) => setMonths(Number(e.target.value))}>{[12, 24, 36, 48, 60].map((m) => <option key={m} value={m}>{m} months</option>)}</select></label>
+        </div>
+        {!valid ? <p className="hint neg">Enter an APR from 0 to 100 and a fee from 0 to 20.</p> : w && (
+          <>
+            <div className="list">
+              <div className="item"><div className="item-main"><div className="item-title">Keep the cards</div>
+                <div className="item-sub">{money(w.keep.monthly_cents, currency)}/mo · paid off {when(w.keep.payoff_month)}</div></div>
+                <div className="item-end"><div className="v">{w.keep.payoff_month ? money(w.keep.cost_cents, currency) : "—"}</div><div className="k">interest</div></div></div>
+              <div className="item"><div className="item-main"><div className="item-title">One loan</div>
+                <div className="item-sub">{money(w.payment_cents, currency)}/mo · paid off {when(w.loan.payoff_month)}{w.fee_cents ? ` · ${money(w.fee_cents, currency)} fee` : ""}</div></div>
+                <div className="item-end"><div className="v">{money(w.loan.cost_cents, currency)}</div><div className="k">interest + fee</div></div></div>
+            </div>
+            <p className={`hint ${w.saves_cents > 0 ? "pos" : "neg"}`} style={{ margin: 0 }}>
+              {!w.keep.payoff_month ? "Your card payments don't cover the interest, so the loan is the only one of the two that ends."
+                : w.saves_cents > 0 ? `The loan saves about ${money(w.saves_cents, currency)}${w.payment_cents > w.keep.monthly_cents ? `, but costs ${money(w.payment_cents - w.keep.monthly_cents, currency)} more a month` : ""}.`
+                : `Keeping the cards costs ${money(-w.saves_cents, currency)} less. Consolidating isn't worth it at these terms.`}
+              {" "}It only works if the cards stay paid off afterward.
+            </p>
+          </>
+        )}
+      </div>
+    </Card>
   );
 }

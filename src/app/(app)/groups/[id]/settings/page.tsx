@@ -48,7 +48,7 @@ export default function GroupSettings() {
     setCurrency(b.group.currency);
   }, [b?.group.name, b?.group.kind, b?.group.currency]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (missing) return <main className="page page-narrow"><Empty title="Group not found" action={<Link href="/dashboard" className="btn">Dashboard</Link>} /></main>;
+  if (missing) return <main className="page page-narrow"><Empty title="Group not found" action={<Link href="/groups" className="btn">All groups</Link>} /></main>;
   if (!b) return <Loading />;
 
   const { group, members } = b;

@@ -1,4 +1,5 @@
 "use client";
+import { SplitNav } from "@/components/SplitNav";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
@@ -29,6 +30,7 @@ export default function GroupsPage() {
         </div>
         <Link href="/groups/new" className="btn btn-primary"><Plus /> New group</Link>
       </div>
+      <SplitNav />
       {(() => {
         const tot = Object.entries(sum.totals)[0];
         if (!tot) return <div className="overall faint">Overall, you are all settled up</div>;

@@ -38,7 +38,7 @@ export function LoginForm({ next, initialError, joining }: { next: string; initi
       <div className="brand-link" style={{ marginBottom: 36 }}><LogoMark size={30} /><span className="wordmark">SPLIT<b>TER</b></span></div>
       <h2>{joining ? "Sign in to join" : "Sign in"}</h2>
       <p className="muted">
-        {joining ? "Your group invite is waiting. Sign in and you'll land right in it." : "Split expenses with your roommates."}
+        {joining ? "Your group invite is waiting. Sign in and you'll land right in it." : "Your money in one place, and the costs you share."}
       </p>
 
       <div className="oauth">

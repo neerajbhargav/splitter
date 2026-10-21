@@ -4,8 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "SPLITTER",
     short_name: "SPLITTER",
-    description: "Split shared expenses with roommates, friends and trips.",
-    start_url: "/dashboard",
+    description: "Your money in one place: spending, budget, debt, paychecks and bills, plus costs you split with roommates and friends.",
+    start_url: "/finance",
     display: "standalone",
     background_color: "#0b0b0c",
     theme_color: "#0b0b0c",

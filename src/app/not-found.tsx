@@ -6,7 +6,7 @@ export default function NotFound() {
       <Link href="/" className="wordmark">SPLIT<b>TER</b></Link>
       <h1 className="page-title" style={{ marginTop: 32 }}>Nothing here.</h1>
       <p className="page-sub">That page does not exist, or the link is out of date.</p>
-      <Link href="/dashboard" className="btn" style={{ marginTop: 18 }}>Go to dashboard</Link>
+      <Link href="/finance" className="btn" style={{ marginTop: 18 }}>Go home</Link>
     </main>
   );
 }

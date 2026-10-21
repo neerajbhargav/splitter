@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_KEY, SUPABASE_URL, hasSupabaseEnv } from "@/lib/supabase/env";
 
-const PROTECTED = ["/dashboard", "/groups", "/activity", "/account"];
+const PROTECTED = ["/finance", "/dashboard", "/groups", "/activity", "/search", "/account"];
 const isProtected = (path: string) => path === "/" || PROTECTED.some((p) => path === p || path.startsWith(p + "/"));
 
 export async function proxy(request: NextRequest) {
@@ -35,7 +35,7 @@ export async function proxy(request: NextRequest) {
   }
   if (data.user && (path === "/login" || path === "/")) {
     const next = request.nextUrl.searchParams.get("next");
-    const safe = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+    const safe = next && next.startsWith("/") && !next.startsWith("//") ? next : "/finance";
     return NextResponse.redirect(new URL(safe, request.url));
   }
   return response;

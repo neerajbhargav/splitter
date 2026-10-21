@@ -98,7 +98,7 @@ function Join() {
         <div style={{ marginTop: 40 }}>
           <h1 className="page-title">This invite expired.</h1>
           <p className="page-sub">The link was reset or the group was deleted. Ask a member for a fresh link.</p>
-          <Link href="/dashboard" className="btn" style={{ marginTop: 18 }}>Go to dashboard</Link>
+          <Link href="/finance" className="btn" style={{ marginTop: 18 }}>Go home</Link>
         </div>
       ) : (
         <div style={{ marginTop: 40 }}>

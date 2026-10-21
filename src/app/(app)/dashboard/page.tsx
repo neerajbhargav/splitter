@@ -1,4 +1,5 @@
 "use client";
+import { SplitNav } from "@/components/SplitNav";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -13,7 +14,7 @@ import { CHART_COLORS, Donut, MonthlyBars, type Slice } from "@/components/chart
 import { loadOverview, useLiveRefresh, type Overview } from "@/lib/data";
 import { summarize } from "@/lib/overview";
 import { category, groupKind } from "@/lib/categories";
-import { greeting, money } from "@/lib/format";
+import { money } from "@/lib/format";
 
 export default function Dashboard() {
   const me = useMe();
@@ -81,13 +82,13 @@ export default function Dashboard() {
   }, [data, sum, me.id, me.profile]);
 
   if (!data || !sum || !view) return <Loading />;
-  const first = (me.profile?.display_name || "").split(" ")[0];
 
   if (!data.groups.length) {
     return (
       <main className="page page-narrow">
-        <div className="eyebrow">{greeting()}{first ? `, ${first}` : ""}</div>
+        <div className="eyebrow">Split with others</div>
         <h1 className="page-title">Start your first group.</h1>
+        <SplitNav />
         <p className="page-sub">Make a group for your apartment, a trip, or anyone you share costs with. Add people by name now and send the invite link whenever you like.</p>
         <div className="row-flex wrap" style={{ marginTop: 24 }}>
           <Link href="/groups/new" className="btn btn-primary btn-lg"><Plus /> Create a group</Link>
@@ -101,7 +102,13 @@ export default function Dashboard() {
 
   return (
     <main className="page">
-      <div className="eyebrow">{greeting()}{first ? `, ${first}` : ""}</div>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">With roommates, trips and friends</div>
+          <h1 className="page-title">Split</h1>
+        </div>
+      </div>
+      <SplitNav />
 
       <section className="card">
         <div className="hero-bal">

@@ -1,4 +1,5 @@
 "use client";
+import { SplitNav } from "@/components/SplitNav";
 import { useCallback, useEffect, useState } from "react";
 import { useToast } from "@/components/providers";
 import { Loading } from "@/components/ui";
@@ -22,6 +23,7 @@ export default function ActivityPage() {
           <h1 className="page-title">Activity</h1>
         </div>
       </div>
+      <SplitNav />
       <section className="card">
         <div className="card-body">
           <ActivityList items={data.activity} groups={data.groups} />

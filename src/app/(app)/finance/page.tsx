@@ -283,7 +283,7 @@ function GroupsCard() {
   }, [me.id]);
   if (!g) return null;
   return (
-    <Card title="Groups" description="Shared costs with roommates, trips and friends" action={<Link href="/dashboard" className="btn btn-sm">Groups <ArrowRight /></Link>}>
+    <Card title="Groups" description="Shared costs with roommates, trips and friends" action={<Link href="/dashboard" className="btn btn-sm">Split <ArrowRight /></Link>}>
       {g.totals.length || g.upcoming.length ? (
         <div className="list">
           {g.totals.map(([cur, t]) => (

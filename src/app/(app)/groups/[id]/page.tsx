@@ -115,7 +115,7 @@ export default function GroupPage() {
   if (missing) {
     return (
       <main className="page page-narrow">
-        <Empty title="Group not found" action={<Link href="/dashboard" className="btn">Back to dashboard</Link>}>
+        <Empty title="Group not found" action={<Link href="/groups" className="btn">All groups</Link>}>
           It may have been deleted, or you are no longer a member.
         </Empty>
       </main>

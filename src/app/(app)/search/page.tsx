@@ -1,4 +1,5 @@
 "use client";
+import { SplitNav } from "@/components/SplitNav";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCw, Search } from "lucide-react";
@@ -102,6 +103,7 @@ export default function SearchPage() {
           <RefreshCw className={loading ? "spin" : ""} /> {loading ? "Refreshing..." : "Refresh"}
         </button>
       </div>
+      <SplitNav />
       {error && <div className="banner neg" role="alert">
         <div>{data ? "Couldn't refresh. Results below are from the last successful load. " : "Couldn't load your expenses. "}{error}</div>
         <button type="button" className="btn btn-sm" onClick={() => void reload()} disabled={loading}>Try again</button>

@@ -10,7 +10,7 @@ const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: { default: "SPLITTER", template: "%s · SPLITTER" },
-  description: "Split rent, groceries and trips with the people you live and travel with. Live sync, simplified debts, no ads.",
+  description: "Your money in one place: spending, budget, debt payoff, paychecks and subscriptions, plus rent and trips you split with roommates and friends. Free, no ads.",
   applicationName: "SPLITTER",
   appleWebApp: { capable: true, title: "SPLITTER", statusBarStyle: "black-translucent" },
   icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },

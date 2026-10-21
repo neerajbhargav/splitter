@@ -2,7 +2,9 @@
 
 **Live:** https://usesplitter.vercel.app
 
-Split rent, groceries and trips with the people you live and travel with. Everyone in a group sees the same numbers, live, and one tap tells you who pays whom.
+Your money in one place: spending, budget, paychecks, accounts, debt payoff, subscriptions and credit health. It opens on your money; **Split** is one tab of it, for rent, groceries and trips you share with the people you live and travel with. Everyone in a group sees the same numbers, live, and one tap tells you who pays whom.
+
+**Layout:** the sidebar (desktop) lists the money sections, then **Split** with your groups under it. On phones the tab bar is Money · Activity · Add · Budget · Split, and each area has its own row of section tabs. **Add** asks whether it's your own spending or income, or a cost to split with a group.
 
 ## Features
 

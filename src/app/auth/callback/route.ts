@@ -5,8 +5,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const rawNext = url.searchParams.get("next") ?? "/dashboard";
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
+  const rawNext = url.searchParams.get("next") ?? "/finance";
+  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/finance";
   // Behind Vercel's proxy, rebuild the public origin from the forwarded headers.
   const host = request.headers.get("x-forwarded-host") ?? url.host;
   const proto = request.headers.get("x-forwarded-proto")?.split(",")[0] ?? url.protocol.replace(":", "");

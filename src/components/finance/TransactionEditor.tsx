@@ -10,7 +10,7 @@ import { ACCOUNT_TYPE_LABEL, CATEGORY_KIND_LABEL, FINANCE_MAX_CENTS, type Financ
 import { STALE_DRAFT, useFinance } from "./FinanceProvider";
 import { MoneyInput, errorText, useDraftContext } from "./kit";
 
-export type TxDefaults = Partial<Pick<FinanceTransaction, "date" | "kind" | "category_id" | "account_id" | "description">>;
+export type TxDefaults = Partial<Pick<FinanceTransaction, "date" | "kind" | "category_id" | "account_id" | "description" | "amount_cents">>;
 
 const KIND_OPTIONS: { id: TxKind; label: string }[] = [
   { id: "expense", label: "Expense" }, { id: "income", label: "Income" }, { id: "transfer", label: "Transfer" },
@@ -20,7 +20,11 @@ const SOURCE_NOTE: Record<FinanceTransaction["source"], string | null> = {
 };
 
 /** Add or edit one ledger line. Used by Overview, Activity, Budget and Accounts. */
-export function TransactionEditor({ open, tx, defaults, onClose }: { open: boolean; tx: FinanceTransaction | null; defaults?: TxDefaults; onClose: () => void }) {
+export function TransactionEditor({ open, tx, defaults, onClose, onSplit }: {
+  open: boolean; tx: FinanceTransaction | null; defaults?: TxDefaults; onClose: () => void;
+  /** Offered on new expenses: hand the purchase to a group instead of logging it here. */
+  onSplit?: (p: { description: string; amount_cents?: number }) => void;
+}) {
   const { bundle, currency, today, api } = useFinance();
   const toast = useToast();
   const draft = useDraftContext();
@@ -38,7 +42,7 @@ export function TransactionEditor({ open, tx, defaults, onClose }: { open: boole
   useEffect(() => {
     if (!open) { draft.release(); return; }
     setKind(tx?.kind ?? defaults?.kind ?? "expense");
-    setAmount(tx ? centsToInput(tx.amount_cents) : "");
+    setAmount(tx ? centsToInput(tx.amount_cents) : defaults?.amount_cents ? centsToInput(defaults.amount_cents) : "");
     setDescription(tx?.description ?? defaults?.description ?? "");
     setDate(tx?.date ?? defaults?.date ?? today);
     setCategoryId(tx?.category_id ?? defaults?.category_id ?? "");
@@ -104,6 +108,10 @@ export function TransactionEditor({ open, tx, defaults, onClose }: { open: boole
           <button type="button" className="btn btn-danger" disabled={busy} onClick={() => void remove()}>Delete</button></>
       ) : (
         <>{tx && <button type="button" className="btn btn-ghost btn-icon" style={{ marginRight: "auto" }} aria-label="Delete transaction" onClick={() => setConfirmDelete(true)}><Trash2 /></button>}
+          {!tx && onSplit && kind === "expense" && (
+            <button type="button" className="btn" style={{ marginRight: "auto" }} disabled={busy}
+              onClick={() => { const c = parseMoney(amount); onSplit({ description: description.trim(), amount_cents: c && c > 0 ? c : undefined }); }}>Split with a group</button>
+          )}
           <button type="button" className="btn btn-ghost" onClick={onClose} disabled={busy}>Cancel</button>
           <button type="submit" form="fin-tx-form" className="btn btn-primary" disabled={busy || draft.stale}>{busy && <Spinner />}{tx ? "Save" : "Add"}</button></>
       )}>

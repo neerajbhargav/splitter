@@ -9,7 +9,7 @@ import { DefaultSplitSettings } from "@/components/DefaultSplitSettings";
 import { api, loadGroup, useLiveRefresh, type GroupBundle } from "@/lib/data";
 import { netBalances } from "@/lib/debts";
 import { GROUP_KINDS } from "@/lib/categories";
-import { CURRENCIES, money } from "@/lib/format";
+import { CURRENCIES, money, rangeLabel } from "@/lib/format";
 import { avatarFor } from "@/lib/overview";
 import type { GroupKind, Member } from "@/lib/types";
 
@@ -26,7 +26,7 @@ export default function GroupSettings() {
   const [savingInfo, setSavingInfo] = useState(false);
   const [add, setAdd] = useState({ name: "", email: "", phone: "" });
   const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState({ name: "", email: "", phone: "" });
+  const [draft, setDraft] = useState({ name: "", email: "", phone: "", from: "", to: "" });
 
   const reload = useCallback(async () => {
     try {
@@ -55,7 +55,9 @@ export default function GroupSettings() {
   const currencyLocked = b.expenses.length > 0 || b.upcoming.length > 0;
   const net = netBalances(members.map((m) => m.id), b.expenses.filter((e) => !e.deleted_at));
   const mine = members.find((m) => m.user_id === me.id);
+  const canDelete = mine?.role === "owner" || !members.some((m) => m.role === "owner" && m.is_active && m.user_id);
   const link = `${window.location.origin}/join/${group.invite_code}`;
+  const [fromLabel, toLabel] = group.kind === "home" ? ["Moved in", "Moved out"] : ["First day", "Last day"];
 
   async function saveInfo(e: FormEvent) {
     e.preventDefault();
@@ -84,7 +86,9 @@ export default function GroupSettings() {
 
   async function saveMember(m: Member) {
     try {
+      if (draft.from && draft.to && draft.to < draft.from) return toast.err("The last day is before the first day");
       await api.updateMember(m.id, draft.name, m.user_id ? null : draft.email, draft.phone);
+      if ((draft.from || null) !== (m.stay_from ?? null) || (draft.to || null) !== (m.stay_to ?? null)) await api.setMemberStay(m.id, draft.from, draft.to);
       setEditing(null);
       toast.ok("Saved");
     } catch (err) {
@@ -177,6 +181,10 @@ export default function GroupSettings() {
                     <input className="input" style={{ flex: "1 1 140px" }} value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Name" maxLength={40} aria-label="Name" />
                     {!m.user_id && <input className="input" style={{ flex: "1 1 170px" }} type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} placeholder="Email" aria-label="Email" />}
                     <input className="input" style={{ flex: "1 1 120px" }} type="tel" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} placeholder="Phone" aria-label="Phone" />
+                    <label className="field" style={{ flex: "1 1 140px" }}><span className="label">{fromLabel} <span className="faint">(optional)</span></span>
+                      <input className="input" type="date" value={draft.from} max={draft.to || undefined} onChange={(e) => setDraft({ ...draft, from: e.target.value })} /></label>
+                    <label className="field" style={{ flex: "1 1 140px" }}><span className="label">{toLabel} <span className="faint">(optional)</span></span>
+                      <input className="input" type="date" value={draft.to} min={draft.from || undefined} onChange={(e) => setDraft({ ...draft, to: e.target.value })} /></label>
                     <button type="button" className="btn btn-primary btn-icon" style={{ height: 40, width: 40 }} onClick={() => saveMember(m)} aria-label="Save"><Check /></button>
                     <button type="button" className="btn btn-ghost btn-icon" style={{ height: 40, width: 40 }} onClick={() => setEditing(null)} aria-label="Cancel"><X /></button>
                   </div>
@@ -191,12 +199,12 @@ export default function GroupSettings() {
                       {m.user_id === me.id && <span className="faint"> (you)</span>}
                     </div>
                     <div className="item-sub wrap-all">
-                      {[m.user_id ? "Joined" : "Not joined yet", m.email, m.phone].filter(Boolean).join(" · ")}
+                      {[m.user_id ? "Joined" : "Not joined yet", m.email, m.phone, (m.stay_from || m.stay_to) && rangeLabel(m.stay_from, m.stay_to)].filter(Boolean).join(" · ")}
                       {bal !== 0 && <> · <span className={bal > 0 ? "pos" : "neg"}>{bal > 0 ? "gets back" : "owes"} {money(Math.abs(bal), group.currency)}</span></>}
                     </div>
                   </div>
                   <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Edit ${m.display_name}`}
-                    onClick={() => { setEditing(m.id); setDraft({ name: m.display_name, email: m.email ?? "", phone: m.phone ?? "" }); }}>
+                    onClick={() => { setEditing(m.id); setDraft({ name: m.display_name, email: m.email ?? "", phone: m.phone ?? "", from: m.stay_from ?? "", to: m.stay_to ?? "" }); }}>
                     <Pencil />
                   </button>
                   {m.id === mine?.id && (
@@ -246,8 +254,8 @@ export default function GroupSettings() {
         <div className="card-head"><span className="card-title">Danger zone</span></div>
         <div className="card-body row-flex wrap">
           <button type="button" className="btn btn-danger" onClick={leave}>Leave group</button>
-          <button type="button" className="btn btn-danger" onClick={destroy}><Trash2 /> Delete group</button>
-          <span className="hint">You can only leave or remove people once their balance is zero.</span>
+          {canDelete && <button type="button" className="btn btn-danger" onClick={destroy}><Trash2 /> Delete group</button>}
+          <span className="hint">You can only leave or remove people once their balance is zero.{canDelete ? "" : " Only the group's owner can delete it."}</span>
         </div>
       </section>
     </main>

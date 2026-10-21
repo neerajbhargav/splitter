@@ -10,6 +10,7 @@ Split rent, groceries and trips with the people you live and travel with. Everyo
 - **Groups** for a home, trip, couple or anything else, each with its own currency
 - **Add people by name before they sign up.** They claim their spot from the invite link, or are linked automatically when they sign in with the email you added
 - **Expenses** split equally, by exact amounts, percentages or shares, with one or multiple payers. Every split is stored in integer cents and always adds up exactly
+- **Split by days lived there.** Give people move-in and move-out dates in group settings, then pick **By days** and the dates a bill covers (for example a utility's service period). Each person pays for their days only; anyone without dates counts every day. Works for upcoming bills too, and a paid upcoming bill keeps its period
 - **Simplify debts** per group: settles everyone in the fewest payments (at most people minus 1)
 - **Settle up**: record full or partial payments, with suggested amounts
 - **Reminders**: one tap opens your SMS or mail app with a pre-written nudge (uses the phone or email you saved)
@@ -91,7 +92,8 @@ npm test                     # split + debt math tests
 
 - Amounts are integer cents. Even splits give leftover cents to the first people in the list; percentage and share splits use the largest-remainder method, so parts always sum to the total.
 - **Not simplified:** within each expense, the people who owe pay back whoever paid, then each pair of people is netted.
-- **Simplified:** only each person's overall balance matters. Exact matches are paired first, then the biggest debtor pays the biggest creditor until everyone is at zero. Totals never change, only the routing.
+- **Simplified** (Splitwise's rules): nobody's total changes, the group settles in the fewest payments possible, nobody who is owed money is asked to pay, and among the fewest-payment answers the one closest to who already owed whom wins. It searches payment routes from people who owe to people who are owed; very large groups fall back to biggest-debtor-pays-biggest-creditor.
+- **By days:** shares are weighted by the days of the bill's period each person lived there (move-in and move-out dates are inclusive), using the same largest-remainder method.
 - A payment is stored as an expense where the payer "paid" and the receiver "owes" the same amount, which cancels the debt.
 
 ## Project layout
@@ -122,7 +124,7 @@ tests/                     node:test suite for the math
 - **Itemization:** Choose By item. Enter line totals in the group currency and assign people. Shared lines split equally; tax/tip are proportional to each person's subtotal with exact, deterministic cent allocation. The server independently recomputes the final shares. Foreign-currency bills retain the original lines, tax and tip alongside the converted group-currency amounts. One whole-bill conversion is allocated across components to preserve the exact converted total; the database checks both source and converted line amounts.
 - **Receipt scanning:** Attach a JPG, PNG, WebP, BMP or PDF and choose Scan. English OCR runs locally using Tesseract.js; engine/language files download from CDN, but the image/text are not sent to an external OCR service. Review/edit suggestions before applying. PDFs use local selectable-text extraction first, with local OCR fallback for image pages. At most five pages are read; longer PDFs warn and leave the final total blank. Encrypted PDFs require an unlocked copy. HEIC can be attached, not scanned. Ambiguous dates and conflicting totals are left blank. Receipt files are uploaded to private Supabase storage only when the expense is saved.
 
-For existing deployments, apply `supabase/migrations/20261001_free_expense_tools.sql` then `supabase/migrations/20261002_itemized_currency.sql` before deploying this version. Fresh deployments can use the complete idempotent schema. `npm test` includes isolated PostgreSQL/WASM permission and calculation regressions using synthetic data, not production records.
+For existing deployments, apply `supabase/migrations/20261001_free_expense_tools.sql` then `supabase/migrations/20261002_itemized_currency.sql` before deploying this version. Then apply `supabase/migrations/20261021_group_fixes.sql` (split by days, owner-only group delete, first-name joining, check marks that survive edits; safe to re-run). Fresh deployments can use the complete idempotent schema. `npm test` includes isolated PostgreSQL/WASM permission and calculation regressions using synthetic data, not production records.
 
 ## Personal finance (private)
 
@@ -137,6 +139,7 @@ SPLITTER Finance v2 lives at `/finance` and absorbed the standalone Folio app. I
 - **Health:** Folio's six rules, each shown as pass, warn, fail or unknown.
 - **Ask:** questions about your finances answered by an AI model with your own API key. The request goes from your browser straight to the provider, and the key stays on your device.
 - **Settings:** profile (income, currency), categories (rename, archive, delete with reassignment) and the sample-data toggle.
+- **Apple Pay logging:** an iPhone Shortcut opens SPLITTER after every Apple Pay tap with the amount, merchant and card filled in. Add it to your spending (the category you last used at that merchant is picked for you) or tap **Split with a group**. Setup is below.
 
 **Sample data:** choose Explore with sample data to preview every page. Nothing is saved in this mode and every write is refused until you exit it.
 
@@ -146,6 +149,15 @@ SPLITTER Finance v2 lives at `/finance` and absorbed the standalone Folio app. I
 - Reads are owner-only through row level security, and the client also filters every query by `user_id` and paginates.
 - Writes go only through validated RPCs. Every draft is bound to the account and currency it was opened in, and each RPC re-checks both under a per-owner lock. Switching accounts or changing currency elsewhere cannot reuse an old draft.
 - Bank sync (Plaid) is optional. Access tokens are encrypted with AES-GCM on the server, stored in a table the browser cannot read, and never sent to the browser. The browser reads only a safe connection list (institution, status, last sync).
+
+**Apple Pay Shortcut (iPhone, iOS 17 or later)**
+
+1. Shortcuts > Automation > New Automation > **Transaction**. Pick your cards, choose **Run Immediately**, then Next.
+2. Add **URL Encode** with input *Merchant*, and a second **URL Encode** with input *Card*.
+3. Add **URL**: `https://usesplitter.vercel.app/finance/activity?add=1&amount=[Amount]&merchant=[URL Encoded Text 1]&card=[URL Encoded Text 2]` (insert the variables from the Transaction trigger and the two encode steps).
+4. Add **Open URLs**. Every tap now opens a prefilled entry. Nothing is saved until you press Add or split it.
+
+The card name or its last 4 digits picks the matching account in Accounts, if you have one.
 
 **Setup**
 

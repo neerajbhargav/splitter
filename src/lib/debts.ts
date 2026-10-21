@@ -246,7 +246,8 @@ export function simplifyDebts(net: Record<string, number>, raw: Tx[] = []): Tx[]
 
   const debtors = ids.filter((id) => net[id] < 0);
   const creditors = ids.filter((id) => net[id] > 0);
-  const existing: [string, string][] = raw.filter((t) => t.amount > 0).map((t) => [t.from, t.to]);
+  // Only debtor -> creditor routes can carry a payment (the no-relay rule below), so the rest never need trying.
+  const existing: [string, string][] = raw.filter((t) => t.amount > 0 && net[t.from] < 0 && net[t.to] > 0).map((t) => [t.from, t.to]);
   const existingKeys = new Set(existing.map(([a, b]) => `${a}\u0000${b}`));
   const fresh: [string, string][] = [];
   for (const d of debtors) for (const c of creditors) if (!existingKeys.has(`${d}\u0000${c}`)) fresh.push([d, c]);
@@ -268,18 +269,26 @@ export function simplifyDebts(net: Record<string, number>, raw: Tx[] = []): Tx[]
   // Tie-break: stay as close as possible to what people originally owed each other.
   const score = (txs: Tx[]) => txs.reduce((a, t) => a + Math.abs(t.amount - (rawAmt.get(`${t.from}\u0000${t.to}`) ?? 0)), 0);
 
+  // Every person with a balance must be on at least one payment route; cheap to check before max-flow.
+  const coversEveryone = (combo: [string, string][]) => {
+    const seen = new Set<string>();
+    for (const [x, y] of combo) {
+      seen.add(x);
+      seen.add(y);
+    }
+    return ids.every((id) => seen.has(id));
+  };
   let budget = 300_000;
   for (let k = target; k <= fallback.length; k++) {
     for (let newAllowed = 0; newAllowed <= Math.min(k, fresh.length); newAllowed++) {
-      const pool = newAllowed === 0 ? existing : existing.concat(fresh);
-      if (pool.length < k) continue;
+      // Build only combos with exactly `newAllowed` new routes, in the same order as choosing from existing.concat(fresh).
+      if (existing.length < k - newAllowed) continue;
       let best: Tx[] | null = null;
       let bestScore = Infinity;
-      for (const combo of combinations(pool, k)) {
+      for (const old of combinations(existing, k - newAllowed)) for (const added of combinations(fresh, newAllowed)) {
         if (--budget < 0) return finish(fallback);
-        let nNew = 0;
-        for (const [x, y] of combo) if (!existingKeys.has(`${x}\u0000${y}`)) nNew++;
-        if (nNew !== newAllowed) continue;
+        const combo = old.concat(added);
+        if (!coversEveryone(combo)) continue;
         const flows = route(net, combo);
         if (!flows || flows.size !== k) continue;
         const txs = toTx(flows);

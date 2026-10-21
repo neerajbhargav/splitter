@@ -435,6 +435,11 @@ create or replace function public.delete_group(gid uuid) returns void
 language plpgsql security definer set search_path = public as $$
 begin
   if not public.is_group_member(gid) then raise exception 'You are not in this group'; end if;
+  -- Deleting is permanent for everyone: only the owner, or anyone once no owner is left in the group.
+  if not exists (select 1 from public.group_members where group_id = gid and user_id = auth.uid() and role = 'owner')
+     and exists (select 1 from public.group_members where group_id = gid and role = 'owner' and is_active and user_id is not null) then
+    raise exception 'Only the group''s owner can delete it';
+  end if;
   delete from public.groups where id = gid;
 end $$;
 
@@ -578,6 +583,28 @@ alter table public.expenses add column if not exists source_items jsonb not null
 alter table public.expenses add column if not exists source_tax_cents bigint not null default 0 check(source_tax_cents>=0);
 alter table public.expenses add column if not exists source_tip_cents bigint not null default 0 check(source_tip_cents>=0);
 
+-- Split by days stayed: when each person lived there (inclusive, open ends allowed),
+-- and the dates a bill covers. Shares are then weighted by days in the bill's period.
+alter table public.group_members add column if not exists stay_from date;
+alter table public.group_members add column if not exists stay_to date;
+alter table public.expenses add column if not exists period_start date;
+alter table public.expenses add column if not exists period_end date;
+
+create or replace function public.set_member_stay(mid uuid, p_from date, p_to date) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  m public.group_members;
+begin
+  select * into m from public.group_members where id = mid;
+  if not found or not public.is_group_member(m.group_id) then raise exception 'Not allowed'; end if;
+  if p_to < p_from then raise exception 'The last day is before the first day'; end if;
+  if m.stay_from is not distinct from p_from and m.stay_to is not distinct from p_to then return; end if;
+  update public.group_members set stay_from = p_from, stay_to = p_to where id = mid;
+  perform public.log_activity(m.group_id, 'member_stay',
+    public.actor_name(m.group_id) || ' set ' || m.display_name || '''s dates: '
+      || coalesce(to_char(p_from, 'Mon FMDD, YYYY'), 'from the start') || ' to ' || coalesce(to_char(p_to, 'Mon FMDD, YYYY'), 'now'));
+end $$;
+
 create or replace function public.convert_itemized_bill(gid uuid, source_items jsonb, tax bigint, tip bigint, target_total bigint)
 returns jsonb language plpgsql set search_path=public as $$
 declare source_total numeric; result jsonb;
@@ -635,10 +662,13 @@ declare
   src_tax bigint := coalesce((p->>'source_tax_cents')::bigint,0);
   src_tip bigint := coalesce((p->>'source_tip_cents')::bigint,0);
   converted jsonb;
+  per_start date := nullif(p->>'period_start', '')::date;
+  per_end date := nullif(p->>'period_end', '')::date;
 begin
   if not public.is_group_member(p_group) then raise exception 'You are not in this group'; end if;
   select * into g from public.groups where id = p_group for share;
   if total is null or total <= 0 or total > 9007199254740991 then raise exception 'Amount must be positive and within the supported range'; end if;
+  if (per_start is null) <> (per_end is null) or per_end < per_start then raise exception 'A billing period needs a first and last day, in order'; end if;
   if jsonb_typeof(item_data) is distinct from 'array' then raise exception 'Items must be an array'; end if;
   if tax < 0 or tip < 0 then raise exception 'Tax and tip cannot be negative'; end if;
   if jsonb_array_length(item_data)>0 then
@@ -723,7 +753,8 @@ begin
 
   update public.expenses set items=item_data, tax_cents=tax, tip_cents=tip,
     source_currency=src, source_amount_cents=src_amt, fx_rate=rate, fx_date=rate_date,
-    source_items=src_items,source_tax_cents=src_tax,source_tip_cents=src_tip where id=eid;
+    source_items=src_items,source_tax_cents=src_tax,source_tip_cents=src_tip,
+    period_start=per_start, period_end=per_end where id=eid;
 
   insert into public.expense_payers (expense_id, member_id, amount_cents)
   select eid, (x->>'member_id')::uuid, (x->>'amount_cents')::bigint
@@ -1104,7 +1135,8 @@ begin
     if coalesce(array_length(ids, 1), 0) = 1 then return jsonb_build_object('member_id', ids[1], 'how', 'email'); end if;
   end if;
   -- 2) name: the spot's full name equals mine, or the spot's first name equals my first name
-  mine := public.name_tokens(coalesce(full_name, '')) || public.name_tokens(coalesce(me.display_name, ''));
+  --    (first names only, so a spot called "Jordan" never auto-claims "Michael Jordan")
+  mine := array_remove(array[(public.name_tokens(full_name))[1], (public.name_tokens(me.display_name))[1]], null);
   if coalesce(array_length(mine, 1), 0) = 0 then return null; end if;
   select array_agg(id) into ids from public.group_members m
    where m.group_id = gid and m.user_id is null and m.is_active
@@ -1221,6 +1253,9 @@ end $$;
 -- =====================================================================
 alter table public.upcoming_bill_shares add column if not exists paid_at timestamptz;
 alter table public.upcoming_bill_shares add column if not exists paid_marked_by uuid references auth.users(id) on delete set null;
+alter table public.upcoming_bill_shares add column if not exists paid_cents bigint check (paid_cents is null or paid_cents >= 0);
+alter table public.upcoming_bills add column if not exists period_start date;
+alter table public.upcoming_bills add column if not exists period_end date;
 
 create or replace function public.set_share_paid(bid uuid, mid uuid, p_paid boolean) returns void
 language plpgsql security definer set search_path = public as $$
@@ -1239,7 +1274,8 @@ begin
   end if;
   update public.upcoming_bill_shares
      set paid_at = case when p_paid then coalesce(paid_at, now()) else null end,
-         paid_marked_by = case when p_paid then auth.uid() else null end
+         paid_marked_by = case when p_paid then auth.uid() else null end,
+         paid_cents = case when p_paid then coalesce(paid_cents, amount_cents) else null end
    where bill_id = bid and member_id = mid;
   if not found then raise exception 'That person is not part of this bill'; end if;
   select display_name into who from public.group_members where id = mid;
@@ -1251,7 +1287,8 @@ begin
     null, (select amount_cents from public.upcoming_bill_shares where bill_id = bid and member_id = mid));
 end $$;
 
--- Keep check marks when a bill is edited (for people whose share didn't change).
+-- Keep check marks when a bill is edited. A ticked person keeps the amount they actually sent,
+-- so correcting an estimate leaves only the difference owing.
 create or replace function public.save_upcoming_bill(p_id uuid, p_group uuid, p jsonb) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare
@@ -1261,11 +1298,14 @@ declare
   ssum bigint;
   bad int;
   kept jsonb := '[]'::jsonb;
+  per_start date := nullif(p->>'period_start', '')::date;
+  per_end date := nullif(p->>'period_end', '')::date;
 begin
   if not public.is_group_member(p_group) then raise exception 'You are not in this group'; end if;
   perform 1 from public.groups where id=p_group for share;
   if total is null or total <= 0 then raise exception 'Amount must be greater than zero'; end if;
   if ttl = '' then raise exception 'Add a name for the bill'; end if;
+  if (per_start is null) <> (per_end is null) or per_end < per_start then raise exception 'A billing period needs a first and last day, in order'; end if;
   if jsonb_typeof(p->'shares') <> 'array' or jsonb_array_length(p->'shares') = 0 then raise exception 'Choose who splits this bill'; end if;
   select coalesce(sum((x->>'amount_cents')::bigint), 0) into ssum from jsonb_array_elements(p->'shares') x;
   if ssum <> total then raise exception 'Shares add up to % but the bill is %', public.fmt_cents(ssum), public.fmt_cents(total); end if;
@@ -1278,20 +1318,20 @@ begin
   end if;
 
   if p_id is null then
-    insert into public.upcoming_bills (group_id, title, amount_cents, due_date, is_estimate, category, notes)
+    insert into public.upcoming_bills (group_id, title, amount_cents, due_date, is_estimate, category, notes, period_start, period_end)
     values (p_group, ttl, total, nullif(p->>'due_date', '')::date, coalesce((p->>'is_estimate')::boolean, false),
-            coalesce(nullif(p->>'category', ''), 'utilities'), nullif(trim(coalesce(p->>'notes', '')), ''))
+            coalesce(nullif(p->>'category', ''), 'utilities'), nullif(trim(coalesce(p->>'notes', '')), ''), per_start, per_end)
     returning id into bid;
   else
     update public.upcoming_bills set
       title = ttl, amount_cents = total, due_date = nullif(p->>'due_date', '')::date,
       is_estimate = coalesce((p->>'is_estimate')::boolean, false),
       category = coalesce(nullif(p->>'category', ''), 'utilities'),
-      notes = nullif(trim(coalesce(p->>'notes', '')), ''), updated_at = now()
+      notes = nullif(trim(coalesce(p->>'notes', '')), ''), period_start = per_start, period_end = per_end, updated_at = now()
     where id = p_id and group_id = p_group and status = 'upcoming'
     returning id into bid;
     if bid is null then raise exception 'That bill no longer exists or was already paid'; end if;
-    select coalesce(jsonb_agg(jsonb_build_object('member_id', member_id, 'amount_cents', amount_cents, 'paid_at', paid_at, 'by', paid_marked_by)), '[]'::jsonb)
+    select coalesce(jsonb_agg(jsonb_build_object('member_id', member_id, 'sent', coalesce(paid_cents, amount_cents), 'paid_at', paid_at, 'by', paid_marked_by)), '[]'::jsonb)
       into kept from public.upcoming_bill_shares where bill_id = bid and paid_at is not null;
     delete from public.upcoming_bill_shares where bill_id = bid;
   end if;
@@ -1301,9 +1341,9 @@ begin
   from jsonb_array_elements(p->'shares') x where (x->>'amount_cents')::bigint > 0;
 
   update public.upcoming_bill_shares s
-     set paid_at = (k->>'paid_at')::timestamptz, paid_marked_by = nullif(k->>'by', '')::uuid
+     set paid_at = (k->>'paid_at')::timestamptz, paid_marked_by = nullif(k->>'by', '')::uuid, paid_cents = (k->>'sent')::bigint
     from jsonb_array_elements(kept) k
-   where s.bill_id = bid and s.member_id = (k->>'member_id')::uuid and s.amount_cents = (k->>'amount_cents')::bigint;
+   where s.bill_id = bid and s.member_id = (k->>'member_id')::uuid;
 
   perform public.log_activity(p_group, case when p_id is null then 'upcoming_added' else 'upcoming_updated' end,
     public.actor_name(p_group) || case when p_id is null then ' added upcoming bill "' else ' updated upcoming bill "' end || ttl || '"'
@@ -1332,19 +1372,20 @@ begin
   eid := public.save_expense(null, b.group_id, jsonb_build_object(
     'description', b.title, 'amount_cents', b.amount_cents, 'category', b.category,
     'expense_date', coalesce(p_date, current_date), 'notes', b.notes, 'split_type', 'exact',
+    'period_start', b.period_start, 'period_end', b.period_end,
     'is_payment', false, 'repeat_interval', 'none', 'payers', p_payers,
     'splits', (select coalesce(jsonb_agg(jsonb_build_object('member_id', x.member_id, 'amount_cents', x.amount_cents)), '[]'::jsonb)
                from public.upcoming_bill_shares x where x.bill_id = bid)));
   if jsonb_array_length(p_payers) = 1 then
     payer := (p_payers->0->>'member_id')::uuid;
-    for s in select * from public.upcoming_bill_shares where bill_id = bid and paid_at is not null and member_id <> payer loop
+    for s in select * from public.upcoming_bill_shares where bill_id = bid and paid_at is not null and member_id <> payer and coalesce(paid_cents, amount_cents) > 0 loop
       perform public.save_expense(null, b.group_id, jsonb_build_object(
-        'description', 'Payment', 'amount_cents', s.amount_cents, 'category', 'payment',
+        'description', 'Payment', 'amount_cents', coalesce(s.paid_cents, s.amount_cents), 'category', 'payment',
         'expense_date', coalesce(s.paid_at::date, coalesce(p_date, current_date)),
         'notes', 'Share of "' || b.title || '" (checked off in Upcoming bills)',
         'split_type', 'exact', 'is_payment', true, 'repeat_interval', 'none',
-        'payers', jsonb_build_array(jsonb_build_object('member_id', s.member_id, 'amount_cents', s.amount_cents)),
-        'splits', jsonb_build_array(jsonb_build_object('member_id', payer, 'amount_cents', s.amount_cents))));
+        'payers', jsonb_build_array(jsonb_build_object('member_id', s.member_id, 'amount_cents', coalesce(s.paid_cents, s.amount_cents))),
+        'splits', jsonb_build_array(jsonb_build_object('member_id', payer, 'amount_cents', coalesce(s.paid_cents, s.amount_cents)))));
     end loop;
   end if;
   update public.upcoming_bills set status = 'paid', expense_id = eid, updated_at = now() where id = bid;

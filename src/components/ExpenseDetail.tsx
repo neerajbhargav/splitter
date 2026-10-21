@@ -5,7 +5,7 @@ import { Avatar, Modal } from "./ui";
 import { useMe, useToast } from "./providers";
 import { addComment, api, deleteComment, loadComments, receiptUrl, useLiveRefresh } from "@/lib/data";
 import { category, groupKind } from "@/lib/categories";
-import { longDate, money, timeAgo } from "@/lib/format";
+import { longDate, money, timeAgo, rangeLabel } from "@/lib/format";
 import type { Comment, Expense, Group, Member } from "@/lib/types";
 
 const REPEAT_LABEL: Record<string, string> = { weekly: "Every week", biweekly: "Every 2 weeks", monthly: "Every month", yearly: "Every year" };
@@ -129,6 +129,7 @@ export function ExpenseDetail({ expense, group, members, onClose, onEdit, allExp
             {!expense.is_payment && <span className="badge">{cat.label}</span>}
             {expense.repeat_interval !== "none" && <span className="badge gold"><Repeat /> {REPEAT_LABEL[expense.repeat_interval]}</span>}
           </span>
+          {expense.period_start && expense.period_end && <span>Covers {rangeLabel(expense.period_start, expense.period_end)}{expense.split_type === "shares" ? " · split by days each person lived there" : ""}</span>}
           <span>Added by {nm(byUser(expense.created_by))} {timeAgo(expense.created_at)}</span>
           {expense.updated_by && <span>Last updated by {nm(byUser(expense.updated_by))} {timeAgo(expense.updated_at)}</span>}
         </div>
@@ -147,7 +148,8 @@ export function ExpenseDetail({ expense, group, members, onClose, onEdit, allExp
             <div className="tree" style={{ marginLeft: 20, gap: 8, paddingTop: 4 }}>
               {expense.expense_splits.filter((x) => x.amount_cents !== 0).map((x) => {
                 const m = member(x.member_id);
-                const weight = expense.split_type === "percent" ? `${x.weight}%` : expense.split_type === "shares" ? `${x.weight} share${Number(x.weight) === 1 ? "" : "s"}` : "";
+                const unit = expense.period_start ? "day" : "share";
+                const weight = expense.split_type === "percent" ? `${x.weight}%` : expense.split_type === "shares" ? `${x.weight} ${unit}${Number(x.weight) === 1 ? "" : "s"}` : "";
                 return (
                   <div key={"s" + x.member_id} className="tree-avatar" style={{ fontSize: 14 }}>
                     <Avatar name={m?.display_name ?? "?"} color={m?.color} size={24} />

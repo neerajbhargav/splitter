@@ -12,7 +12,8 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { groupKind } from "@/lib/categories";
 import type { Group, Profile } from "@/lib/types";
 
-type QuickAdd = { open: (groupId?: string | null) => void; groups: Group[] };
+type Prefill = { description?: string; amount_cents?: number };
+type QuickAdd = { open: (groupId?: string | null, prefill?: Prefill) => void; groups: Group[] };
 const QuickAddContext = createContext<QuickAdd>({ open: () => {}, groups: [] });
 export const useQuickAdd = () => useContext(QuickAddContext);
 
@@ -30,7 +31,7 @@ function Frame({ children }: { children: ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const [groups, setGroups] = useState<Group[]>([]);
-  const [quick, setQuick] = useState<{ open: boolean; gid: string | null }>({ open: false, gid: null });
+  const [quick, setQuick] = useState<{ open: boolean; gid: string | null; prefill?: Prefill }>({ open: false, gid: null });
 
   const reload = useCallback(() => {
     loadGroupsLite().then(setGroups).catch(() => {});
@@ -53,13 +54,13 @@ function Frame({ children }: { children: ReactNode }) {
 
   const currentGroup = path.startsWith("/groups/") ? path.split("/")[2] : null;
   const openQuick = useCallback(
-    (gid?: string | null) => {
+    (gid?: string | null, prefill?: Prefill) => {
       if (!groups.length) {
         toast.ok("Create a group first");
         router.push("/groups/new");
         return;
       }
-      setQuick({ open: true, gid: gid ?? (currentGroup && currentGroup !== "new" ? currentGroup : null) });
+      setQuick({ open: true, gid: gid ?? (currentGroup && currentGroup !== "new" ? currentGroup : null), prefill });
     },
     [groups.length, currentGroup, router, toast],
   );
@@ -151,6 +152,7 @@ function Frame({ children }: { children: ReactNode }) {
         onClose={() => setQuick({ open: false, gid: null })}
         groups={groups}
         initialGroupId={quick.gid}
+        prefill={quick.prefill}
         onSaved={(_, gid) => {
           if (currentGroup !== gid) router.push(`/groups/${gid}`);
         }}

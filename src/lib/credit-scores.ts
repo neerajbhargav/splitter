@@ -75,8 +75,10 @@ export function summarizeBureaus(scores: readonly CreditScore[], today: string):
 }
 
 export type CreditOverview = {
-  /** Average of each bureau's latest reading, rounded to a whole point. */
+  /** Average of the latest readings that share a scoring model family, rounded to a whole point. */
   average: number | null;
+  /** That family ("FICO", "VantageScore" or the model as entered), so the number is never read across scales. */
+  average_model: string | null;
   reported: number;
   /** Gap between the highest and lowest latest reading among bureaus using the same model family. */
   spread: number | null;
@@ -86,15 +88,16 @@ export type CreditOverview = {
 
 export function creditOverview(summaries: readonly BureauSummary[]): CreditOverview {
   const have = summaries.filter((s) => s.latest);
-  const values = have.map((s) => s.latest!.score);
-  const average = values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
-  // Spread only means something between scores from the same model; FICO and VantageScore differ by design.
+  // Average and spread only mean something between scores from the same model; FICO and VantageScore differ by design.
   const family = (m: string) => (/vantage/i.test(m) ? "vantage" : /fico/i.test(m) ? "fico" : m.trim().toLowerCase());
   const groups = new Map<string, BureauSummary[]>();
   for (const s of have) groups.set(family(s.latest!.model), [...(groups.get(family(s.latest!.model)) ?? []), s]);
   const comparable = [...groups.values()].sort((a, b) => b.length - a.length)[0] ?? [];
   const cvals = comparable.map((s) => s.latest!.score);
   const spread = cvals.length >= 2 ? Math.max(...cvals) - Math.min(...cvals) : null;
+  const average = cvals.length ? Math.round(cvals.reduce((a, b) => a + b, 0) / cvals.length) : null;
+  const fam = comparable[0] ? family(comparable[0].latest!.model) : null;
+  const average_model = fam === "fico" ? "FICO" : fam === "vantage" ? "VantageScore" : comparable[0]?.latest!.model.trim() || null;
   const lowest = comparable.length >= 2 ? comparable.reduce((a, b) => (b.latest!.score < a.latest!.score ? b : a)) : have.length ? have.reduce((a, b) => (b.latest!.score < a.latest!.score ? b : a)) : null;
   const insights: string[] = [];
   const missing = summaries.filter((s) => !s.latest);
@@ -111,7 +114,7 @@ export function creditOverview(summaries: readonly BureauSummary[]): CreditOverv
   }
   const stale = have.filter((s) => s.stale);
   if (stale.length) insights.push(`${stale.map((s) => label(s.bureau)).join(", ")} ${stale.length === 1 ? "hasn't" : "haven't"} been updated in over ${STALE_DAYS} days.`);
-  return { average, reported: have.length, spread, lowest, insights };
+  return { average, average_model, reported: have.length, spread, lowest, insights };
 }
 
 function label(b: CreditBureau): string {

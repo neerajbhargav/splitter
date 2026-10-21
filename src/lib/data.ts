@@ -50,7 +50,7 @@ export async function loadGroup(gid: string): Promise<GroupBundle | null> {
         .order("expense_date", { ascending: false }).order("created_at", { ascending: false }).range(a, b)),
     sb().from("activity").select("*").eq("group_id", gid).order("created_at", { ascending: false }).limit(150),
     sb().from("profiles").select("*"),
-    sb().from("upcoming_bills").select("*, upcoming_bill_shares(member_id, amount_cents, paid_at, paid_marked_by)").eq("group_id", gid).eq("status", "upcoming")
+    sb().from("upcoming_bills").select("*, upcoming_bill_shares(*)").eq("group_id", gid).eq("status", "upcoming")
       .order("due_date", { ascending: true, nullsFirst: false }),
   ]);
   const group = unwrap(g as PgResult<Group>);
@@ -77,7 +77,7 @@ export async function loadOverview(activityLimit = 40): Promise<Overview> {
         .order("expense_date", { ascending: false }).range(a, b)),
     sb().from("activity").select("*").order("created_at", { ascending: false }).limit(activityLimit),
     sb().from("profiles").select("*"),
-    sb().from("upcoming_bills").select("*, upcoming_bill_shares(member_id, amount_cents, paid_at, paid_marked_by)").eq("status", "upcoming")
+    sb().from("upcoming_bills").select("*, upcoming_bill_shares(*)").eq("status", "upcoming")
       .order("due_date", { ascending: true, nullsFirst: false }),
   ]);
   return {
@@ -139,6 +139,8 @@ export const api = {
   updateMember: (mid: string, name: string, email?: string | null, phone?: string | null) =>
     call<null>("update_member", { mid, p_name: name, p_email: email || null, p_phone: phone || null }),
   removeMember: (mid: string) => call<null>("remove_member", { mid }),
+  setMemberStay: (mid: string, from: string | null, to: string | null) =>
+    call<null>("set_member_stay", { mid, p_from: from || null, p_to: to || null }),
   saveExpense: (id: string | null, gid: string, input: ExpenseInput) => call<string>("save_expense", { p_id: id, p_group: gid, p: input }),
   deleteExpense: (id: string) => call<null>("delete_expense", { eid: id }),
   restoreExpense: (id: string) => call<null>("restore_expense", { eid: id }),

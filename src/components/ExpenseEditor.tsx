@@ -10,8 +10,8 @@ import { ItemizationEditor, type ItemDraft } from "./ItemizationEditor";
 import { convertItemizedBill } from "@/lib/itemized-currency";
 import { itemizedSplit } from "@/lib/itemization";
 import { CATEGORIES } from "@/lib/categories";
-import { CURRENCIES, centsToInput, money, todayISO } from "@/lib/format";
-import { parseMoney, parseMoneyOrZero, splitByWeights, splitEqual } from "@/lib/split";
+import { CURRENCIES, centsToInput, money, rangeLabel, todayISO } from "@/lib/format";
+import { daysStayed, parseMoney, parseMoneyOrZero, splitByDays, splitByWeights, splitEqual } from "@/lib/split";
 import type { Expense, ExpenseInput, FxMetadata, Group, Member, RepeatInterval, SplitType } from "@/lib/types";
 
 type Props = {
@@ -23,9 +23,18 @@ type Props = {
   groups?: Group[];
   initialGroupId?: string | null;
   expense?: Expense | null;
+  /** Starting description and amount for a new expense, e.g. an Apple Pay purchase. */
+  prefill?: { description?: string; amount_cents?: number };
 };
 
 const FORM_ID = "expense-form";
+
+/** First and last day of last month: the usual period for a bill that arrives this month. */
+function lastMonth(): [string, string] {
+  const t = todayISO();
+  const end = new Date(Date.UTC(+t.slice(0, 4), +t.slice(5, 7) - 1, 0)).toISOString().slice(0, 10);
+  return [end.slice(0, 8) + "01", end];
+}
 
 export function ExpenseEditor(props: Props) {
   const { open, onClose, onSaved, expense } = props;
@@ -89,6 +98,7 @@ export function ExpenseEditor(props: Props) {
           group={loaded.group}
           members={loaded.members}
           expense={expense ?? null}
+          prefill={props.prefill}
           setSaving={setSaving}
           onDone={(id) => {
             toast.ok(expense ? "Expense updated" : "Expense added");
@@ -103,8 +113,8 @@ export function ExpenseEditor(props: Props) {
   );
 }
 
-function ExpenseForm({ group, members, expense, setSaving, onDone }: {
-  group: Group; members: Member[]; expense: Expense | null; setSaving: (v: boolean) => void; onDone: (id: string) => void;
+function ExpenseForm({ group, members, expense, prefill, setSaving, onDone }: {
+  group: Group; members: Member[]; expense: Expense | null; prefill?: Props["prefill"]; setSaving: (v: boolean) => void; onDone: (id: string) => void;
 }) {
   const me = useMe();
   const involved = (id: string) =>
@@ -116,8 +126,8 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
   const validDefault = def && def.members.length > 0 && def.members.every(s => people.some(m => m.id === s.member_id && m.is_active)) ? def : null;
   const defaultWeights = validDefault ? Object.fromEntries(validDefault.members.map(s => [s.member_id,String(s.weight)])) : {};
 
-  const [description, setDescription] = useState(expense?.description ?? "");
-  const [amount, setAmount] = useState(expense ? centsToInput(expense.amount_cents) : "");
+  const [description, setDescription] = useState(expense?.description ?? prefill?.description ?? "");
+  const [amount, setAmount] = useState(expense ? centsToInput(expense.amount_cents) : prefill?.amount_cents ? centsToInput(prefill.amount_cents) : "");
   const [category, setCategory] = useState(expense?.category && expense.category !== "payment" ? expense.category : "general");
   const [date, setDate] = useState(expense?.expense_date ?? todayISO());
   const [notes, setNotes] = useState(expense?.notes ?? "");
@@ -126,7 +136,8 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
   const [payer, setPayer] = useState<string>(expense?.expense_payers[0]?.member_id ?? mine?.id ?? people[0]?.id ?? "");
   const [payerAmts, setPayerAmts] = useState<Record<string, string>>(() =>
     Object.fromEntries((expense?.expense_payers ?? []).map((p) => [p.member_id, centsToInput(p.amount_cents)])));
-  const [splitType, setSplitType] = useState<SplitType>(expense?.split_type ?? validDefault?.type ?? "equal");
+  const [splitType, setSplitType] = useState<SplitType | "days">(expense?.period_start ? "days" : expense?.split_type ?? validDefault?.type ?? "equal");
+  const [period, setPeriod] = useState<[string, string]>(() => expense?.period_start && expense.period_end ? [expense.period_start, expense.period_end] : lastMonth());
   const [included, setIncluded] = useState<Set<string>>(() =>
     new Set(expense ? expense.expense_splits.map((s) => s.member_id) : (validDefault?.type === "equal" ? validDefault.members.map(s=>s.member_id) : people.filter((m) => m.is_active).map((m) => m.id))));
   const fromSplits = (t: SplitType, f: (s: Expense["expense_splits"][number]) => string) =>
@@ -170,6 +181,13 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
       splitEqual(total, ids).forEach((p) => out.set(p.id, { amount: p.amount, weight: null }));
       if (!ids.length) problem = "Pick at least one person to split with";
       else note = total ? `${money(Math.floor(total / ids.length), cur)} each across ${ids.length}` : `Split evenly across ${ids.length}`;
+    } else if (splitType === "days") {
+      const [from, to] = period;
+      const parts = from && to && from <= to ? splitByDays(total, from, to, people.filter((m) => included.has(m.id))) : [];
+      parts.forEach((p) => out.set(p.id, { amount: p.amount, weight: p.days }));
+      if (!from || !to || from > to) problem = "Enter the first and last day the bill covers";
+      else if (!parts.length) problem = "Nobody picked lived there during these dates";
+      else note = `${rangeLabel(from, to)} · ${daysStayed(from, to)} days`;
     } else if (splitType === "exact") {
       let sum = 0;
       for (const m of people) {
@@ -197,7 +215,7 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
       }
     }
     return { out, problem, note };
-  }, [splitType, people, included, exact, pct, shares, total, cur]);
+  }, [splitType, period, people, included, exact, pct, shares, total, cur]);
 
   const split = itemMode ? {...itemResult,note:"Item subtotals plus proportional tax and tip"} : regularSplit;
 
@@ -241,7 +259,9 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
         category,
         expense_date: date,
         notes,
-        split_type: itemMode ? "exact" : splitType,
+        split_type: itemMode ? "exact" : splitType === "days" ? "shares" : splitType,
+        period_start: !itemMode && splitType === "days" ? period[0] : null,
+        period_end: !itemMode && splitType === "days" ? period[1] : null,
         items: itemMode ? baseItems : [],
         tax_cents: itemMode ? baseTax : 0,
         tip_cents: itemMode ? baseTip : 0,
@@ -343,7 +363,7 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
       <div className="field">
         <div className="between wrap">
           <span className="label">Split</span>
-          <Segmented<SplitType | "items">
+          <Segmented<SplitType | "days" | "items">
             value={itemMode ? "items" : splitType}
             onChange={v=>{if(v==="items"){if(!itemMode){setItemMode(true);if(itemCurrency===cur || fx?.source_currency!==itemCurrency)setFx(null);}}else{if(itemMode){setAmount(centsToInput(total));setFx(activeFx);}setItemMode(false);setSplitType(v);}}}
             options={[
@@ -351,10 +371,24 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
               { id: "exact", label: "Exact" },
               { id: "percent", label: "Percent" },
               { id: "shares", label: "Shares" },
+              { id: "days", label: "By days" },
               { id: "items", label: "By item" },
             ]}
           />
         </div>
+        {!itemMode && splitType === "days" && <>
+          <div className="form-row" style={{ marginTop: 6 }}>
+            <div className="field">
+              <label className="label" htmlFor="exp-from">Bill covers from</label>
+              <input id="exp-from" type="date" className="input" value={period[0]} max={period[1] || undefined} onChange={(e) => setPeriod([e.target.value, period[1]])} />
+            </div>
+            <div className="field">
+              <label className="label" htmlFor="exp-to">To (last day)</label>
+              <input id="exp-to" type="date" className="input" value={period[1]} min={period[0] || undefined} onChange={(e) => setPeriod([period[0], e.target.value])} />
+            </div>
+          </div>
+          <p className="hint">Each person pays for the days they lived there. Set move-in and move-out dates in group settings; anyone without dates counts every day.</p>
+        </>}
         {!expense && <p className="hint">{validDefault ? "Started from this group's saved default. You can change it for this expense." : def ? "The saved default includes unavailable people. Started with everyone equally; review this split." : "Tip: save a reusable split in group settings."}</p>}
         {itemMode && <>
           <div className="field"><label className="label" htmlFor="item-currency">Receipt / item currency</label><select id="item-currency" className="select" value={itemCurrency} onChange={e=>{setItemCurrency(e.target.value);setFx(null);}}>{Array.from(new Set([...CURRENCIES,cur,itemCurrency])).map(c=><option key={c} value={c}>{c}</option>)}</select><p className="hint">Choose the receipt currency before entering items. Foreign currencies need an applied rate above.</p></div>
@@ -364,15 +398,18 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
         <div className="card" style={{ padding: "4px 14px", marginTop: 6 }}>
           {people.map((m) => {
             const share = split.out.get(m.id)?.amount ?? 0;
-            const on = !itemMode && splitType === "equal" ? included.has(m.id) : share > 0;
+            const ticks = !itemMode && (splitType === "equal" || splitType === "days");
+            const days = !itemMode && splitType === "days" && period[0] && period[1] ? daysStayed(period[0], period[1], m.stay_from, m.stay_to) : null;
+            const on = ticks ? included.has(m.id) && days !== 0 : share > 0;
             return (
               <div key={m.id} className={`split-row ${on ? "" : "off"}`}>
                 <Avatar name={m.display_name} color={m.color} size={26} />
                 <span className="ellipsis">
                   {m.display_name}
                   {m.user_id === me.id && <span className="faint"> (you)</span>}
+                  {days !== null && <span className="faint"> · {days ? `${days} day${days === 1 ? "" : "s"}` : "not there"}</span>}
                 </span>
-                {itemMode ? <span className="faint">Itemized</span> : splitType === "equal" ? (
+                {itemMode ? <span className="faint">Itemized</span> : ticks ? (
                   <label className="check" style={{ justifySelf: "end" }}>
                     <input type="checkbox" checked={included.has(m.id)} onChange={() => toggle(m.id)} aria-label={`Include ${m.display_name}`} />
                   </label>
@@ -397,7 +434,7 @@ function ExpenseForm({ group, members, expense, setSaving, onDone }: {
           })}
           <div className="split-total" style={{ marginBottom: 10 }}>
             <span className={split.problem ? "neg" : "faint"}>{split.problem ?? split.note}</span>
-            {!itemMode && splitType === "equal" && (
+            {!itemMode && (splitType === "equal" || splitType === "days") && (
               <span>
                 <button type="button" className="link-btn" onClick={() => setIncluded(new Set(people.map((m) => m.id)))}>All</button>
                 <span className="faint"> / </span>

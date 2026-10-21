@@ -37,6 +37,9 @@ export type Member = {
   color: string;
   role: "owner" | "member";
   is_active: boolean;
+  /** First and last day this person lived there (inclusive). Null ends are open. */
+  stay_from?: string | null;
+  stay_to?: string | null;
   created_at: string;
 };
 
@@ -67,6 +70,9 @@ export type Expense = Partial<FxMetadata> & {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  /** Dates the bill covers when it was split by days stayed. */
+  period_start?: string | null;
+  period_end?: string | null;
   expense_payers: Share[];
   expense_splits: Share[];
 };
@@ -120,6 +126,8 @@ export type ExpenseInput = Partial<FxMetadata> & {
   repeat_interval: RepeatInterval;
   payers: { member_id: string; amount_cents: number }[];
   splits: { member_id: string; amount_cents: number; weight?: number | null }[];
+  period_start?: string | null;
+  period_end?: string | null;
 };
 
 export type UpcomingBill = {
@@ -132,10 +140,13 @@ export type UpcomingBill = {
   category: string;
   notes: string | null;
   status: "upcoming" | "paid";
+  period_start?: string | null;
+  period_end?: string | null;
   expense_id: string | null;
   created_at: string;
   created_by?: string | null;
-  upcoming_bill_shares: { member_id: string; amount_cents: number; paid_at?: string | null; paid_marked_by?: string | null }[];
+  /** paid_cents: what a ticked person actually sent (can differ after an estimate is corrected). */
+  upcoming_bill_shares: { member_id: string; amount_cents: number; paid_at?: string | null; paid_marked_by?: string | null; paid_cents?: number | null }[];
 };
 
 export type UpcomingInput = {
@@ -146,4 +157,6 @@ export type UpcomingInput = {
   category: string;
   notes: string;
   shares: { member_id: string; amount_cents: number }[];
+  period_start?: string | null;
+  period_end?: string | null;
 };

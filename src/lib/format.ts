@@ -56,6 +56,14 @@ export function longDate(iso: string): string {
   return parseDay(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+/** "Sep 12 – Oct 11, 2026". Open ends read "the start" and "now". */
+export function rangeLabel(from?: string | null, to?: string | null): string {
+  const f = (iso: string, year: boolean) =>
+    parseDay(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", ...(year ? { year: "numeric" } : {}) });
+  if (from && to) return `${f(from, from.slice(0, 4) !== to.slice(0, 4))} – ${f(to, true)}`;
+  return `${from ? f(from, true) : "the start"} – ${to ? f(to, true) : "now"}`;
+}
+
 export function monthLabel(iso: string): string {
   return parseDay(iso).toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }

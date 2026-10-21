@@ -212,6 +212,8 @@ test("spread ignores bureaus on a different scoring model", () => {
   const sums = summarizeBureaus([score("experian", 511, "2026-10-04", "FICO 8"), score("equifax", 563, "2026-10-04", "VantageScore 3.0"), score("transunion", 619, "2026-10-04", "VantageScore 3.0")], "2026-10-04");
   const o = creditOverview(sums);
   assert.equal(o.spread, 56);
+  assert.equal(o.average, 591, "averages the two VantageScores, not the FICO on a different scale");
+  assert.equal(o.average_model, "VantageScore");
   assert.equal(o.lowest!.bureau, "equifax");
   assert.match(o.insights.join(" "), /Experian uses FICO 8, so compare it with its own history/);
   assert.doesNotMatch(o.insights.join(" "), /Experian is \d+ points below/);
@@ -230,4 +232,17 @@ test("bands, chart rows and validation", () => {
   assert.match(validateScore({ score: 901, as_of: "2026-10-01" }, "2026-10-01")!, /250 to 900/);
   assert.match(validateScore({ score: 720.5, as_of: "2026-10-01" }, "2026-10-01")!, /250 to 900/);
   assert.match(validateScore({ score: 720, as_of: "2026-10-02" }, "2026-10-01")!, /hasn't happened/);
+});
+
+test("a scheduled extra-payment change stays in effect once its month arrives", () => {
+  const saved = { extra_monthly_cents: 20_000, rollover: true, priority: [], payments: [], lump_sums: [],
+    extra_changes: [{ month: "2026-10", extra_monthly_cents: 50_000 }, { month: "2027-03", extra_monthly_cents: 10_000 }] };
+  const sep = plannerInput([CARD, LOAN], saved, "avalanche", "2026-09");
+  assert.equal(sep.extra_monthly_cents, 20_000);
+  assert.deepEqual(sep.extra_changes?.map((c) => c.month), ["2026-10", "2027-03"]);
+  const oct = plannerInput([CARD, LOAN], saved, "avalanche", "2026-10");
+  assert.equal(oct.extra_monthly_cents, 50_000, "October's +$500 is the extra from October on");
+  assert.deepEqual(oct.extra_changes?.map((c) => c.month), ["2027-03"]);
+  assert.equal(plannerInput([CARD, LOAN], saved, "avalanche", "2027-05").extra_monthly_cents, 10_000);
+  assert.equal(plannerInput([CARD, LOAN], saved, "avalanche", "2026-10", 0).extra_monthly_cents, 0, "an explicit override still wins");
 });

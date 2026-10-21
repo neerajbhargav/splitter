@@ -117,7 +117,7 @@ export function CreditScores() {
           {overview.average !== null && (
             <div className="fin-credit-overview">
               <div className="row-flex wrap" style={{ gap: 6 }}>
-                <span className="pill-stat">Average <b className="num">{overview.average}</b></span>
+                <span className="pill-stat">{overview.reported > 1 && overview.average_model ? `${overview.average_model} average` : "Average"} <b className="num">{overview.average}</b></span>
                 {overview.spread !== null && <span className="pill-stat">Spread <b className="num">{overview.spread} pts</b></span>}
                 {overview.lowest && overview.reported > 1 && <span className="pill-stat">Lowest <b>{BUREAU_LABEL[overview.lowest.bureau]}</b></span>}
               </div>

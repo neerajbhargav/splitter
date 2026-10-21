@@ -1,7 +1,10 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ArrowRight, CalendarClock, Check, Eye, FileUp, Landmark, Plus, Repeat, Wallet } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, CalendarClock, Check, Eye, FileUp, Landmark, Plus, Repeat, Users, Wallet } from "lucide-react";
+import { useMe } from "@/components/providers";
+import { loadOverview } from "@/lib/data";
+import { summarize, type PersonBalance } from "@/lib/overview";
 import { Card, Progress } from "@/components/kit";
 import { useFinance } from "@/components/finance/FinanceProvider";
 import { DailyBars } from "@/components/finance/charts";
@@ -186,6 +189,8 @@ export default function FinanceOverview() {
             ) : <p className="hint">{bundle.subscriptions.length ? "No renewals in the next two weeks." : "Track subscriptions to see renewals before they hit."}</p>}
           </Card>
 
+          {!f.demo && <GroupsCard />}
+
           <Card title="Debt" action={<Link href="/finance/debt" className="btn btn-sm">Payoff plan <ArrowRight /></Link>}>
             {view.debts.length ? (
               <div className="row-flex" style={{ gap: 14 }}>
@@ -252,5 +257,59 @@ function Welcome() {
         <button type="button" className="btn btn-ghost" style={{ marginTop: 14 }} onClick={() => setDemo(true)}><Eye /> Explore with sample data first</button>
       </div>
     </section>
+  );
+}
+
+/** Money in your groups: who owes you, whom you owe, and your unpaid shares of upcoming bills. */
+function GroupsCard() {
+  const me = useMe();
+  const [g, setG] = useState<{ totals: [string, { owe: number; owed: number }][]; people: PersonBalance[]; upcoming: [string, number][] } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadOverview(1).then((o) => {
+      if (!alive) return;
+      const s = summarize(o, me.id);
+      const upcoming: Record<string, number> = {};
+      for (const b of o.upcoming) {
+        const mine = o.members.find((m) => m.group_id === b.group_id && m.user_id === me.id);
+        const share = b.upcoming_bill_shares.find((x) => x.member_id === mine?.id);
+        const left = share ? share.amount_cents - (share.paid_at ? share.paid_cents ?? share.amount_cents : 0) : 0;
+        const cur = o.groups.find((x) => x.id === b.group_id)?.currency ?? "USD";
+        if (left > 0) upcoming[cur] = (upcoming[cur] ?? 0) + left;
+      }
+      setG({ totals: Object.entries(s.totals), people: [...s.owesYou, ...s.youOwe].slice(0, 3), upcoming: Object.entries(upcoming) });
+    }).catch(() => alive && setG({ totals: [], people: [], upcoming: [] }));
+    return () => { alive = false; };
+  }, [me.id]);
+  if (!g) return null;
+  return (
+    <Card title="Groups" description="Shared costs with roommates, trips and friends" action={<Link href="/dashboard" className="btn btn-sm">Groups <ArrowRight /></Link>}>
+      {g.totals.length || g.upcoming.length ? (
+        <div className="list">
+          {g.totals.map(([cur, t]) => (
+            <div className="item" key={cur}>
+              <span className="icon-tile sm"><Users /></span>
+              <div className="item-main"><div className="item-title">{t.owed >= t.owe ? "You're owed overall" : "You owe overall"}</div>
+                <div className="item-sub">Owed to you {money(t.owed, cur)} · you owe {money(t.owe, cur)}</div></div>
+              <div className="item-end"><div className={`v ${t.owed >= t.owe ? "pos" : "neg"}`}>{money(Math.abs(t.owed - t.owe), cur)}</div></div>
+            </div>
+          ))}
+          {g.people.map((p) => (
+            <div className="item" key={p.key} style={{ padding: "8px 0" }}>
+              <div className="item-main"><div className="item-title" style={{ fontSize: 13.5 }}>{p.amount > 0 ? `${p.name} owes you` : `You owe ${p.name}`}</div></div>
+              <div className="item-end"><div className={`v ${p.amount > 0 ? "pos" : "neg"}`}>{money(Math.abs(p.amount), p.currency)}</div></div>
+            </div>
+          ))}
+          {g.upcoming.map(([cur, cents]) => (
+            <div className="item" key={"up" + cur}>
+              <span className="icon-tile sm"><CalendarClock /></span>
+              <div className="item-main"><div className="item-title">Your unpaid upcoming bills</div>
+                <div className="item-sub">Not in balances yet. Set it aside from your next paycheck.</div></div>
+              <div className="item-end"><div className="v">{money(cents, cur)}</div></div>
+            </div>
+          ))}
+        </div>
+      ) : <p className="hint">All settled up in your groups.</p>}
+    </Card>
   );
 }

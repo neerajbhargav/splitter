@@ -58,6 +58,27 @@ export function splitByWeights(total: number, weights: { id: string; weight: num
   return raw.map((r) => ({ id: r.id, amount: r.floor }));
 }
 
+const dayNo = (iso: string) => Date.parse(iso + "T00:00:00Z") / 864e5;
+
+/** Days of the inclusive period [from, to] that fall inside a stay. Open stay ends count as unbounded. */
+export function daysStayed(from: string, to: string, stayFrom?: string | null, stayTo?: string | null): number {
+  const a = Math.max(dayNo(from), stayFrom ? dayNo(stayFrom) : -Infinity);
+  const b = Math.min(dayNo(to), stayTo ? dayNo(stayTo) : Infinity);
+  return Number.isFinite(a) && Number.isFinite(b) && b >= a ? b - a + 1 : 0;
+}
+
+/**
+ * Split a bill by how many days of its period each person lived there (largest remainder,
+ * so the parts sum to exactly `total`). People with no days in the period are left out.
+ */
+export function splitByDays(
+  total: number, from: string, to: string, people: { id: string; stay_from?: string | null; stay_to?: string | null }[],
+): (Portion & { days: number })[] {
+  const days = new Map(people.map((p) => [p.id, daysStayed(from, to, p.stay_from, p.stay_to)]));
+  return splitByWeights(total, people.map((p) => ({ id: p.id, weight: days.get(p.id)! })))
+    .map((p) => ({ ...p, days: days.get(p.id)! }));
+}
+
 export function sumPortions(p: Portion[]): number {
   return p.reduce((a, x) => a + x.amount, 0);
 }

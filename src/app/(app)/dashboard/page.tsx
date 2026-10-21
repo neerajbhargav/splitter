@@ -73,7 +73,7 @@ export default function Dashboard() {
       .map((b) => {
         const mine = b.upcoming_bill_shares.find((s) => myIds.has(s.member_id));
         const paid = b.upcoming_bill_shares.filter((s) => s.paid_at);
-        return { b, g: groupName.get(b.group_id), mine, paidCount: paid.length, paidAmt: paid.reduce((a, s) => a + s.amount_cents, 0) };
+        return { b, g: groupName.get(b.group_id), mine, paidCount: paid.length, paidAmt: paid.reduce((a, s) => a + (s.paid_cents ?? s.amount_cents), 0) };
       })
       .filter((x) => x.g && x.mine);
 

@@ -6,8 +6,8 @@ import { Avatar, Modal, Segmented } from "./ui";
 import { useMe, useToast } from "./providers";
 import { api } from "@/lib/data";
 import { CATEGORIES, category } from "@/lib/categories";
-import { centsToInput, longDate, money, todayISO } from "@/lib/format";
-import { parseMoney, parseMoneyOrZero, splitEqual } from "@/lib/split";
+import { centsToInput, longDate, money, rangeLabel, todayISO } from "@/lib/format";
+import { daysStayed, parseMoney, parseMoneyOrZero, splitByDays, splitEqual } from "@/lib/split";
 import type { Group, Member, UpcomingBill } from "@/lib/types";
 
 function dueLabel(b: UpcomingBill): { text: string; tone: "neg" | "gold" | "faint" } {
@@ -65,7 +65,7 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
                 const isOpen = open === b.id;
                 const shares = [...b.upcoming_bill_shares].sort((x, y) => Number(!!x.paid_at) - Number(!!y.paid_at) || y.amount_cents - x.amount_cents);
                 const paidShares = b.upcoming_bill_shares.filter((x) => x.paid_at);
-                const paidAmt = paidShares.reduce((a, x) => a + x.amount_cents, 0);
+                const paidAmt = paidShares.reduce((a, x) => a + (x.paid_cents ?? x.amount_cents), 0);
                 const myPaid = !!b.upcoming_bill_shares.find((x) => x.member_id === mine?.id)?.paid_at;
                 return (
                   <div key={b.id}>
@@ -75,6 +75,7 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
                         <div className="item-title row-flex" style={{ gap: 6 }}>
                           <span className="clamp-2">{b.title}</span>
                         </div>
+                        {b.period_start && b.period_end && <div className="item-sub">Covers {rangeLabel(b.period_start, b.period_end)} · split by days lived there</div>}
                         <div className={`item-sub ${due.tone}`}>{b.is_estimate && <span className="badge" style={{ height: 17, marginRight: 6, verticalAlign: "1px" }}>estimate</span>}{due.text} · {paidShares.length} of {shares.length} paid</div>
                         <div style={{ marginTop: 8, maxWidth: 360 }}><Progress value={paidAmt} max={b.amount_cents} size="sm" /></div>
                       </div>
@@ -105,7 +106,8 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
                                 <div className="item-main">
                                   <span className="item-title" style={{ fontWeight: 500 }}>{name(s.member_id)}</span>
                                   {s.paid_at && (
-                                    <div className="item-sub">Paid {new Date(s.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{marker && marker.id !== s.member_id ? ` · marked by ${marker.user_id === me.id ? "you" : marker.display_name}` : ""}</div>
+                                    <div className="item-sub">Paid {new Date(s.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{marker && marker.id !== s.member_id ? ` · marked by ${marker.user_id === me.id ? "you" : marker.display_name}` : ""}
+                                      {s.paid_cents != null && s.paid_cents !== s.amount_cents && <span className={s.paid_cents < s.amount_cents ? "neg" : "pos"}> · sent {money(s.paid_cents, cur)}, {s.paid_cents < s.amount_cents ? `${money(s.amount_cents - s.paid_cents, cur)} still to send` : `${money(s.paid_cents - s.amount_cents, cur)} extra, comes back in balances`}</span>}</div>
                                   )}
                                 </div>
                                 <span className="num">{money(s.amount_cents, cur)}</span>
@@ -150,7 +152,8 @@ function UpcomingEditor({ open, bill, group, members, onClose }: {
   const [estimate, setEstimate] = useState(false);
   const [cat, setCat] = useState("utilities");
   const [notes, setNotes] = useState("");
-  const [mode, setMode] = useState<"equal" | "exact">("equal");
+  const [mode, setMode] = useState<"equal" | "days" | "exact">("equal");
+  const [period, setPeriod] = useState<[string, string]>(["", ""]);
   const [included, setIncluded] = useState<Set<string>>(new Set());
   const [exact, setExact] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -165,10 +168,11 @@ function UpcomingEditor({ open, bill, group, members, onClose }: {
     setEstimate(bill?.is_estimate ?? false);
     setCat(bill?.category ?? "utilities");
     setNotes(bill?.notes ?? "");
+    setPeriod([bill?.period_start ?? "", bill?.period_end ?? ""]);
     if (bill) {
       const amts = bill.upcoming_bill_shares.map((s) => s.amount_cents);
       const even = Math.max(...amts) - Math.min(...amts) <= 1;
-      setMode(even ? "equal" : "exact");
+      setMode(bill.period_start ? "days" : even ? "equal" : "exact");
       setIncluded(new Set(bill.upcoming_bill_shares.map((s) => s.member_id)));
       setExact(Object.fromEntries(bill.upcoming_bill_shares.map((s) => [s.member_id, centsToInput(s.amount_cents)])));
     } else {
@@ -182,8 +186,12 @@ function UpcomingEditor({ open, bill, group, members, onClose }: {
   const total = parseMoney(amount) ?? 0;
   const shares = useMemo(() => {
     if (mode === "equal") return splitEqual(total, people.filter((m) => included.has(m.id)).map((m) => m.id)).map((p) => ({ member_id: p.id, amount_cents: p.amount }));
+    if (mode === "days") {
+      const [from, to] = period;
+      return from && to && from <= to ? splitByDays(total, from, to, people.filter((m) => included.has(m.id))).map((p) => ({ member_id: p.id, amount_cents: p.amount })) : [];
+    }
     return people.map((m) => ({ member_id: m.id, amount_cents: parseMoneyOrZero(exact[m.id]) })).filter((s) => s.amount_cents > 0);
-  }, [mode, total, people, included, exact]);
+  }, [mode, period, total, people, included, exact]);
   const assigned = shares.reduce((a, s) => a + s.amount_cents, 0);
 
   async function submit(e: FormEvent) {
@@ -191,11 +199,13 @@ function UpcomingEditor({ open, bill, group, members, onClose }: {
     setError(null);
     if (!title.trim()) return setError("Add a name for the bill");
     if (total <= 0) return setError("Enter an amount greater than zero");
+    if (mode === "days" && !(period[0] && period[1] && period[0] <= period[1])) return setError("Enter the first and last day the bill covers");
     if (!shares.length) return setError("Choose who splits this bill");
     if (assigned !== total) return setError(`Shares add up to ${money(assigned, group.currency)}, the bill is ${money(total, group.currency)}`);
     setBusy(true);
     try {
-      await api.saveUpcoming(bill?.id ?? null, group.id, { title: title.trim(), amount_cents: total, due_date: due || null, is_estimate: estimate, category: cat, notes, shares });
+      await api.saveUpcoming(bill?.id ?? null, group.id, { title: title.trim(), amount_cents: total, due_date: due || null, is_estimate: estimate, category: cat, notes, shares,
+        period_start: mode === "days" ? period[0] : null, period_end: mode === "days" ? period[1] : null });
       toast.ok(bill ? "Bill updated" : "Upcoming bill added");
       onClose();
     } catch (err) {
@@ -226,16 +236,27 @@ function UpcomingEditor({ open, bill, group, members, onClose }: {
         <label className="check small"><input type="checkbox" checked={estimate} onChange={(e) => setEstimate(e.target.checked)} /> Amount is an estimate</label>
         <div className="field">
           <div className="between wrap"><span className="label">Split</span>
-            <Segmented<"equal" | "exact"> value={mode} onChange={(v) => { setMode(v); if (v === "exact" && !Object.keys(exact).length) setExact(Object.fromEntries(shares.map((s) => [s.member_id, centsToInput(s.amount_cents)]))); }}
-              options={[{ id: "equal", label: "Equally" }, { id: "exact", label: "Exact" }]} /></div>
+            <Segmented<"equal" | "days" | "exact"> value={mode} onChange={(v) => { setMode(v); if (v === "exact" && !Object.keys(exact).length) setExact(Object.fromEntries(shares.map((s) => [s.member_id, centsToInput(s.amount_cents)]))); }}
+              options={[{ id: "equal", label: "Equally" }, { id: "days", label: "By days" }, { id: "exact", label: "Exact" }]} /></div>
+          {mode === "days" && <>
+            <div className="form-row" style={{ marginTop: 6 }}>
+              <div className="field"><label className="label" htmlFor="ub-from">Bill covers from</label>
+                <input id="ub-from" type="date" className="input" value={period[0]} max={period[1] || undefined} onChange={(e) => setPeriod([e.target.value, period[1]])} /></div>
+              <div className="field"><label className="label" htmlFor="ub-to">To (last day)</label>
+                <input id="ub-to" type="date" className="input" value={period[1]} min={period[0] || undefined} onChange={(e) => setPeriod([period[0], e.target.value])} /></div>
+            </div>
+            <p className="hint">Each person pays for the days they lived there. Set move-in and move-out dates in group settings; anyone without dates counts every day.</p>
+          </>}
           <div className="card" style={{ padding: "4px 14px", marginTop: 6 }}>
             {people.map((m) => {
               const sh = shares.find((s) => s.member_id === m.id)?.amount_cents ?? 0;
+              const days = mode === "days" && period[0] && period[1] ? daysStayed(period[0], period[1], m.stay_from, m.stay_to) : null;
               return (
                 <div key={m.id} className={`split-row ${sh ? "" : "off"}`} style={{ gridTemplateColumns: "auto minmax(0,1fr) 110px 80px" }}>
                   <Avatar name={m.display_name} color={m.color} size={24} />
-                  <span className="ellipsis">{m.display_name}{m.user_id === me.id && <span className="faint"> (you)</span>}</span>
-                  {mode === "equal" ? (
+                  <span className="ellipsis">{m.display_name}{m.user_id === me.id && <span className="faint"> (you)</span>}
+                    {days !== null && <span className="faint"> · {days ? `${days} day${days === 1 ? "" : "s"}` : "not there"}</span>}</span>
+                  {mode !== "exact" ? (
                     <label className="check" style={{ justifySelf: "end" }}><input type="checkbox" checked={included.has(m.id)} aria-label={`Include ${m.display_name}`}
                       onChange={() => setIncluded((s) => { const n = new Set(s); if (n.has(m.id)) n.delete(m.id); else n.add(m.id); return n; })} /></label>
                   ) : (

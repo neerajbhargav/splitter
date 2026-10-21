@@ -12,7 +12,8 @@ import { CsvImport } from "@/components/finance/CsvImport";
 import { TransactionEditor, type TxDefaults } from "@/components/finance/TransactionEditor";
 import { CategoryTile, TxAmount, monthLong, weekdayDay } from "@/components/finance/kit";
 import { detectRecurring } from "@/lib/finance-import";
-import { categoryLookup, sortTransactions } from "@/lib/finance-selectors";
+import { categoryLookup, purchaseDefaults, sortTransactions } from "@/lib/finance-selectors";
+import { useQuickAdd } from "@/components/Shell";
 import { isReauthError, syncConnection } from "@/lib/plaid-client";
 import { centsToInput, money } from "@/lib/format";
 import { parseMoney } from "@/lib/split";
@@ -25,6 +26,7 @@ export default function ActivityPage() {
   const router = useRouter();
   const toast = useToast();
   const { bundle, currency, today, ctx, demo, reload } = useFinance();
+  const quickAdd = useQuickAdd();
   const [query, setQuery] = useState("");
   const [month, setMonth] = useState("");
   const [accountId, setAccountId] = useState("");
@@ -40,6 +42,8 @@ export default function ActivityPage() {
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     if (q.get("import") === "1") setImportOpen(true);
+    const purchase = purchaseDefaults(q, bundle.accounts, bundle.categories, bundle.transactions);
+    if (purchase) setEditing({ tx: null, defaults: purchase });
     const c = q.get("category");
     if (c === "uncategorized" || (c && bundle.categories.some((x) => x.id === c))) setCategory(c);
     const m = q.get("month");
@@ -306,7 +310,8 @@ export default function ActivityPage() {
 
       <p className="fin-foot">Transfers between your own accounts never count as spending or income.</p>
 
-      <TransactionEditor open={editing !== null} tx={editing?.tx ?? null} defaults={editing?.defaults} onClose={() => setEditing(null)} />
+      <TransactionEditor open={editing !== null} tx={editing?.tx ?? null} defaults={editing?.defaults} onClose={() => setEditing(null)}
+        onSplit={(p) => { setEditing(null); quickAdd.open(null, p); }} />
       <CsvImport open={importOpen} onClose={() => setImportOpen(false)} />
     </>
   );

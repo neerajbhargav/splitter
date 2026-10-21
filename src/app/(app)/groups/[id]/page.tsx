@@ -103,7 +103,9 @@ export default function GroupPage() {
         const u: Record<string, { due: number; paid: number }> = {};
         for (const bill of b.upcoming) for (const s of bill.upcoming_bill_shares) {
           const x = (u[s.member_id] ??= { due: 0, paid: 0 });
-          if (s.paid_at) x.paid += s.amount_cents; else x.due += s.amount_cents;
+          const sent = s.paid_at ? s.paid_cents ?? s.amount_cents : 0;
+          x.paid += sent;
+          x.due += Math.max(0, s.amount_cents - sent);
         }
         return u;
       })(),

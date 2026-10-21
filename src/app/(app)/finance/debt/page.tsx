@@ -11,7 +11,7 @@ import { DebtSchedule } from "@/components/finance/DebtSchedule";
 import { PayoffChart } from "@/components/finance/charts";
 import { AccountIcon, AmountChips, HeroText, MoneyInput, Pill, currencySymbol, errorText, monthLong, monthShort } from "@/components/finance/kit";
 import { compareDebtPlans, type DebtPlan, type DebtPlanComparison, type DebtStrategy } from "@/lib/debt-planner";
-import { debtsMissingTerms, payoffDebts, plannerInput } from "@/lib/finance-selectors";
+import { debtsMissingTerms, payoffDebts, plannerInput, extraInEffect } from "@/lib/finance-selectors";
 import { centsToInput, money } from "@/lib/format";
 import { parseMoney } from "@/lib/split";
 import { FINANCE_MAX_CENTS, isLiability, type DebtPlanInput, type DebtPlanSettings, type FinanceAccount, type FinanceAccountInput, type FinanceContext } from "@/lib/finance-types";
@@ -92,7 +92,8 @@ export default function DebtPage() {
   const [planOpen, setPlanOpen] = useState(false);
   // Local copy of the plan so changes show instantly (and keep working in sample mode). Cleared when a newer saved plan arrives.
   const [local, setLocal] = useState<PlanFields | null>(null);
-  const [extraText, setExtraText] = useState(() => (saved?.extra_monthly_cents ? centsToInput(saved.extra_monthly_cents) : ""));
+  const thisMonth = today.slice(0, 7);
+  const [extraText, setExtraText] = useState(() => { const c = extraInEffect(saved, thisMonth); return c ? centsToInput(c) : ""; });
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const [demoNoted, setDemoNoted] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -105,9 +106,13 @@ export default function DebtPage() {
     if (pending.current) return;
     setLocal(null);
     // Only rewrite the box when the saved amount really differs, so "50" never turns into "50.00" under your cursor.
-    const savedExtra = saved?.extra_monthly_cents ?? 0;
+    const savedExtra = extraInEffect(saved, thisMonth);
     setExtraText((text) => ((parseMoney(text) ?? 0) === savedExtra ? text : savedExtra ? centsToInput(savedExtra) : ""));
-  }, [saved?.updated_at, saved?.extra_monthly_cents]);
+  }, [saved?.updated_at, saved?.extra_monthly_cents]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Setting the extra for now replaces any scheduled change that has already started. */
+  const withExtra = (f: PlanFields, cents: number): PlanFields =>
+    ({ ...f, extra_monthly_cents: cents, extra_changes: f.extra_changes.filter((c) => c.month.slice(0, 7) > thisMonth) });
 
   const planFields: PlanFields = local ?? saved ?? EMPTY_PLAN;
 
@@ -158,7 +163,7 @@ export default function DebtPage() {
     setExtraText(text);
     const c = parseMoney(text);
     if (text.trim() !== "" && (c === null || c < 0 || c > FINANCE_MAX_CENTS)) return;
-    update({ ...planFields, extra_monthly_cents: c ?? 0 }, 700);
+    update(withExtra(planFields, c ?? 0), 700);
   };
 
   const view = useMemo(() => {
@@ -315,7 +320,7 @@ export default function DebtPage() {
                       const p = comparisonFor(s)?.plan;
                       const badge = optionBadge(s);
                       return (
-                        <button key={s} type="button" className={`fin-option ${effective === s ? "on" : ""}`} aria-pressed={effective === s} onClick={() => { if (effective !== s || !(local || saved)) update({ ...planFields, extra_monthly_cents: extra, strategy: s }, 0); }} style={{ minHeight: 36 }}>
+                        <button key={s} type="button" className={`fin-option ${effective === s ? "on" : ""}`} aria-pressed={effective === s} onClick={() => { if (effective !== s || !(local || saved)) update({ ...withExtra(planFields, extra), strategy: s }, 0); }} style={{ minHeight: 36 }}>
                           <div className="t">{STRATEGY_NAME[s]}{badge && <span className="badge gold">{badge}</span>}</div>
                           <div className="d">{p?.is_finite && p.payoff_month ? monthShort(p.payoff_month) : "No end date"}</div>
                           <div className="s">{p?.is_finite ? `${STRATEGY_RULE[s]} · ${bigMoney(p.estimated_interest_cents, currency)} interest` : STRATEGY_RULE[s]}</div>
@@ -326,7 +331,7 @@ export default function DebtPage() {
                   <div className="stack-sm">
                     <label className="label" htmlFor="fin-debt-extra">Extra each month</label>
                     <MoneyInput id="fin-debt-extra" value={extraText} onChange={onExtraChange} currency={currency} />
-                    <AmountChips values={presets(minimumsTotal)} currency={currency} current={extra} onPick={(c) => { setExtraText(c ? centsToInput(c) : ""); update({ ...planFields, extra_monthly_cents: c }, 0); }} />
+                    <AmountChips values={presets(minimumsTotal)} currency={currency} current={extra} onPick={(c) => { setExtraText(c ? centsToInput(c) : ""); update(withExtra(planFields, c), 0); }} />
                     {extraInvalid
                       ? <div className="hint neg">Enter an amount like 50 or 125.50.</div>
                       : <div className="hint">On top of {money(minimumsTotal, currency)} in minimums{effective === "custom" ? " and your own amounts" : ""}.</div>}

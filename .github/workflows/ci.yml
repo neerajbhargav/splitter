@@ -1,0 +1,29 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          # The tests run .ts files directly, which needs Node's built-in type stripping.
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      # Includes the PGlite tests that load supabase/schema.sql into in-memory Postgres. No secrets.
+      - run: npm test
+      # No Supabase or Plaid env vars: the build must not need them.
+      - run: npm run build

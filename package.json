@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "SPLITTER - split shared expenses with roommates, friends and trips. Realtime sync, OAuth, simplify debts.",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

@@ -18,5 +18,5 @@ export default defineConfig([
       "react-hooks/preserve-manual-memoization": "off",
     },
   },
-  globalIgnores([".next/**", "out/**", "next-env.d.ts", "public/pdf.worker.min.mjs"]),
+  globalIgnores([".next/**", "out/**", "test-results/**", "playwright-report/**", "next-env.d.ts", "public/pdf.worker.min.mjs"]),
 ]);

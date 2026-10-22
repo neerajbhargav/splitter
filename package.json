@@ -11,6 +11,7 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.ts",
+    "e2e": "playwright test",
     "bench:simplify": "node eval/bench-simplify.ts",
     "eval:receipts": "node eval/eval-receipts.ts"
   },
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@playwright/test": "1.64.1",
     "@tesseract.js-data/eng": "1.0.0",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",

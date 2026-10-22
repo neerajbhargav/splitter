@@ -1,0 +1,19 @@
+$ npm run bench:simplify -- --compare --json eval/results/simplify-bench-2026-10-22.json
+
+simplify bench: seed=1 people=2-10 expenses=1-30 cap=250ms budget=300000
+node v24.17.0 darwin arm64 Apple M4 Pro, load avg 6.4 18.6 28.2
+groups=500 at_min=500/500 invariant_failures=0 fallback_budget=0 fallback_time=54
+uncached ms: p50=0.11 p95=251 max=253   memo hit ms: p50=0.00 max=0.03
+payments: raw=7741 simplified=2432 reduction=68.6%
+time-capped groups rerun with no cap: 54; same payment count 54/54; identical payments 17/54; uncapped hit the budget 17/54; uncapped ms p50=931 max=2198
+
+ n  groups  at_min  fb_budget  fb_time  failures  p50_ms  p95_ms  max_ms   raw  simplified  reduction
+ 2      52   52/52          0        0         0    0.01    0.02    0.02    52          52       0.0%
+ 3      57   57/57          0        0         0    0.01    0.03    0.03   166         113      31.9%
+ 4      63   63/63          0        0         0    0.03    0.05    0.14   367         189      48.5%
+ 5      58   58/58          0        0         0    0.06    0.14    0.15   559         231      58.7%
+ 6      53   53/53          0        0         0    0.29    0.75    0.96   714         263      63.2%
+ 7      59   59/59          0        0         0    1.34    6.58    8.81  1083         342      68.4%
+ 8      54   54/54          0        0         0      11      66      72  1224         369      69.9%
+ 9      54   54/54          0       17         0     132     252     253  1710         429      74.9%
+10      50   50/50          0       37         0     250     253     253  1866         444      76.2%

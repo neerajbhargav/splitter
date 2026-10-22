@@ -500,7 +500,6 @@ function Insights({ bundle }: { bundle: GroupBundle }) {
   const total = spend.reduce((a, e) => a + e.amount_cents, 0);
   const totals = paidAndShare(spend);
   const people = bundle.members.filter((m) => totals[m.id]).map((m) => ({ m, ...totals[m.id] })).sort((x, y) => y.share - x.share);
-  const maxP = Math.max(1, ...people.map((p) => Math.max(p.paid, p.share)));
 
   if (!spend.length) {
     return <section className="card"><div className="card-body"><Empty title="Nothing to chart yet">Insights appear once the group has a few expenses.</Empty></div></section>;

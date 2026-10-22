@@ -3,7 +3,7 @@ import { SplitNav } from "@/components/SplitNav";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, CalendarClock, ChevronRight, Plus, Users } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CalendarClock, Plus, Users } from "lucide-react";
 import { useMe, useToast } from "@/components/providers";
 import { useQuickAdd } from "@/components/Shell";
 import { Avatar, Loading } from "@/components/ui";
@@ -13,7 +13,7 @@ import { BigMoney, Card, Progress } from "@/components/kit";
 import { CHART_COLORS, Donut, MonthlyBars, type Slice } from "@/components/charts";
 import { loadOverview, useLiveRefresh, type Overview } from "@/lib/data";
 import { summarize } from "@/lib/overview";
-import { category, groupKind } from "@/lib/categories";
+import { category } from "@/lib/categories";
 import { money } from "@/lib/format";
 
 export default function Dashboard() {

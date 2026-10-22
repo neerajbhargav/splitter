@@ -79,17 +79,17 @@ function harness(seed: Record<string, Row[]> = {}) {
       return state.onRpc ? await state.onRpc(rpc) : { data: 'saved-id', error: null };
     },
   };
-  const module = { exports: {} };
+  const cjs = { exports: {} };
   vm.runInNewContext(compiled, {
-    module,
-    exports: module.exports,
+    module: cjs,
+    exports: cjs.exports,
     require(name: string) {
       if (name === './supabase/client') return { supabaseBrowser: () => client };
       if (name === './data') return { friendly: (message: string) => message, notifyChanged: () => { state.notifications++; } };
       throw new Error(`Unexpected production import: ${name}`);
     },
   }, { filename: 'finance-data.transpiled.cjs' });
-  return { api: module.exports as FinanceModule, state };
+  return { api: cjs.exports as FinanceModule, state };
 }
 
 
@@ -102,7 +102,6 @@ const importRows = [{ date: '2020-01-01', description: 'Row', amount_cents: 100,
 const subscription = { name: 'Private subscription', amount_cents: 100, cycle: 'monthly', anchor_date: '2020-01-01', status: 'active', notes: '' };
 const profile = { income_cents: 1 };
 type Api = FinanceModule['financeApi'];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const writes: { name: string; args: Record<string, unknown>; invoke: (api: Api) => Promise<unknown> }[] = [
   { name: 'ensure_finance_workspace', args: {}, invoke: api => api.ensureWorkspace(context) },
   { name: 'save_finance_settings', args: {}, invoke: api => api.saveSettings(context) },

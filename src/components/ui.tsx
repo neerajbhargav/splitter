@@ -6,6 +6,8 @@ import { initials, money } from "@/lib/format";
 export function Avatar({ name, color = "#c9a96e", src, size = 32 }: { name: string; color?: string; src?: string | null; size?: number }) {
   return (
     <span className="avatar" style={{ ["--size" as string]: `${size}px`, background: src ? "var(--surface-3)" : color }} title={name}>
+      {/* OAuth provider avatars load straight from the provider, with no referrer and no image proxy. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       {src ? <img src={src} alt="" referrerPolicy="no-referrer" /> : initials(name)}
     </span>
   );

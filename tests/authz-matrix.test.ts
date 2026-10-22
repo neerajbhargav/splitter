@@ -192,14 +192,23 @@ for (const [label, migrations] of [["fresh schema", []], ["schema plus the 2026-
     const tables = (await db.query<{ t: string; rls: boolean }>(`select c.relname t, c.relrowsecurity rls from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p') order by 1`)).rows;
     assert.deepEqual(tables.filter((t) => !t.rls).map((t) => t.t), [], "tables without RLS");
     const names = tables.map((t) => t.t);
+    // A view runs with its owner's rights and skips the caller's RLS unless it is security_invoker.
+    // Materialized views and foreign tables cannot have RLS at all. None exist today.
+    const views = (await db.query<{ v: string }>(
+      `select c.relname v from pg_class c join pg_namespace n on n.oid=c.relnamespace
+        where n.nspname='public' and c.relkind in ('v','m','f') and coalesce(array_to_string(c.reloptions, ','), '') !~ 'security_invoker=(true|on|1)' order by 1`)).rows;
+    assert.deepEqual(views.map((v) => v.v), [], "views without security_invoker, materialized views or foreign tables in public: they bypass RLS");
 
-    // 2. Every SECURITY DEFINER function pins search_path.
-    const fns = (await db.query<{ name: string; args: string; definer: boolean; config: string[] | null; auth: boolean; anon: boolean; setof: boolean }>(
-      `select p.proname name, pg_get_function_identity_arguments(p.oid) args, p.prosecdef definer, p.proconfig config, p.proretset setof,
+    // 2. Every SECURITY DEFINER function pins search_path, trigger functions included.
+    const definers = (await db.query<{ name: string; ok: boolean }>(
+      `select p.proname name, coalesce(array_to_string(p.proconfig, ','), '') ~ '(^|,)search_path=' ok
+         from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prosecdef order by 1`)).rows;
+    assert.deepEqual(definers.filter((d) => !d.ok).map((d) => d.name), [], "SECURITY DEFINER functions without search_path");
+    const fns = (await db.query<{ name: string; args: string; auth: boolean; anon: boolean; setof: boolean }>(
+      `select p.proname name, pg_get_function_identity_arguments(p.oid) args, p.proretset setof,
               has_function_privilege('authenticated', p.oid, 'EXECUTE') auth, has_function_privilege('anon', p.oid, 'EXECUTE') anon
          from pg_proc p join pg_namespace n on n.oid=p.pronamespace
         where n.nspname='public' and p.prokind='f' and p.prorettype <> 'trigger'::regtype order by 1`)).rows;
-    assert.deepEqual(fns.filter((x) => x.definer && !(x.config ?? []).some((c) => c.startsWith("search_path="))).map((x) => x.name), [], "SECURITY DEFINER functions without search_path");
 
     // 3. Coverage: every table holds victim rows, and every granted function has a case.
     const before = await snapshot(db, names);
@@ -277,7 +286,7 @@ for (const [label, migrations] of [["fresh schema", []], ["schema plus the 2026-
       }
     }
     for (const [k, n] of Object.entries(tally).sort()) t.diagnostic(`${k}: ${n}`);
-    t.diagnostic(`functions granted: ${granted.length}; tables: ${names.length}; known gaps: ${Object.keys(KNOWN).join(", ")}`);
+    t.diagnostic(`functions granted: ${granted.length}; SECURITY DEFINER functions: ${definers.length}; tables: ${names.length}; known gaps: ${Object.keys(KNOWN).join(", ")}`);
     assert.deepEqual(leaks, [], "outsider or anon reached victim data");
     assert.deepEqual(Object.keys(KNOWN).filter((k) => !observed[k]), [], "known gaps that no longer leak: remove them from KNOWN");
   } finally {

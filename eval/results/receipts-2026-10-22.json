@@ -1,0 +1,5400 @@
+{
+ "eval": "receipt-extraction",
+ "generated_at": "2026-10-22T04:36:15.971Z",
+ "git": {
+  "commit": "40e5d169c56a4b62dbd3daf2d167c2591ab91930",
+  "dirty": false
+ },
+ "reproduce": "npm run eval:receipts -- --seed 1 --n 200",
+ "dataset": {
+  "generator": "eval/receipt-gen.ts",
+  "seed": 1,
+  "n": 200,
+  "tiers": {
+   "clean": 73,
+   "mild": 75,
+   "hard": 52
+  }
+ },
+ "pipeline": {
+  "ocr": "tesseract.js 7.0.0 (core 7.0.0), createWorker(\"eng\", 1): LSTM only, default page segmentation, as in src/components/ReceiptScanner.tsx",
+  "lang_data": "@tesseract.js-data/eng 1.0.0 4.0.0_best_int/eng.traineddata.gz sha256 45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91",
+  "parser": "src/lib/receipt.ts parseReceipt"
+ },
+ "environment": {
+  "node": "v24.17.0",
+  "platform": "darwin-arm64",
+  "cpu": "Apple M4 Pro",
+  "sharp": "0.35.5",
+  "librsvg": "2.63.2"
+ },
+ "definitions": {
+  "precision": "correct / answered. A wrong prefill is the costly error, because a user may apply it.",
+  "coverage": "answered / receipts with a knowable answer (all receipts for merchant and total; date_expect = extract for date).",
+  "refusal_rate": "receipts with date_expect = refuse (ambiguous numeric day/month, two dates, or no date) where no date was suggested.",
+  "merchant_match": "case-insensitive, whitespace-collapsed exact match. contains_name counts suggestions that hold the name plus OCR junk.",
+  "ci95": "Wilson interval."
+ },
+ "not_scored": "Subtotal and tax are printed on every receipt and kept in each item's truth, but parseReceipt does not extract them.",
+ "ocr": {
+  "merchant": {
+   "n": 200,
+   "answered": 173,
+   "correct": 100,
+   "wrong": 73,
+   "precision": 0.578,
+   "precision_ci95": [
+    0.504,
+    0.649
+   ],
+   "coverage": 0.865,
+   "eligible": 200,
+   "contains_name": 139
+  },
+  "total": {
+   "n": 200,
+   "answered": 106,
+   "correct": 105,
+   "wrong": 1,
+   "precision": 0.991,
+   "precision_ci95": [
+    0.948,
+    0.998
+   ],
+   "coverage": 0.53,
+   "eligible": 200
+  },
+  "date": {
+   "n": 200,
+   "answered": 72,
+   "correct": 71,
+   "wrong": 1,
+   "precision": 0.986,
+   "precision_ci95": [
+    0.925,
+    0.998
+   ],
+   "coverage": 0.598,
+   "eligible": 117,
+   "should_refuse": 83,
+   "refused": 81,
+   "refusal_rate": 0.976,
+   "refusal_ci95": [
+    0.916,
+    0.993
+   ],
+   "by_kind": {
+    "iso": {
+     "n": 25,
+     "answered": 19,
+     "correct": 19
+    },
+    "named_mdy": {
+     "n": 44,
+     "answered": 27,
+     "correct": 27
+    },
+    "numeric_one_reading": {
+     "n": 18,
+     "answered": 0,
+     "correct": 0
+    },
+    "numeric_ambiguous": {
+     "n": 48,
+     "answered": 0,
+     "correct": 0
+    },
+    "named_dmy": {
+     "n": 30,
+     "answered": 24,
+     "correct": 24
+    },
+    "two_dates": {
+     "n": 21,
+     "answered": 2,
+     "correct": 1
+    },
+    "none": {
+     "n": 14,
+     "answered": 0,
+     "correct": 0
+    }
+   }
+  }
+ },
+ "ocr_total_blank": {
+  "n": 94,
+  "right_amount_on_total_line": 50
+ },
+ "ocr_by_tier": {
+  "clean": {
+   "n": 73,
+   "merchant": {
+    "n": 73,
+    "answered": 73,
+    "correct": 68,
+    "wrong": 5,
+    "precision": 0.932,
+    "precision_ci95": [
+     0.849,
+     0.97
+    ],
+    "coverage": 1,
+    "eligible": 73,
+    "contains_name": 69
+   },
+   "total": {
+    "n": 73,
+    "answered": 72,
+    "correct": 72,
+    "wrong": 0,
+    "precision": 1,
+    "precision_ci95": [
+     0.949,
+     1
+    ],
+    "coverage": 0.986,
+    "eligible": 73
+   },
+   "date": {
+    "n": 73,
+    "answered": 33,
+    "correct": 33,
+    "wrong": 0,
+    "precision": 1,
+    "precision_ci95": [
+     0.896,
+     1
+    ],
+    "coverage": 0.868,
+    "eligible": 38,
+    "should_refuse": 35,
+    "refused": 35,
+    "refusal_rate": 1,
+    "refusal_ci95": [
+     0.901,
+     1
+    ]
+   }
+  },
+  "mild": {
+   "n": 75,
+   "merchant": {
+    "n": 75,
+    "answered": 73,
+    "correct": 25,
+    "wrong": 48,
+    "precision": 0.342,
+    "precision_ci95": [
+     0.244,
+     0.457
+    ],
+    "coverage": 0.973,
+    "eligible": 75,
+    "contains_name": 59
+   },
+   "total": {
+    "n": 75,
+    "answered": 26,
+    "correct": 26,
+    "wrong": 0,
+    "precision": 1,
+    "precision_ci95": [
+     0.871,
+     1
+    ],
+    "coverage": 0.347,
+    "eligible": 75
+   },
+   "date": {
+    "n": 75,
+    "answered": 31,
+    "correct": 31,
+    "wrong": 0,
+    "precision": 1,
+    "precision_ci95": [
+     0.89,
+     1
+    ],
+    "coverage": 0.667,
+    "eligible": 45,
+    "should_refuse": 30,
+    "refused": 29,
+    "refusal_rate": 0.967,
+    "refusal_ci95": [
+     0.833,
+     0.994
+    ]
+   }
+  },
+  "hard": {
+   "n": 52,
+   "merchant": {
+    "n": 52,
+    "answered": 27,
+    "correct": 7,
+    "wrong": 20,
+    "precision": 0.259,
+    "precision_ci95": [
+     0.132,
+     0.447
+    ],
+    "coverage": 0.519,
+    "eligible": 52,
+    "contains_name": 11
+   },
+   "total": {
+    "n": 52,
+    "answered": 8,
+    "correct": 7,
+    "wrong": 1,
+    "precision": 0.875,
+    "precision_ci95": [
+     0.529,
+     0.978
+    ],
+    "coverage": 0.154,
+    "eligible": 52
+   },
+   "date": {
+    "n": 52,
+    "answered": 8,
+    "correct": 7,
+    "wrong": 1,
+    "precision": 0.875,
+    "precision_ci95": [
+     0.529,
+     0.978
+    ],
+    "coverage": 0.206,
+    "eligible": 34,
+    "should_refuse": 18,
+    "refused": 17,
+    "refusal_rate": 0.944,
+    "refusal_ci95": [
+     0.742,
+     0.99
+    ]
+   }
+  }
+ },
+ "text_only": {
+  "merchant": {
+   "n": 200,
+   "answered": 200,
+   "correct": 186,
+   "wrong": 14,
+   "precision": 0.93,
+   "precision_ci95": [
+    0.886,
+    0.958
+   ],
+   "coverage": 1,
+   "eligible": 200,
+   "contains_name": 186
+  },
+  "total": {
+   "n": 200,
+   "answered": 200,
+   "correct": 200,
+   "wrong": 0,
+   "precision": 1,
+   "precision_ci95": [
+    0.981,
+    1
+   ],
+   "coverage": 1,
+   "eligible": 200
+  },
+  "date": {
+   "n": 200,
+   "answered": 99,
+   "correct": 99,
+   "wrong": 0,
+   "precision": 1,
+   "precision_ci95": [
+    0.963,
+    1
+   ],
+   "coverage": 0.846,
+   "eligible": 117,
+   "should_refuse": 83,
+   "refused": 83,
+   "refusal_rate": 1,
+   "refusal_ci95": [
+    0.956,
+    1
+   ],
+   "by_kind": {
+    "iso": {
+     "n": 25,
+     "answered": 25,
+     "correct": 25
+    },
+    "named_mdy": {
+     "n": 44,
+     "answered": 44,
+     "correct": 44
+    },
+    "numeric_one_reading": {
+     "n": 18,
+     "answered": 0,
+     "correct": 0
+    },
+    "numeric_ambiguous": {
+     "n": 48,
+     "answered": 0,
+     "correct": 0
+    },
+    "named_dmy": {
+     "n": 30,
+     "answered": 30,
+     "correct": 30
+    },
+    "two_dates": {
+     "n": 21,
+     "answered": 0,
+     "correct": 0
+    },
+    "none": {
+     "n": 14,
+     "answered": 0,
+     "correct": 0
+    }
+   }
+  }
+ },
+ "ocr_ms": {
+  "p50": 167,
+  "p95": 229,
+  "max": 326,
+  "note": "One worker, this machine only."
+ },
+ "items": [
+  {
+   "id": "r000",
+   "tier": "mild",
+   "file": "r000.png",
+   "sha256": "7a2800c928f7ca59a5b3bfb6a03f41ffced19a9d8487045b685e29ff3c88f00d",
+   "truth": {
+    "merchant": "STATION 98 SUPPLY",
+    "date": "2025-02-17",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 5366,
+    "tax_cents": 215,
+    "total_cents": 5581
+   },
+   "ocr": {
+    "merchant": ". Millbrook Falls .",
+    "date": "2025-02-17",
+    "total_cents": 5581
+   },
+   "text_only": {
+    "merchant": "Millbrook Falls",
+    "date": "2025-02-17",
+    "total_cents": 5581
+   },
+   "ocr_ms": 200,
+   "ocr_text": "’ STATION 98, SUBPLY\n: 723 Orchard Blvd .\n. Millbrook Falls .\n: Tel 555-0148\nDATE 2025-02-17 10:09\nReg 1 Clerk 45 °\nEggs Dozen 3 @ 5.57 16.71\n| Notebook | 20.16\nsparkling Water ‘16.79\nSUBTOTAL \"53.66\nTax 4% . 2.15\nTOTAL: $55.81\nVISA ending 3909 55.81\nL Thank you, come again oo\n"
+  },
+  {
+   "id": "r001",
+   "tier": "mild",
+   "file": "r001.jpg",
+   "sha256": "2ba2ddb07e23bc8f4c5d02cf83daacd6580efb730ff51eeb1891b908861b0e26",
+   "truth": {
+    "merchant": "Riverbend Meadow Garden Center",
+    "date": "2026-06-22",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 4770,
+    "tax_cents": 0,
+    "total_cents": 4770
+   },
+   "ocr": {
+    "merchant": ".. Riverbend Meadow Garden Center",
+    "date": "2026-06-22",
+    "total_cents": 4770
+   },
+   "text_only": {
+    "merchant": "Riverbend Meadow Garden Center",
+    "date": "2026-06-22",
+    "total_cents": 4770
+   },
+   "ocr_ms": 198,
+   "ocr_text": ".. Riverbend Meadow Garden Center\n© 836 Linden St 5\n. ‘Riverton\n© Tel 555-0186 °\n\n-June 22 2026 + i 17:09\nReg 9 Clerk 21 |\n\n‘Olive 011 3 @ 10.31 © 730.93\nTomatdes” . 16.77\nSub Total * Sag 70)\nTax 5 oo .0.00\nTotal : $47.70\ncash. TC 60.00\n\n‘Change 72.30 5\n: Thank you, come again\n"
+  },
+  {
+   "id": "r002",
+   "tier": "mild",
+   "file": "r002.png",
+   "sha256": "a601d581fb5ec4c24df47f8805db9672a9262739d84e2f32039c47772c483ebe",
+   "truth": {
+    "merchant": "Lucky Fox Supply",
+    "date": "2024-09-13",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 5052,
+    "tax_cents": 202,
+    "total_cents": 5254
+   },
+   "ocr": {
+    "merchant": "Lucky Fox Supply o"
+   },
+   "text_only": {
+    "merchant": "Lucky Fox Supply",
+    "total_cents": 5254
+   },
+   "ocr_ms": 161,
+   "ocr_text": "Lucky Fox Supply o\n. 13 Larch St°\nCedar: Hollow .\nTel 555-0132 d\nDate: 13-09-2024 . 18:13\nReg 2 Clerk 46 5 BN\n* Soup of the Day t 22.22\nLight Bulb 21.68\nGreen. Tea . 6.62\nSub Total : 50.52,\nTax 4% 0 2.02\n+ Total 52.54\nCash . 60.00\nChange, 7.46\nTotal Savings . 7.16\nThanks ‘for visiting .\n"
+  },
+  {
+   "id": "r003",
+   "tier": "hard",
+   "file": "r003.jpg",
+   "sha256": "503e783aa89b87e5c926bf3fcab82ff9df35e26e352f8770da458359ba421707",
+   "truth": {
+    "merchant": "Copper Fox Kitchen",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 6018,
+    "tax_cents": 534,
+    "total_cents": 7635
+   },
+   "ocr": {
+    "merchant": "Milbrook Fa"
+   },
+   "text_only": {
+    "merchant": "Copper Fox Kitchen",
+    "total_cents": 7635
+   },
+   "ocr_ms": 57,
+   "ocr_text": "433 Kestrel Lang\nMilbrook Fa\nGarden Hose\nfoe Bear 208\nat Milk 19.68\nSUBTOTA\nTip 534\nBalarice Dy 108\nalance Dug 0.83\nChange 80.00\n"
+  },
+  {
+   "id": "r004",
+   "tier": "mild",
+   "file": "r004.png",
+   "sha256": "e1e9b0af16705902626fdae194365282801e6f183f90a6a594b6b6c11836552f",
+   "truth": {
+    "merchant": "Lucky Acorn Pantry",
+    "date": "2024-04-20",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 3256,
+    "tax_cents": 130,
+    "total_cents": 3386
+   },
+   "ocr": {
+    "merchant": "Lucky Acorn Pantry",
+    "date": "2024-04-20",
+    "total_cents": 3386
+   },
+   "text_only": {
+    "merchant": "Lucky Acorn Pantry",
+    "date": "2024-04-20",
+    "total_cents": 3386
+   },
+   "ocr_ms": 127,
+   "ocr_text": "Lucky Acorn Pantry\n.. Good Food Good Mood\n920 Elm Blvd\nPort Ellery\nTel 555-0156\n20 Apr, 2024 14:33\nReg 8 Clerk 54\nNotebook 10.57\nCoffee Beans 21.99 .\nSubtotal 32.56\nTax. 4% 1.30\nTOTAL: 33.86\nDebit ending 6651 33.86\nThanks for visiting’\n"
+  },
+  {
+   "id": "r005",
+   "tier": "clean",
+   "file": "r005.png",
+   "sha256": "3acdab900ce10f9a1af83a981a2b9188ed97a63dfa6e7944445d4b2b236140cf",
+   "truth": {
+    "merchant": "Pier 34 Supply",
+    "date": "2025-10-25",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 4790,
+    "tax_cents": 299,
+    "total_cents": 5089
+   },
+   "ocr": {
+    "merchant": "Westvale",
+    "date": "2025-10-25",
+    "total_cents": 5089
+   },
+   "text_only": {
+    "merchant": "Westvale",
+    "date": "2025-10-25",
+    "total_cents": 5089
+   },
+   "ocr_ms": 150,
+   "ocr_text": "Pier 34 Supply\n12 Bayview St\nWestvale\n\nTel 555-0197\nDATE October 25, 2025 15:24\nReg 6 Clerk 80\nAA Batteries 19.22\nPaper Towels 4.81\nLight Bulb 23.87\nTotal Items 3\nSub Total 47.90\nSales Tax 2.99\nTotal Due $50.89\nCash 60.00\nChange 9.11\n\nHave a nice day\n"
+  },
+  {
+   "id": "r006",
+   "tier": "hard",
+   "file": "r006.jpg",
+   "sha256": "a9beea9841cdaab5fb2a229c58d44a4fc8d608e949af0b6486347c628e38a33b",
+   "truth": {
+    "merchant": "Route 7 Hardware",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 9711,
+    "tax_cents": 680,
+    "total_cents": 10391
+   },
+   "ocr": {
+    "merchant": "pont Ellery",
+    "total_cents": 10391
+   },
+   "text_only": {
+    "merchant": "Port Ellery",
+    "total_cents": 10391
+   },
+   "ocr_ms": 130,
+   "ocr_text": "Route 7- Hardware:\n413 Bayview St\npont Ellery\nTel 565-0179\nDate: 01.09.2025 07:26\nReg 1 Clérk 55\nSoup of the Day B38\nTomatoes 3 @ 11:17 3351\nLight Bulb . 987\nSourdough Loa! 1336\nOat Milk 3 @-10.63 31.89\nSUBTOTAL z 97.11\nTax 680\nTOTAL 103.91\nCash 120.00\nChange 16.00\nThanks for Visiting\n"
+  },
+  {
+   "id": "r007",
+   "tier": "hard",
+   "file": "r007.jpg",
+   "sha256": "8b685b8461a25af48ce73d415d1ed5a40eab1959fa8f1b9320c84b5f3684132f",
+   "truth": {
+    "merchant": "NORTHSIDE OTTER PHARMACY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 8192,
+    "tax_cents": 512,
+    "total_cents": 8704
+   },
+   "ocr": {
+    "merchant": "NORTHSIDE OTTER PHARMACY"
+   },
+   "text_only": {
+    "merchant": "NORTHSIDE OTTER PHARMACY",
+    "total_cents": 8704
+   },
+   "ocr_ms": 157,
+   "ocr_text": "NORTHSIDE OTTER PHARMACY\nNeighborhood Favorite\n653 Mil St\nEastbrook\nTel 555.0108\nDate: 09.10.2025 1401\nRog 3 Clerk 14\nSparkling Water 2185\nDish Soap 207\nPasta3 @ 2239. Zz\nOlveOr 13.26\nLatte 16.08\nTorhatoes \"og\nSUBTOTAL 81.92\nSales Tax . 512\n‘Grand Total \".. | Broausp\nDebit ending 2080 870s\nThanks for visiting,\n"
+  },
+  {
+   "id": "r008",
+   "tier": "clean",
+   "file": "r008.png",
+   "sha256": "9eb2644bc83a433665155041eebe8d17c69631a8eb44662adf162604a980bc58",
+   "truth": {
+    "merchant": "Little Kettle Pharmacy",
+    "date": "2024-11-30",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 4689,
+    "tax_cents": 0,
+    "total_cents": 4689
+   },
+   "ocr": {
+    "merchant": "Little Kettle Pharmacy",
+    "date": "2024-11-30",
+    "total_cents": 4689
+   },
+   "text_only": {
+    "merchant": "Little Kettle Pharmacy",
+    "date": "2024-11-30",
+    "total_cents": 4689
+   },
+   "ocr_ms": 151,
+   "ocr_text": "Little Kettle Pharmacy\n534 Ferry Lane\nCedar Hollow\nTel 555-0174\nDATE 2024-11-30 11:10\nReg 1 Clerk 16\nNotebook 7.75\nTomatoes 2.03\nPaper Towels 24.43\nLight Bulb 12.68\nSUBTOTAL 46.89\nTax 0.00\nTotal 46.89 USD\nMastercard ending 7838 46.89\nHave a nice day\n"
+  },
+  {
+   "id": "r009",
+   "tier": "mild",
+   "file": "r009.jpg",
+   "sha256": "6400b2f3cb66f1c5323beaa45be9e48069986b02cc882dd51cfc9367cb7c2e82",
+   "truth": {
+    "merchant": "SILVER BIRCH BISTRO",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 5693,
+    "tax_cents": 455,
+    "total_cents": 6148
+   },
+   "ocr": {
+    "merchant": "SILVER BIRCH BISTRO"
+   },
+   "text_only": {
+    "merchant": "SILVER BIRCH BISTRO",
+    "total_cents": 6148
+   },
+   "ocr_ms": 160,
+   "ocr_text": "SILVER BIRCH BISTRO\n. 840 Bayview lane . *\nto Riverton I\n.°, Tel 555-0164\nDATE 01/12/2026 12:02\nReg 7'Clerk 87 E\nYogurt | + . 22.81\nDish Soap 4 @ 8.53 34.12\nSUBTOTAL . ‘56.93\n| Tax 8% . 4.55\nTOTAL: h .$61.48\nVISA ending 6011 61.48\nThank you, came again\n"
+  },
+  {
+   "id": "r010",
+   "tier": "mild",
+   "file": "r010.png",
+   "sha256": "589819d8854b5364cf40749ed21d455f54969b47a8d07c9c4ea3818bd038fa69",
+   "truth": {
+    "merchant": "Red Door Fox Noodle House",
+    "date": "2025-11-09",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 8726,
+    "tax_cents": 611,
+    "total_cents": 10646
+   },
+   "ocr": {
+    "merchant": "Red Door Fox Noodle House *"
+   },
+   "text_only": {
+    "merchant": "Red Door Fox Noodle House",
+    "total_cents": 10646
+   },
+   "ocr_ms": 192,
+   "ocr_text": "Red Door Fox Noodle House *\n. * 890 Elm St\n©. Riverton _ 0\n. Tel 555-0139 .\nNov 9, 2025, B 18:41\nReg1Clerkso :\nNotebook ~~ -. B 21.46\nSoup of the Day : © 2401\nOat Milk : | 5.10\nSourdough Loaf 3 @ 12.23 36.69\n\" SUBTOTAL : \"87.26\nTax - 6.11\nTip . 13.09\n‘Balance Die ~ - ) $106.46\nCash ~~ © 120.00\n+ Change Po 13.54\n: Return by Dec 9, 2025\n) . Haveaniceday\n"
+  },
+  {
+   "id": "r011",
+   "tier": "mild",
+   "file": "r011.png",
+   "sha256": "a421750b32d726063bf11ef5e274bf541f5f17420921301bc2e4a64cdf4c85a5",
+   "truth": {
+    "merchant": "HARBOR ACORN PANTRY",
+    "date": "2026-06-20",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 16401,
+    "tax_cents": 1312,
+    "total_cents": 17713
+   },
+   "ocr": {
+    "merchant": ". HARBOR AGORN PANTRY i"
+   },
+   "text_only": {
+    "merchant": "HARBOR ACORN PANTRY",
+    "total_cents": 17713
+   },
+   "ocr_ms": 167,
+   "ocr_text": ". HARBOR AGORN PANTRY i\n_ 711 Linden Lane :\nCedar Hollow -\n\nCo Tel 555-0175\n06-202026 © 1248\nReg 9 Clerk 15 .\n‘Rice 3 @ 10.47 Le . 31.41\"\nWood Glue ao 6.40\nTomatoes 4 @ 14.13 56.52\nLatte 4 @ 17.42 69.68\nSub Total i 164.01\nSales Tax woeo18i2\nTOTAL 0 USD 177.13\n\nDebif ending 6012 177.13\nThank you, come again\n"
+  },
+  {
+   "id": "r012",
+   "tier": "clean",
+   "file": "r012.png",
+   "sha256": "5b5efd2fedbcb1e4ba6d35ca8812e4639bbb957b831c2986640a219648d5a881",
+   "truth": {
+    "merchant": "Cedar Wren Books",
+    "date": "2025-05-23",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 733,
+    "tax_cents": 59,
+    "total_cents": 792
+   },
+   "ocr": {
+    "merchant": "Cedar Wren Books",
+    "date": "2025-05-23",
+    "total_cents": 792
+   },
+   "text_only": {
+    "merchant": "Cedar Wren Books",
+    "date": "2025-05-23",
+    "total_cents": 792
+   },
+   "ocr_ms": 149,
+   "ocr_text": "Cedar Wren Books\n379 Mill Ave\nMillbrook Falls\nTel 555-0158\nDATE 23 May, 2025 09:14\nReg 4 Clerk 14\nDish Soap 3.08\nEggs Dozen 4.25\nSub Total 7.33\nSales Tax 0.59\nTOTAL: 7.92 USD\nCash 20.00\nChange 12.08\nThank you, come again\n"
+  },
+  {
+   "id": "r013",
+   "tier": "clean",
+   "file": "r013.png",
+   "sha256": "d0302db445f61d94a8f9db4ffe009117e0a0fcf513ca9c4bb310f8d5b23c58f1",
+   "truth": {
+    "merchant": "Red Door Pine Hardware",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 5343,
+    "tax_cents": 427,
+    "total_cents": 5770
+   },
+   "ocr": {
+    "merchant": "Red Door Pine Hardware",
+    "total_cents": 5770
+   },
+   "text_only": {
+    "merchant": "Red Door Pine Hardware",
+    "total_cents": 5770
+   },
+   "ocr_ms": 161,
+   "ocr_text": "Red Door Pine Hardware\n309 Hawthorn Blvd\nWestvale\nTel 555-0107\n\n06-10-2026 08:24\nReg 9 Clerk 18\nEggs Dozen 2 @ 23.99 47.98\nGreen Tea 3.84\nPaper Towels 1.61\nSUBTOTAL 53.43\nTax 8% 4.27\nTOTAL: 57.70\nMastercard ending 6900 57.70\n\nHave a nice day\n"
+  },
+  {
+   "id": "r014",
+   "tier": "mild",
+   "file": "r014.png",
+   "sha256": "b93020f60e23a91e9ffc285f0881c0e6e6ace907fd9abdf1c1b91092fb6c0c4a",
+   "truth": {
+    "merchant": "GREEN SPARROW HARDWARE",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 4677,
+    "tax_cents": 374,
+    "total_cents": 5051
+   },
+   "ocr": {
+    "merchant": "GREEN SPARROW HARDWARE"
+   },
+   "text_only": {
+    "merchant": "GREEN SPARROW HARDWARE",
+    "total_cents": 5051
+   },
+   "ocr_ms": 150,
+   "ocr_text": "GREEN SPARROW HARDWARE\n644 Ferry Blvd\nWestvale .\n. Tel 555-0101\n10.11.2026 18:20\nReg 3 Clerk 79\nGreen Tea 147\nCoffee Beans; . 10.60\nNotebook : 11.66\nWood Glue 17.93\nLight Bulb 5.11\nSubtotal : Lab\nTax 3:74\nGrand Total 5 © 50.51 USD\nVISA ending 6867 50.51\n‘Thanks for visiting .\n"
+  },
+  {
+   "id": "r015",
+   "tier": "mild",
+   "file": "r015.jpg",
+   "sha256": "27d783e6733f7760b03c863c632985a70aeb9c46a2076859563d00e5186ee40f",
+   "truth": {
+    "merchant": "SILVER FOX NOODLE HOUSE",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 4651,
+    "tax_cents": 326,
+    "total_cents": 5675
+   },
+   "ocr": {
+    "merchant": "a SILVER FOX NOODLE HOUSE"
+   },
+   "text_only": {
+    "merchant": "SILVER FOX NOODLE HOUSE",
+    "total_cents": 5675
+   },
+   "ocr_ms": 186,
+   "ocr_text": "a SILVER FOX NOODLE HOUSE\ni 583 Elm Blvd -\n. Westvale\n. Tel. 555-0184 \"\nDate: 08/07/2026 17:41\nReg 7 Clerk 60 ,\nSparkling Water | 7.65\nOat Milk i 16,29\nNotebook 22.57\n_ Subtotal : © 46.51\nTax - © 3.26\nTip. - 6.98\nBalance Due 5 56.75\nCash 5 60.00\nChange i 3.25\n2 Have a’nice day =\n"
+  },
+  {
+   "id": "r016",
+   "tier": "clean",
+   "file": "r016.png",
+   "sha256": "c289762a0324e816eb0b9364adcf4fd8f166ad0f7cf01980c603abc2ab01b46f",
+   "truth": {
+    "merchant": "NORTHSIDE MEADOW HARDWARE",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 1815,
+    "tax_cents": 127,
+    "total_cents": 1942
+   },
+   "ocr": {
+    "merchant": "NORTHSIDE MEADOW HARDWARE",
+    "total_cents": 1942
+   },
+   "text_only": {
+    "merchant": "NORTHSIDE MEADOW HARDWARE",
+    "total_cents": 1942
+   },
+   "ocr_ms": 136,
+   "ocr_text": "NORTHSIDE MEADOW HARDWARE\n\n59 Larch Blvd\n\nCedar Hollow\n\nTel 555-0180\nDATE 01.09.24 14:13\nReg 8 Clerk 42\nLight Bulb 1.35\nOat Milk 16.80\nSub Total 18.15\nSales Tax 1.27\nTOTAL $19.42\nCash 20.00\nChange 0.58\n\nThank you, come again\n"
+  },
+  {
+   "id": "r017",
+   "tier": "hard",
+   "file": "r017.jpg",
+   "sha256": "ca5bc694b4c1faac8a81101e03f72d918bfac92ff117fb842e3a603da43ce9fa",
+   "truth": {
+    "merchant": "GREEN ANCHOR BOOKS",
+    "date": "2026-02-02",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 6230,
+    "tax_cents": 498,
+    "total_cents": 6728
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "GREEN ANCHOR BOOKS",
+    "total_cents": 6728
+   },
+   "ocr_ms": 8,
+   "ocr_text": ""
+  },
+  {
+   "id": "r018",
+   "tier": "clean",
+   "file": "r018.png",
+   "sha256": "61d7cb686e76f26b87f114b93cabb2898741b5164d31325eec19ab2a6be97572",
+   "truth": {
+    "merchant": "Quiet Wren Cafe",
+    "date": "2026-02-11",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 12133,
+    "tax_cents": 1077,
+    "total_cents": 13210
+   },
+   "ocr": {
+    "merchant": "Quiet Wren Cafe",
+    "date": "2026-02-11",
+    "total_cents": 13210
+   },
+   "text_only": {
+    "merchant": "Quiet Wren Cafe",
+    "date": "2026-02-11",
+    "total_cents": 13210
+   },
+   "ocr_ms": 189,
+   "ocr_text": "Quiet Wren Cafe\n147 Quarry Blvd\nRiverton\nTel 555-0174\nDATE Feb 11, 2026 11:33\nReg 5 Clerk 22\nLatte 14.55\nBananas 9.47\nOat Milk 2 @ 22.52 45.04\nWood Glue 19.80\nNotebook 15.89\nLatte 16.58\nSub Total 121.33\nTax 8.875% 10.77\nTOTAL 132.10 USD\nMastercard ending 4528 132.10\nTotal Savings 6.71\nThank you, come again\n"
+  },
+  {
+   "id": "r019",
+   "tier": "hard",
+   "file": "r019.jpg",
+   "sha256": "284800435edaba340e4bce16e2a80919b292e9a9e44794f57c02874c6ffdaefc",
+   "truth": {
+    "merchant": "Juniper Sparrow Noodle House",
+    "date": "2024-11-30",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 2257,
+    "tax_cents": 200,
+    "total_cents": 2796
+   },
+   "ocr": {
+    "merchant": "Juniper Sparrow Noodte House"
+   },
+   "text_only": {
+    "merchant": "Juniper Sparrow Noodle House",
+    "date": "2024-11-30",
+    "total_cents": 2796
+   },
+   "ocr_ms": 126,
+   "ocr_text": "Juniper Sparrow Noodte House\nx 254 Quarry st\nRiverton\nTel 555-9197 .\nNov 38, 2924 19:15\nReg 9 Clerk 45\nSoup of the’ pay © ., 13.62\nBananas 8.75\nSUBTOTAL 22/57\nTax 8.8754 2.00\nTip 3.39\nBalance pye 27:96 usp\nMastercard ending 6597\" 27.96\n» Have a nice zy\n"
+  },
+  {
+   "id": "r020",
+   "tier": "mild",
+   "file": "r020.png",
+   "sha256": "0f021eb4b74c918afd38049d6fed8638065f47a7dae6850b9a40247b627438a6",
+   "truth": {
+    "merchant": "Little Thistle Kitchen",
+    "date": "2026-02-18",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 2221,
+    "tax_cents": 0,
+    "total_cents": 2554
+   },
+   "ocr": {
+    "merchant": "Little Thistle Kitchen"
+   },
+   "text_only": {
+    "merchant": "Little Thistle Kitchen",
+    "date": "2026-02-18",
+    "total_cents": 2554
+   },
+   "ocr_ms": 162,
+   "ocr_text": "Little Thistle Kitchen\n819 Hawthorn Lane\n- Riverton: :\n\n. . Tel 555-0189 o\nDATE Feb 18,2026 09:30\n‘Reg 3 Clerk 76\nRice . 7.45\noat Milk ° 7.06\nTomatoes a0 7.70\nSub Total - 22.21\nTax co : © 0.00\nTip 3.33\nAmount Due. . $25.54\nMastercard ending 6743 25.54 .\n\nThank you, come again\n"
+  },
+  {
+   "id": "r021",
+   "tier": "clean",
+   "file": "r021.png",
+   "sha256": "83d2e36c26c95a5aed4f6160a366cf12db208b2f9cf1db135d8204a0aa021799",
+   "truth": {
+    "merchant": "CEDAR OTTER GARDEN CENTER",
+    "date": "2025-09-02",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 1987,
+    "tax_cents": 79,
+    "total_cents": 2066
+   },
+   "ocr": {
+    "merchant": "CEDAR OTTER GARDEN CENTER",
+    "date": "2025-09-02",
+    "total_cents": 2066
+   },
+   "text_only": {
+    "merchant": "CEDAR OTTER GARDEN CENTER",
+    "date": "2025-09-02",
+    "total_cents": 2066
+   },
+   "ocr_ms": 152,
+   "ocr_text": "CEDAR OTTER GARDEN CENTER\n574 Bayview Ave\nPort Ellery\nTel 555-0194\n\n2025-09-02 10:07\nReg 5 Clerk 17\n\nSoup of the Day 8.27\nSparkling Water 3.81\nApples 7.79\nSUBTOTAL 19.87\nTax 4% 0.79\nGrand Total USD 20.66\nCash 40.00\nChange 19.34\n\nThank you, come again\n"
+  },
+  {
+   "id": "r022",
+   "tier": "mild",
+   "file": "r022.jpg",
+   "sha256": "b2768b2025d53adb90aea6110629892e4a357b49ca1e6404abd03240b9fed239",
+   "truth": {
+    "merchant": "JUNIPER KETTLE KITCHEN",
+    "date": "2025-08-12",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 9941,
+    "tax_cents": 398,
+    "total_cents": 10339
+   },
+   "ocr": {
+    "merchant": "JUNIPER KETTLE KITCHEN - - -",
+    "date": "2025-08-12",
+    "total_cents": 10339
+   },
+   "text_only": {
+    "merchant": "JUNIPER KETTLE KITCHEN",
+    "date": "2025-08-12",
+    "total_cents": 10339
+   },
+   "ocr_ms": 209,
+   "ocr_text": "JUNIPER KETTLE KITCHEN - - -\n: © 151 Elm St\n: Riverton .\nTel 555-0165\nDATE 2025-08-12 . 19:26\nReg 7 Clerk 22 .\nLight Bulb = ) 24.97.\n- Sourdough Loaf : 19.86\nCheddar a 23.97\nLatte 11.25\nGreen Tea 12.58\n\"AA Batteries 2 @ 3.39 .6.78\nSUBTOTAL i © 99.41\nSales Tax ; : 3.98\nTOTAL 103.39\nVISA ending 7487 103.39\nHave a'nice day : B\n"
+  },
+  {
+   "id": "r023",
+   "tier": "clean",
+   "file": "r023.png",
+   "sha256": "17eacebe8aab5a74bc8511308da699b2b2af59dd3dde403803b3d279f51227cc",
+   "truth": {
+    "merchant": "Cedar Kettle Supply",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 3588,
+    "tax_cents": 224,
+    "total_cents": 3812
+   },
+   "ocr": {
+    "merchant": "Cedar Kettle Supply",
+    "total_cents": 3812
+   },
+   "text_only": {
+    "merchant": "Cedar Kettle Supply",
+    "total_cents": 3812
+   },
+   "ocr_ms": 146,
+   "ocr_text": "Cedar Kettle Supply\n694 Mill Ave\nMillbrook Falls\nTel 555-0155\nDATE 05.01.2024 09:57\nReg 1 Clerk 46\nDish Soap 4.55\nOlive Oil 17.20\nLight Bulb 14.13\nSUBTOTAL 35.88\nTax 6.25% 2.24\nTotal Due USD 38.12\nMastercard ending 8179 38.12\nThanks for visiting\n"
+  },
+  {
+   "id": "r024",
+   "tier": "clean",
+   "file": "r024.png",
+   "sha256": "76ac8f9a6a6071697adac829d8cff0c048bacca0acd800d1e381b4cfc06c6412",
+   "truth": {
+    "merchant": "NORTHSIDE SPARROW GROCERY",
+    "date": "2025-10-19",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 16832,
+    "tax_cents": 1494,
+    "total_cents": 18326
+   },
+   "ocr": {
+    "merchant": "NORTHSIDE SPARROW GROCERY",
+    "date": "2025-10-19",
+    "total_cents": 18326
+   },
+   "text_only": {
+    "merchant": "NORTHSIDE SPARROW GROCERY",
+    "date": "2025-10-19",
+    "total_cents": 18326
+   },
+   "ocr_ms": 187,
+   "ocr_text": "NORTHSIDE SPARROW GROCERY\n69 Linden Blvd\nEastbrook\nTel 555-0140\n\nDATE 19 October, 2025 14:41\nReg 7 Clerk 83\nAR Batteries 4 @ 19.86 79.44\nGreen Tea 18.54\nNotebook 23.91\nGreen Tea 7.89\nBananas 3 @ 10.92 32.76\nEggs Dozen 2 @ 2.89 5.78\nSub Total 168.32\nTax 14.94\nTOTAL 183.26\nMastercard ending 3573 183.26\n\nHave a nice day\n"
+  },
+  {
+   "id": "r025",
+   "tier": "clean",
+   "file": "r025.png",
+   "sha256": "5395c27e3b9748e6b8f4b85279ddd57a3ed0fb13746d7fc2b5d6bba272ee8e15",
+   "truth": {
+    "merchant": "NORTHSIDE ACORN KITCHEN",
+    "date": "2024-07-23",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 11888,
+    "tax_cents": 0,
+    "total_cents": 11888
+   },
+   "ocr": {
+    "merchant": "NORTHSIDE ACORN KITCHEN",
+    "date": "2024-07-23",
+    "total_cents": 11888
+   },
+   "text_only": {
+    "merchant": "NORTHSIDE ACORN KITCHEN",
+    "date": "2024-07-23",
+    "total_cents": 11888
+   },
+   "ocr_ms": 222,
+   "ocr_text": "NORTHSIDE ACORN KITCHEN\nFresh Local Goods\n169 Bayview Lane\nRiverton\nTel 555-0199\n\nDATE 2024-07-23 12:22\nReg 4 Clerk 37\nSparkling Water 11.81\nYogurt 17.45\nSoup of the Day 15.68\nYogurt 19.40\nLatte 2 @ 19.15 38.30\nOat Milk 16.24\nSub Total 118.88\nTax 0.00\nTotal Due 118.88 USD\nCash 120.00\nChange 1.12\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r026",
+   "tier": "mild",
+   "file": "r026.png",
+   "sha256": "819e7e5bd7a52524e534fcb31353d3d14859c51c48fa9b8be419372255e7bf0f",
+   "truth": {
+    "merchant": "Northside Kettle Kitchen",
+    "date": "2025-05-26",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 3680,
+    "tax_cents": 230,
+    "total_cents": 3910
+   },
+   "ocr": {
+    "merchant": "Northside Kettle Kitchen",
+    "total_cents": 3910
+   },
+   "text_only": {
+    "merchant": "Northside Kettle Kitchen",
+    "total_cents": 3910
+   },
+   "ocr_ms": 156,
+   "ocr_text": "Northside Kettle Kitchen\n137 Bayview St .\n& oo Westvale\n+ Tel 555-0166\nDate: 26/05/2025 : 09:19\"\nReg6Clerk2o ~~\nCheddar . ‘14.27\nPasta . © 4.97\n. Apples2 @8.78 : ©1756\nSUBTOTAL B 36.80\"\nTax 6.25% . ‘2.30\nBalance Due 39.10 USD\nDebit ending 6811 39.10\n©. Thanks for visiting\n"
+  },
+  {
+   "id": "r027",
+   "tier": "hard",
+   "file": "r027.jpg",
+   "sha256": "bb9589bfc088ce7002ced451aeb48d5a8cd50fc100e22a0fe93a57df26026b72",
+   "truth": {
+    "merchant": "Riverbend Sparrow Books",
+    "date": "2024-05-18",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 6276,
+    "tax_cents": 0,
+    "total_cents": 6276
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Riverbend Sparrow Books",
+    "date": "2024-05-18",
+    "total_cents": 6276
+   },
+   "ocr_ms": 27,
+   "ocr_text": "&\n"
+  },
+  {
+   "id": "r028",
+   "tier": "clean",
+   "file": "r028.png",
+   "sha256": "908cece1ccab84d2efb1ea76f42c7f90519a863feed0d0348c7364c2f57929d0",
+   "truth": {
+    "merchant": "Blue Kettle Noodle House",
+    "date": "2026-02-05",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 9098,
+    "tax_cents": 807,
+    "total_cents": 11543
+   },
+   "ocr": {
+    "merchant": "Blue Kettle Noodle House",
+    "date": "2026-02-05",
+    "total_cents": 11543
+   },
+   "text_only": {
+    "merchant": "Blue Kettle Noodle House",
+    "date": "2026-02-05",
+    "total_cents": 11543
+   },
+   "ocr_ms": 192,
+   "ocr_text": "Blue Kettle Noodle House\n\n770 Elm Lane\n\nCedar Hollow\n\nTel 555-0171\n5 February 2026 10:29\nReg 6 Clerk 38\nCroissant 8.04\nLatte 3 @ 21.24 63.72\nPasta 2 @ 5.08 10.16\nOat Milk 9.06\nSUBTOTAL 90.98\nTax 8.07\nTip 16.38\nTotal Due 115.43 USD\nVISA ending 5745 115.43\n\nThank you, come again\n"
+  },
+  {
+   "id": "r029",
+   "tier": "clean",
+   "file": "r029.png",
+   "sha256": "d5f553c3fdb6908569974d0d7c1a3dbf5faa9c4114e36eb5d3e9441803320896",
+   "truth": {
+    "merchant": "QUIET ANCHOR SUPPLY",
+    "date": "2024-02-14",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 7788,
+    "tax_cents": 0,
+    "total_cents": 7788
+   },
+   "ocr": {
+    "merchant": "QUIET ANCHOR SUPPLY",
+    "date": "2024-02-14",
+    "total_cents": 7788
+   },
+   "text_only": {
+    "merchant": "QUIET ANCHOR SUPPLY",
+    "date": "2024-02-14",
+    "total_cents": 7788
+   },
+   "ocr_ms": 187,
+   "ocr_text": "QUIET ANCHOR SUPPLY\n523 Bayview Rd\nEastbrook\nTel 555-0159\nFeb 14, 2024 09:31\nReg 2 Clerk 59\nYogurt 23.57\nSoup of the Day 1.42\nLatte 16.98\nDish Soap 3.58\nPasta 15.82\nGarden Hose 16.51\nSubtotal 77.88\nTax 0.00\nGrand Total $77.88\nMastercard ending 1050 77.88\nThanks for visiting\n"
+  },
+  {
+   "id": "r030",
+   "tier": "mild",
+   "file": "r030.png",
+   "sha256": "0ab33484699256ccaa85535c4f2c11e2d7da4f002dc707d73f0bd8a39003f8a2",
+   "truth": {
+    "merchant": "TWIN OAKS HERON KITCHEN",
+    "date": "2024-02-01",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 33145,
+    "tax_cents": 2320,
+    "total_cents": 35465
+   },
+   "ocr": {
+    "merchant": "TWIN OAKS HERON KITCHEN"
+   },
+   "text_only": {
+    "merchant": "TWIN OAKS HERON KITCHEN",
+    "date": "2024-02-01",
+    "total_cents": 35465
+   },
+   "ocr_ms": 181,
+   "ocr_text": "TWIN OAKS HERON KITCHEN\n. 987 Ferry Rd\nRiverton :\n\n. . Tel 555-0155 La\nDate: February l, 2024 16:50\nReg 9 Clerk 40 °\nDesk Chair 5 29287\nAR Batteries | © 17.52\nOat Milk ° 5 21.06\nSUBTOTAL +,\" © 331.45\nTax 7% : 23.20\nTOTAL o USD 354.65\nCash . '360.00\nChédnge B : L938\n\n. ‘Thariks for visiting\n"
+  },
+  {
+   "id": "r031",
+   "tier": "clean",
+   "file": "r031.png",
+   "sha256": "00d4f3665702b2951c1c75b0ab7248435a396ad0fb6da740eb51742918ae4142",
+   "truth": {
+    "merchant": "Northside Lantern Market",
+    "date": "2026-03-20",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 4425,
+    "tax_cents": 310,
+    "total_cents": 4735
+   },
+   "ocr": {
+    "merchant": "Northside Lantern Market",
+    "date": "2026-03-20",
+    "total_cents": 4735
+   },
+   "text_only": {
+    "merchant": "Northside Lantern Market",
+    "date": "2026-03-20",
+    "total_cents": 4735
+   },
+   "ocr_ms": 191,
+   "ocr_text": "Northside Lantern Market\nNeighborhood Favorite\n741 Bayview Blvd\nPort Ellery\nTel 555-0106\nDate: March 20, 2026 09:04\nReg 4 Clerk 41\nSparkling Water 6.90\nTomatoes 18.30\nAA Batteries 12.44\nBananas 6.61\nTotal Items 4\nSub Total 44.25\nTax 7% 3.10\nTOTAL USD 47.35\nMastercard ending 1610 47.35\nThank you, come again\n"
+  },
+  {
+   "id": "r032",
+   "tier": "hard",
+   "file": "r032.jpg",
+   "sha256": "f722823fc8af483bdd41f7b2b2f5451182c8ce777a500ef11fc8de6d8e752261",
+   "truth": {
+    "merchant": "BRIGHT PINE HARDWARE",
+    "date": "2025-07-16",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 5021,
+    "tax_cents": 446,
+    "total_cents": 5467
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "BRIGHT PINE HARDWARE",
+    "date": "2025-07-16",
+    "total_cents": 5467
+   },
+   "ocr_ms": 9,
+   "ocr_text": ""
+  },
+  {
+   "id": "r033",
+   "tier": "hard",
+   "file": "r033.jpg",
+   "sha256": "09bd73ae62c316e359b58033ee141dc83ce645800d711dad3afa124db9db1ada",
+   "truth": {
+    "merchant": "DOCK 55 BAKERY",
+    "date": "2025-10-23",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 1989,
+    "tax_cents": 159,
+    "total_cents": 2148
+   },
+   "ocr": {
+    "merchant": "Port Ellery"
+   },
+   "text_only": {
+    "merchant": "Port Ellery",
+    "date": "2025-10-23",
+    "total_cents": 2148
+   },
+   "ocr_ms": 113,
+   "ocr_text": "DOCK ‘55 Bakery\n912 Mill Ave\nPort Ellery\nTet 555-p155\nDATE October 3,. 2025 Ser\nReg 1 Clerk 39\nearn 15.03\not 4.86\nSUBTOTAL io\non 1.59\nHH 21.48 ‘usp\n2 40.00\nThanks. for vis it ing\n"
+  },
+  {
+   "id": "r034",
+   "tier": "hard",
+   "file": "r034.jpg",
+   "sha256": "c4c84470eeb9357fe918a8787d8bb53392e39cc3ad0ae63a521e35f5cbbd3b32",
+   "truth": {
+    "merchant": "Riverbend Otter Hardware",
+    "date": "2024-06-06",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 3444,
+    "tax_cents": 138,
+    "total_cents": 3582
+   },
+   "ocr": {
+    "merchant": "Riverbend Otter Hardware",
+    "total_cents": 3582
+   },
+   "text_only": {
+    "merchant": "Riverbend Otter Hardware",
+    "date": "2024-06-06",
+    "total_cents": 3582
+   },
+   "ocr_ms": 150,
+   "ocr_text": "Riverbend Otter Hardware\n266 Kestrel BLO\ncedar Hollow\nTel 555-0179\n2023-06-96 10:12\nReg-1-Clerk-63\nSourdough Loaf 12.92\npacking Tape 2.14\nEggs Dozen 5.07\npaper Towels 3 3 4.77 14:31\nsub Total 34.44\nsales Tax 1.38\nTotal 35.82\ncash 40.00\nChange 4.18\nHave.a nice day\n"
+  },
+  {
+   "id": "r035",
+   "tier": "hard",
+   "file": "r035.jpg",
+   "sha256": "152e6f2af8aefa911b1cf4b6c01b7085343427b6ac9e4d456cac05aae225ed78",
+   "truth": {
+    "merchant": "Cedar Heron Noodle House",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 7661,
+    "tax_cents": 536,
+    "total_cents": 8197
+   },
+   "ocr": {
+    "merchant": "Cedar Hasot NdDdle House",
+    "total_cents": 8197
+   },
+   "text_only": {
+    "merchant": "Cedar Heron Noodle House",
+    "total_cents": 8197
+   },
+   "ocr_ms": 172,
+   "ocr_text": "Cedar Hasot NdDdle House\n330 Bayview Lane 3\n: Pod Ebery\nTol 555 0122\n| bay2r2025 15:57\nReg 8 Clock 55\nTioIBEo0K ’ 543\nNotebook 2 & 23 48 46.90\nGarden Hose\" 17.98\nApples 8%\nSUBTOTAL 76.61\nTTR it 536\nTOTAL $81.97\nMastercard ending 3548 8197\n. Thanks for visiting\n"
+  },
+  {
+   "id": "r036",
+   "tier": "mild",
+   "file": "r036.png",
+   "sha256": "8e431359aad856f5d02a79f2a39778c90461edc4b878cad2888bd4ee39731d0d",
+   "truth": {
+    "merchant": "TWIN OAKS WREN DELI",
+    "date": "2026-04-26",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 131391,
+    "tax_cents": 10511,
+    "total_cents": 141902
+   },
+   "ocr": {
+    "merchant": "\"TWIN OAKS WREN DELL"
+   },
+   "text_only": {
+    "merchant": "TWIN OAKS WREN DELI",
+    "date": "2026-04-26",
+    "total_cents": 141902
+   },
+   "ocr_ms": 164,
+   "ocr_text": "\"TWIN OAKS WREN DELL\n5 . 180 Kestrel Rd\n. Millbrook Falls :\n. Tel 555-0181\"\n| 2026-0426 © - 13:47\nReg 1 Clerk 46\nStanding Fan 3 @ 429.77 1289.31\nApples h : 24.60.\nSUBTOTAL ~~ Co 1313.91\nTax 105.11\nAmountDue USD 1,419.02\nCash © . . 1420.00,\nChange ’ . 0.98\n| * Thanks for visiting\n"
+  },
+  {
+   "id": "r037",
+   "tier": "mild",
+   "file": "r037.jpg",
+   "sha256": "dbf31ea2dfbd9c1053f259bad82914fb162b486192ad49d1aead42cecf25f272",
+   "truth": {
+    "merchant": "Silver Sparrow Pantry",
+    "date": "2025-07-17",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 32797,
+    "tax_cents": 2911,
+    "total_cents": 35708
+   },
+   "ocr": {
+    "merchant": "© Silver Sparrow Pantry Be"
+   },
+   "text_only": {
+    "merchant": "Silver Sparrow Pantry",
+    "total_cents": 35708
+   },
+   "ocr_ms": 195,
+   "ocr_text": "© Silver Sparrow Pantry Be\n948 Hawthorn Ave\nPort Ellery .\nS Tel 555-0109\nDATE 1 7107/2025 5 13:18\nReg 6 Clerk 18°\n* Desk Chair : 251.73 .\nCoffee Beans 21.66\n© Wood Glue ~ : 18.40\nOat Milk C2214\nLatte 4 @ 3.51 14.04\nSubtotal © 327.97\nTax 8.875% . 29.11\nGrand Total. . $357.08\nCash . 360.00\nChange - 2.92\n\"Thank you, come again .\n"
+  },
+  {
+   "id": "r038",
+   "tier": "clean",
+   "file": "r038.png",
+   "sha256": "92e75c3174bdcb3d53c8725f13122c2b162af4c96f5723c3868a4a06b56017eb",
+   "truth": {
+    "merchant": "GREEN BIRCH HARDWARE",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 2536,
+    "tax_cents": 178,
+    "total_cents": 2714
+   },
+   "ocr": {
+    "merchant": "GREEN BIRCH HARDWARE",
+    "total_cents": 2714
+   },
+   "text_only": {
+    "merchant": "GREEN BIRCH HARDWARE",
+    "total_cents": 2714
+   },
+   "ocr_ms": 135,
+   "ocr_text": "GREEN BIRCH HARDWARE\n814 Ferry Lane\nCedar Hollow\nTel 555-0167\nReg 8 Clerk 89\nPasta 3.28\nEggs Dozen 22.08\nSub Total 25.36\nTax 7% 1.78\nTotal Due 27.14\nMastercard ending 5059 27.14\nThank you, come again\n"
+  },
+  {
+   "id": "r039",
+   "tier": "clean",
+   "file": "r039.png",
+   "sha256": "2f55ff5182cd4948178252da87aab8ea481cbdf656430ccd909b4d147cdbf59a",
+   "truth": {
+    "merchant": "MAPLE THISTLE GROCERY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 7498,
+    "tax_cents": 665,
+    "total_cents": 8163
+   },
+   "ocr": {
+    "merchant": "MAPLE THISTLE GROCERY",
+    "total_cents": 8163
+   },
+   "text_only": {
+    "merchant": "MAPLE THISTLE GROCERY",
+    "total_cents": 8163
+   },
+   "ocr_ms": 131,
+   "ocr_text": "MAPLE THISTLE GROCERY\n194 Kestrel Ave\nRiverton\nTel 555-0192\n\nDate: 07/12/2024 17:22\nReg 8 Clerk 86\n\nYogurt 9.62\nAA Batteries 4 @ 16.34 65.36\nSubtotal 74.98\nTax 6.65\nTotal 81.63\nMastercard ending 2025 81.63\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r040",
+   "tier": "clean",
+   "file": "r040.png",
+   "sha256": "edc8725ed3f116490f8ff5bffe5102389d126cd29aecb300fd33c69a733c9f2b",
+   "truth": {
+    "merchant": "Amber Birch Books",
+    "date": "2024-03-12",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 84014,
+    "tax_cents": 5881,
+    "total_cents": 89895
+   },
+   "ocr": {
+    "merchant": "Amber Birch Books",
+    "date": "2024-03-12",
+    "total_cents": 89895
+   },
+   "text_only": {
+    "merchant": "Amber Birch Books",
+    "date": "2024-03-12",
+    "total_cents": 89895
+   },
+   "ocr_ms": 173,
+   "ocr_text": "Amber Birch Books\n263 Orchard Rd\nRiverton\nTel 555-0104\nDATE 2024-03-12 09:46\nReg 6 Clerk 98\nStanding Fan 807.59\nCheddar 23.79\nLight Bulb 3.99\nOlive 0il 4.77\nSub Total 840.14\nTax 58.81\nAmount Due 898.95\nMastercard ending 3474 898.95\nThanks for visiting\n"
+  },
+  {
+   "id": "r041",
+   "tier": "hard",
+   "file": "r041.jpg",
+   "sha256": "f4d6d6186b3d066e1f4cba911287058bfd5878110c9a179cc54f17541e051762",
+   "truth": {
+    "merchant": "Northside Heron Cafe",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 3770,
+    "tax_cents": 302,
+    "total_cents": 4826
+   },
+   "ocr": {
+    "merchant": "Northside Heron Cafe"
+   },
+   "text_only": {
+    "merchant": "Northside Heron Cafe",
+    "total_cents": 4826
+   },
+   "ocr_ms": 156,
+   "ocr_text": "Northside Heron Cafe\n189 Orciiard Ave\ncedar Hollow\nTel 555-0102\nDATE 11/12/2023 13:98\nReg 6 Clerk B84\npacking Tape 15.55\npasta 10.42\nyogurt 6.33\nGarden Hase 2 @ 2:70 5.40\nsyb Total 37.70\nTax 8% 3,02\nTip 7.54\nBalance Due sD 48.26\ncash 60.09\nChange 11.74\nThank you, come again\n"
+  },
+  {
+   "id": "r042",
+   "tier": "mild",
+   "file": "r042.jpg",
+   "sha256": "bd12c7287b12294ac1edc0c34c8722b5b065c79270c32a9c481a8afc287a8bae",
+   "truth": {
+    "merchant": "Maple Pine Pantry",
+    "date": "2025-06-26",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 13791,
+    "tax_cents": 552,
+    "total_cents": 14343
+   },
+   "ocr": {
+    "merchant": ": Maple Pine Pantry",
+    "date": "2025-06-26",
+    "total_cents": 14343
+   },
+   "text_only": {
+    "merchant": "Maple Pine Pantry",
+    "date": "2025-06-26",
+    "total_cents": 14343
+   },
+   "ocr_ms": 181,
+   "ocr_text": ": Maple Pine Pantry\n505 Larch Blvd\nCedar Hollow *\n+ Tel 555-0163 :\nDATE 2025-06-26 16:36\nReg 8 Clerk 24\nApples . 15%42\nPasta : 23.37\nBandanas . 10.74\nBananas T15.27\nCroissant 3 @ 24.37 73.11\nSub Total —  .  ° 137.91\nTax 3 5.52\nGrand Total 143.43 USD\nDebit ending 2288 143.43\nHave a nice day\n"
+  },
+  {
+   "id": "r043",
+   "tier": "clean",
+   "file": "r043.png",
+   "sha256": "49efc0f20bf8e10ec9b4a3c1a9bc8f57ec0f6e60a576919512b9a872cb9d85cf",
+   "truth": {
+    "merchant": "LITTLE OTTER NOODLE HOUSE",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 4232,
+    "tax_cents": 0,
+    "total_cents": 4232
+   },
+   "ocr": {
+    "merchant": "LITTLE OTTER NOODLE HOUSE",
+    "total_cents": 4232
+   },
+   "text_only": {
+    "merchant": "LITTLE OTTER NOODLE HOUSE",
+    "total_cents": 4232
+   },
+   "ocr_ms": 160,
+   "ocr_text": "LITTLE OTTER NOODLE HOUSE\n\n992 Ferry Ave\n\nCedar Hollow\n\nTel 555-0120\nDate: 07-10-2026 18:56\nReg 2 Clerk 25\nCoffee Beans 19.95\nAA Batteries 4.01\nCoffee Beans 18.36\nSub Total 42.32\nTax 0.00\nTOTAL: USD 42.32\nCash 60.00\nChange 17.68\n\nHave a nice day\n"
+  },
+  {
+   "id": "r044",
+   "tier": "hard",
+   "file": "r044.jpg",
+   "sha256": "d9e63870d911a03a9b1760713d68f901cfaf74ce99e516df84a8053ee4f5bf6b",
+   "truth": {
+    "merchant": "OLD MILL COMET GROCERY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 8149,
+    "tax_cents": 326,
+    "total_cents": 8475
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "OLD MILL COMET GROCERY",
+    "total_cents": 8475
+   },
+   "ocr_ms": 9,
+   "ocr_text": ""
+  },
+  {
+   "id": "r045",
+   "tier": "clean",
+   "file": "r045.png",
+   "sha256": "59df781c5341df12a4031499121bf9d916c7d56989d692aa919037d8b6fc6a3d",
+   "truth": {
+    "merchant": "CEDAR THISTLE BISTRO",
+    "date": "2024-05-07",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 10432,
+    "tax_cents": 0,
+    "total_cents": 12518
+   },
+   "ocr": {
+    "merchant": "CEDAR THISTLE BISTRO",
+    "total_cents": 12518
+   },
+   "text_only": {
+    "merchant": "CEDAR THISTLE BISTRO",
+    "total_cents": 12518
+   },
+   "ocr_ms": 207,
+   "ocr_text": "CEDAR THISTLE BISTRO\n396 Larch St\nMillbrook Falls\nTel 555-0110\nMay 7, 2024 21:42\nReg 6 Clerk 94\nSparkling Water 4 @ 21.09 84.36\nOlive 0il 7.94\nYogurt 12.02\nSub Total 104.32\nTax 0.00\nTip 20.86\nBalance Due 125.18 USD\nMastercard ending 5493 125.18\nReturn by June 6 2024\nThank you, come again\n"
+  },
+  {
+   "id": "r046",
+   "tier": "hard",
+   "file": "r046.jpg",
+   "sha256": "9b05e36dec6ac6c3b3d855f09b841680e5f26a25b3ede35b02d30441fd7fe441",
+   "truth": {
+    "merchant": "Willow Acorn Cafe",
+    "date": "2026-06-04",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 36344,
+    "tax_cents": 1454,
+    "total_cents": 37798
+   },
+   "ocr": {
+    "merchant": "Willow Acorn cafe",
+    "date": "2026-06-04"
+   },
+   "text_only": {
+    "merchant": "Willow Acorn Cafe",
+    "date": "2026-06-04",
+    "total_cents": 37798
+   },
+   "ocr_ms": 150,
+   "ocr_text": "Willow Acorn cafe\nFresh Local Goggs\n361 Quarry gy\nPort Ellery\nTel 555-9119\n4 Jun 2026 07:33\nReg 3 Clerk 2,\nArea Rug 309.18\nGarden Hose 22.53\nApples 14.38\nDish Soap 17.35\nSubtotal 363.44\nTax 14:54\nGrand. Tota) $377.98\nMastercarg ending 914g 377.98\nTotal Savings 5.07\nHave a nice gay\n"
+  },
+  {
+   "id": "r047",
+   "tier": "hard",
+   "file": "r047.jpg",
+   "sha256": "294a5fac1c46b85b22d96661d15bcd7385c6fb35d8232b136567cf552cdad777",
+   "truth": {
+    "merchant": "Silver Pebble Bakery",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 4347,
+    "tax_cents": 386,
+    "total_cents": 4733
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Silver Pebble Bakery",
+    "total_cents": 4733
+   },
+   "ocr_ms": 29,
+   "ocr_text": "=\n"
+  },
+  {
+   "id": "r048",
+   "tier": "hard",
+   "file": "r048.jpg",
+   "sha256": "2a217e0ba5899b1386257f3f891effda724abb4b7cef2317c27c089e9bbf1cf1",
+   "truth": {
+    "merchant": "Riverbend Thistle Deli",
+    "date": "2026-01-29",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 3932,
+    "tax_cents": 246,
+    "total_cents": 4178
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Riverbend Thistle Deli",
+    "total_cents": 4178
+   },
+   "ocr_ms": 7,
+   "ocr_text": ""
+  },
+  {
+   "id": "r049",
+   "tier": "clean",
+   "file": "r049.png",
+   "sha256": "3027f760e149f0443d67d73dc5234e231f8ec61fc17008f5d72bc102277c171b",
+   "truth": {
+    "merchant": "Quiet Kettle Market",
+    "date": "2024-04-29",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 7812,
+    "tax_cents": 625,
+    "total_cents": 8437
+   },
+   "ocr": {
+    "merchant": "Quiet Kettle Market",
+    "total_cents": 8437
+   },
+   "text_only": {
+    "merchant": "Quiet Kettle Market",
+    "total_cents": 8437
+   },
+   "ocr_ms": 158,
+   "ocr_text": "Quiet Kettle Market\nGood Food Good Mood\n368 Hawthorn Rd\nCedar Hollow\nTel 555-0133\nDATE 29/04/2024 21:18\nReg 4 Clerk 57\nSparkling Water 21.77\nGreen Tea 6.61\nEggs Dozen 17.45\nPasta 23.51\nGreen Tea 8.78\nSubtotal 78.12\nTax 6.25\nTotal 84.37\nVISA ending 5211 84.37\nHave a nice day\n"
+  },
+  {
+   "id": "r050",
+   "tier": "hard",
+   "file": "r050.jpg",
+   "sha256": "5ae3252f5024520d4114cafdcaf081ae5208212969e7fb6638b84835f486e3ed",
+   "truth": {
+    "merchant": "Bright Kettle Hardware",
+    "date": "2024-01-23",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 7783,
+    "tax_cents": 691,
+    "total_cents": 8474
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Bright Kettle Hardware",
+    "date": "2024-01-23",
+    "total_cents": 8474
+   },
+   "ocr_ms": 26,
+   "ocr_text": "|\n"
+  },
+  {
+   "id": "r051",
+   "tier": "clean",
+   "file": "r051.png",
+   "sha256": "a3b842720651a61a4bd9c8bd620fa6148506a9f4a02ab8a977069760be61efd8",
+   "truth": {
+    "merchant": "BLUE HERON SUPPLY",
+    "date": "2026-05-30",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 2127,
+    "tax_cents": 133,
+    "total_cents": 2260
+   },
+   "ocr": {
+    "merchant": "BLUE HERON SUPPLY",
+    "total_cents": 2260
+   },
+   "text_only": {
+    "merchant": "BLUE HERON SUPPLY",
+    "total_cents": 2260
+   },
+   "ocr_ms": 127,
+   "ocr_text": "BLUE HERON SUPPLY\n60 Hawthorn Lane\nWestvale\nTel 555-0112\n\nDATE 30/05/2026 20:21\nReg 5 Clerk 40\nOat Milk 12.44\nCheddar 8.83\nSUBTOTAL 21.27\nTax 1.33\nBalance Due $22.60\ncash 40.00\nChange 17.40\n\nHave a nice day\n"
+  },
+  {
+   "id": "r052",
+   "tier": "mild",
+   "file": "r052.jpg",
+   "sha256": "a69ec152f85e123d0ceb9e694ba30ae1d9e18fa4fa2d1e204181181445f9fe75",
+   "truth": {
+    "merchant": "COPPER PEBBLE GROCERY",
+    "date": "2026-08-23",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 9956,
+    "tax_cents": 796,
+    "total_cents": 10752
+   },
+   "ocr": {
+    "merchant": ": . COPPER \"PEBBLE GROCERY",
+    "date": "2026-08-23"
+   },
+   "text_only": {
+    "merchant": "COPPER PEBBLE GROCERY",
+    "date": "2026-08-23",
+    "total_cents": 10752
+   },
+   "ocr_ms": 326,
+   "ocr_text": ": . COPPER \"PEBBLE GROCERY\n. 962 Quarry Rd\n- Eastbrook : 7\n. Tel 555-0184 -\nDATE August 23, 2026 18:08\n| Reg 8 Clerk 44 ]\nYogurt'4 @ 9.26 37.04\nEggs Dozen cha an\nTate 2 Loi s+. 3.82 |\nTomatoes . ©. © 10.98\n\" Eggs Dozen s 5 24.07\nDish Soap ~~ . . “14.47\nSub Total © 89.56\nsales Tax A 7.96\"\nTotal Due. ST t8107.52\n‘cash 7 t+ 120.00\nChange Se ©. 12.48\n) Thank you, come again\n"
+  },
+  {
+   "id": "r053",
+   "tier": "hard",
+   "file": "r053.jpg",
+   "sha256": "7e894c2c9a87e89883b31abdbef2ba7f8bd77ddb8163a20183b60abf76ac56df",
+   "truth": {
+    "merchant": "GOLDEN OTTER SUPPLY",
+    "date": "2026-10-08",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 1127,
+    "tax_cents": 0,
+    "total_cents": 1127
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "GOLDEN OTTER SUPPLY",
+    "date": "2026-10-08",
+    "total_cents": 1127
+   },
+   "ocr_ms": 23,
+   "ocr_text": "N\n"
+  },
+  {
+   "id": "r054",
+   "tier": "mild",
+   "file": "r054.jpg",
+   "sha256": "10b7bf207161ba3c466546014a81cea0e5adcff9af9f9b7fa170c6e60e9eb96b",
+   "truth": {
+    "merchant": "Lucky Sparrow Kitchen",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 3066,
+    "tax_cents": 215,
+    "total_cents": 3281
+   },
+   "ocr": {
+    "merchant": "Lucky Sparrow Kitchen :"
+   },
+   "text_only": {
+    "merchant": "Lucky Sparrow Kitchen",
+    "total_cents": 3281
+   },
+   "ocr_ms": 148,
+   "ocr_text": "Lucky Sparrow Kitchen :\nGood Food Good Mood :\n386 Kestrel Ave .\n\"Eastbrook\n. Tel 555-0162 .\n. DATE 10.03.2026 14:47\nReg 7 Clerk 61 :\nPacking Tape 10.46\nEggs Dozen 20.20\nSubtotal 5\" . 3066\nTax 7% 2.15\nTOTAL: . USD 32.81\nDebit ending 4108 32.81\nTotal Savings | 4.06\n8 “Thanks for visiting\n"
+  },
+  {
+   "id": "r055",
+   "tier": "hard",
+   "file": "r055.jpg",
+   "sha256": "879b12821a3bb2b23ac5e8594cd61fc11d9fd9a73cc38b79748c7aaa141ef68d",
+   "truth": {
+    "merchant": "Northside Heron Books",
+    "date": "2025-06-12",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 13616,
+    "tax_cents": 1089,
+    "total_cents": 14705
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Northside Heron Books",
+    "date": "2025-06-12",
+    "total_cents": 14705
+   },
+   "ocr_ms": 30,
+   "ocr_text": "3\n"
+  },
+  {
+   "id": "r056",
+   "tier": "mild",
+   "file": "r056.jpg",
+   "sha256": "b38c226ff8cd56178483bd4d8b5d1809d112cffd7d6b8d3493ddfe11689243ea",
+   "truth": {
+    "merchant": "RIVERBEND LANTERN MARKET",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 1503,
+    "tax_cents": 94,
+    "total_cents": 1597
+   },
+   "ocr": {
+    "merchant": "+ RIVERBEND LANTERN MARKET ."
+   },
+   "text_only": {
+    "merchant": "RIVERBEND LANTERN MARKET",
+    "total_cents": 1597
+   },
+   "ocr_ms": 208,
+   "ocr_text": "+ RIVERBEND LANTERN MARKET .\n§ 34 Kestrel Ave\n’ .- Riverton =\n= Tel 55501750 ARE i\nDATE 00/08/2025 17:23\nReg.2 Clerk 66... - ~~\n‘Packing Tape. © + 11.87.\nPasta ©. on ES\nSUBTOTAL a 15.03\n| sales Tax he 0.94\n‘Amount Due $15.97\nMastercard ending 6854 . © 15.97\"\nEB . Thank you, come again .\n"
+  },
+  {
+   "id": "r057",
+   "tier": "mild",
+   "file": "r057.png",
+   "sha256": "e22a7ca50c3534807e72a5afb88a3d78b2780b7b75820448a516ae509a9f07cc",
+   "truth": {
+    "merchant": "Green Heron Kitchen",
+    "date": "2026-03-29",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 5194,
+    "tax_cents": 364,
+    "total_cents": 6597
+   },
+   "ocr": {
+    "merchant": "\"© GreenHeronKichen +"
+   },
+   "text_only": {
+    "merchant": "Green Heron Kitchen",
+    "total_cents": 6597
+   },
+   "ocr_ms": 185,
+   "ocr_text": "\"© GreenHeronKichen +\n674 EIm Bivd\n-Port Ellery .\nTel 555-0161\n20/03/2026, . 1920\nReg 2 Clerk 82\nPacking Tape - ) © 16.59\n* Sourdough Loaf 317\nGreenTea  - 17.21\nSparkling Water LL tae\nSubtotal | 51.94\nTax CC 364\nTp 1039\nTOTAL ¥ . .$65.97\nCash 80.00\nChange - . 14.03\n. Have arice day\n"
+  },
+  {
+   "id": "r058",
+   "tier": "hard",
+   "file": "r058.jpg",
+   "sha256": "22c72757dab580c9bfe57c79fbb4c815da361c2a0de4958334a8991026262afe",
+   "truth": {
+    "merchant": "Maple Wren Cafe",
+    "date": "2026-07-23",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 6258,
+    "tax_cents": 391,
+    "total_cents": 7775
+   },
+   "ocr": {
+    "merchant": "Maple Wren Cite",
+    "date": "2026-07-23"
+   },
+   "text_only": {
+    "merchant": "Maple Wren Cafe",
+    "date": "2026-07-23",
+    "total_cents": 7775
+   },
+   "ocr_ms": 118,
+   "ocr_text": "Maple Wren Cite\n48 Hawthorn St\nTol 555-0184\nDate: 2026-07-23 tok\nFleg 2.Clark 35\nWood Glue oh\nCoffee Beans N86\nWood Glue ios\nPacking Tape TE\nLate bid\nasim 62,58\nTax oe\nTotal Due ies\nCash Bnd\nChange cys\nThanks for visiting\n"
+  },
+  {
+   "id": "r059",
+   "tier": "mild",
+   "file": "r059.png",
+   "sha256": "57a3904b0d06921cebe14813c8923db6875da67e00eff1a530b502b7eb8bd904",
+   "truth": {
+    "merchant": "Old Mill Comet Noodle House",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 59068,
+    "tax_cents": 4135,
+    "total_cents": 73835
+   },
+   "ocr": {
+    "merchant": "Old Mill Comet Noodle House ~~ *"
+   },
+   "text_only": {
+    "merchant": "Old Mill Comet Noodle House",
+    "total_cents": 73835
+   },
+   "ocr_ms": 221,
+   "ocr_text": "Old Mill Comet Noodle House ~~ *\nLo 786 Flm Rd -\n©. Riverton - :.\nTel 555-0162 - .\nReg 8 Clerk 22 : toe\nStanding Fan 548.37\noatMilk : 22.81\nTomatoes | 7 19.50\nSub Total : 590.68\nTax7% * oS 41.35\nTip CT © 106.32\nAmount Dué- . USD738.35\nCash = 740.00\nChange *  . \"7 165\n\"Total Savings ST. 3.72\n- © Haveaniceday ’\n"
+  },
+  {
+   "id": "r060",
+   "tier": "clean",
+   "file": "r060.png",
+   "sha256": "fb8f29b38308e370d47f6738270cc88fcd2bfb7c6fe671bde1a3815c0373cbc7",
+   "truth": {
+    "merchant": "Amber Sparrow Pantry",
+    "date": "2026-04-25",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 1902,
+    "tax_cents": 119,
+    "total_cents": 2021
+   },
+   "ocr": {
+    "merchant": "Amber Sparrow Pantry",
+    "date": "2026-04-25",
+    "total_cents": 2021
+   },
+   "text_only": {
+    "merchant": "Amber Sparrow Pantry",
+    "date": "2026-04-25",
+    "total_cents": 2021
+   },
+   "ocr_ms": 160,
+   "ocr_text": "Amber Sparrow Pantry\n859 Larch Ave\nCedar Hollow\nTel 555-0145\nDate: Apr 25, 2026 10:03\nReg 6 Clerk 54\nSourdough Loaf 8.60\nDish Soap 10.42\nSub Total 19.02\nSales Tax 1.19\nGrand Total $20.21\nMastercard ending 2989 20.21\nThank you, come again\n"
+  },
+  {
+   "id": "r061",
+   "tier": "clean",
+   "file": "r061.png",
+   "sha256": "6289cbc79e1662057daefc1f9780ee9a30b0256dde2371ec24f88087180bfc30",
+   "truth": {
+    "merchant": "Red Door Otter Noodle House",
+    "date": "2024-06-08",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 8298,
+    "tax_cents": 581,
+    "total_cents": 10373
+   },
+   "ocr": {
+    "merchant": "Red Door Otter Noodle House",
+    "date": "2024-06-08",
+    "total_cents": 10373
+   },
+   "text_only": {
+    "merchant": "Red Door Otter Noodle House",
+    "date": "2024-06-08",
+    "total_cents": 10373
+   },
+   "ocr_ms": 189,
+   "ocr_text": "Red Door Otter Noodle House\n897 Mill Ave\nEastbrook\n\nTel 555-0121\nDATE 8th Jun. 2024 09:55\nReg 8 Clerk 72\nPaper Towels 14.31\nBananas 3 @ 2.45 7.35\nSourdough Loaf 8.48\nDish Soap 23.71\nPaper Towels 3 @ 9.71 29.13\nSubtotal 82.98\nSales Tax 5.81\nTip 14.94\nTOTAL USD 103.73\nCash 120.00\nChange 16.27\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r062",
+   "tier": "clean",
+   "file": "r062.png",
+   "sha256": "fc06dda58435019b57a167cd866d7d232ade4eaf74e28c37a5f6ad64426873bb",
+   "truth": {
+    "merchant": "Bright Wren Garden Center",
+    "date": "2025-03-30",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 8505,
+    "tax_cents": 0,
+    "total_cents": 8505
+   },
+   "ocr": {
+    "merchant": "Bright Wren Garden Center",
+    "date": "2025-03-30",
+    "total_cents": 8505
+   },
+   "text_only": {
+    "merchant": "Bright Wren Garden Center",
+    "date": "2025-03-30",
+    "total_cents": 8505
+   },
+   "ocr_ms": 180,
+   "ocr_text": "Bright Wren Garden Center\n567 Orchard Blvd\nWestvale\nTel 555-0161\n\nDATE March 30, 2025 10:04\nReg 6 Clerk 93\nGarden Hose 23.53\nAA Batteries 8.29\n‘Wood Glue 3 @ 9.78 29.34\nTomatoes 1.12\nOlive Oil 22.77\nTotal Items 5\nSUBTOTAL 85.05\nTax 0.00\nAmount Due 85.05\nCash 100.00\nChange 14.95\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r063",
+   "tier": "clean",
+   "file": "r063.png",
+   "sha256": "b9187556d3ac88c2c8e6e6e054ca98c3c6221c32877588b8027d0f03b55ca127",
+   "truth": {
+    "merchant": "Riverbend Pebble Bakery",
+    "date": "2024-08-24",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 8440,
+    "tax_cents": 591,
+    "total_cents": 9031
+   },
+   "ocr": {
+    "merchant": "Riverbend Pebble Bakery",
+    "total_cents": 9031
+   },
+   "text_only": {
+    "merchant": "Riverbend Pebble Bakery",
+    "total_cents": 9031
+   },
+   "ocr_ms": 182,
+   "ocr_text": "Riverbend Pebble Bakery\n497 Linden Rd\nRiverton\nTel 555-0126\nDate: Aug. 24, 2024 11:05\nReg 5 Clerk 55\nCroissant 22.83\nBananas 14.23\nLatte 18.24\nRice 11.45\nPacking Tape 6.45\nDish Soap 11.20\nSub Total 84.40\nTax 7% 5.91\nTotal $90.31\nDebit ending 4763 90.31\nTotal Savings 1.50\nReturn by Sep 23 2024\nThanks for visiting\n"
+  },
+  {
+   "id": "r064",
+   "tier": "mild",
+   "file": "r064.png",
+   "sha256": "b5b01026502e2ca68d412f06d9828cf4b7cbbe243353f2afbf354c5c0614f6f8",
+   "truth": {
+    "merchant": "PIER 85 BAKERY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 1931,
+    "tax_cents": 0,
+    "total_cents": 1931
+   },
+   "ocr": {
+    "merchant": "i Eastbrook :"
+   },
+   "text_only": {
+    "merchant": "Eastbrook",
+    "total_cents": 1931
+   },
+   "ocr_ms": 171,
+   "ocr_text": "PIER 85 BAKERY .\n566 Elm Blvd\ni Eastbrook :\n: Tel 555-0184, ©.\n07/02/2025 16:26\nReg5Clerk22 te\nCheddar © © ao\nGreen Tea A \"13.84,\n- Green Tea 2.39\nSoup of the Day Cay\nSub Total | © 19.31\nTax © 0.00\nBalance Due * . 19.31 USD\nCash . \"2000\nChange . 0 0.69\n: Thanks for visiting :\n"
+  },
+  {
+   "id": "r065",
+   "tier": "clean",
+   "file": "r065.png",
+   "sha256": "e3f3a47af7d37631de8f0c2f32db9308911c99d67da554785ca1697b1e8b9ca4",
+   "truth": {
+    "merchant": "Red Door Wren Books",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 11351,
+    "tax_cents": 908,
+    "total_cents": 12259
+   },
+   "ocr": {
+    "merchant": "Red Door Wren Books",
+    "total_cents": 12259
+   },
+   "text_only": {
+    "merchant": "Red Door Wren Books",
+    "total_cents": 12259
+   },
+   "ocr_ms": 197,
+   "ocr_text": "Red Door Wren Books\nNeighborhood Favorite\n147 Hawthorn Rd\nWestvale\nTel 555-0195\n\nDate: 07-09-2024 07:54\nReg 4 Clerk 18\nSourdough Loaf 3 @ 8.92 26.76\nEggs Dozen 1.43\nGarden Hose 4 @ 21.33 85.32\nSubtotal 113.51\nTax 9.08\nTotal 122.59\nDebit ending 5693 122.59\n\nThank you, come again\n"
+  },
+  {
+   "id": "r066",
+   "tier": "mild",
+   "file": "r066.jpg",
+   "sha256": "8b0c7541c4d129b4572869c1a9af4cfce5737abf1e94170cebadcb9fc31cff29",
+   "truth": {
+    "merchant": "LITTLE COMET NOODLE HOUSE",
+    "date": "2026-09-17",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 14774,
+    "tax_cents": 923,
+    "total_cents": 15697
+   },
+   "ocr": {
+    "merchant": ": LITTLE COMET NOODLE HOUSE"
+   },
+   "text_only": {
+    "merchant": "LITTLE COMET NOODLE HOUSE",
+    "date": "2026-09-17",
+    "total_cents": 15697
+   },
+   "ocr_ms": 231,
+   "ocr_text": ": LITTLE COMET NOODLE HOUSE\n158 Bayview Rd\nMillbrook Falls\n2 Ea Tel 555-0161 °\nDate: September.17,2026 ~~ © ‘10:20\nReg 1 Clerk 74 $\nBananas 2 @ 3.47 i 6.94\nSoup of the Day : 19.42\n* Paper Towels - 5.95\nLatte : : 12.09\nGreen Tea 4 @ 10.13 40.52 +\nSourdough Loaf 3 @ 20.94 © 62.82\n| SUBTOTAL EP 147.74\nTax 6.25% 9.23\nTotal © 156.97USD\nCash . 160.00\nChange “3.03\nHave a nice day :\n"
+  },
+  {
+   "id": "r067",
+   "tier": "mild",
+   "file": "r067.jpg",
+   "sha256": "cd082e2b7022e1d05066ecbfc6ae8f1e18b6af51adfd6b63274c267abc10eced",
+   "truth": {
+    "merchant": "CEDAR ACORN NOODLE HOUSE",
+    "date": "2025-11-18",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 4042,
+    "tax_cents": 253,
+    "total_cents": 4295
+   },
+   "ocr": {
+    "merchant": "CEDAR ACORN NOODLE HOUSE",
+    "total_cents": 4295
+   },
+   "text_only": {
+    "merchant": "CEDAR ACORN NOODLE HOUSE",
+    "date": "2025-11-18",
+    "total_cents": 4295
+   },
+   "ocr_ms": 131,
+   "ocr_text": "CEDAR ACORN NOODLE HOUSE\n: 219 Hawthom BIvd 2\n: Eastbrook\nTel 555-0101\nDate: 2025:11-18 10:34\nReg 7 Clerk 37 .\nGreen Tea 5.15\nCheddar 20.06\nOlive Oil 10.44\nBananas 3 @ 1.59 477\nSub Total 0 40.42\nTax . 253\nGrand Total 42.95\nCash 60.00\nChange 17.05\n| Have a nice day .\n"
+  },
+  {
+   "id": "r068",
+   "tier": "mild",
+   "file": "r068.jpg",
+   "sha256": "aa33615f87369af8d6953f65efdc57f7f8df8f8619d6fabad21391b216505c80",
+   "truth": {
+    "merchant": "Bright Kettle Market",
+    "date": "2024-11-21",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 10975,
+    "tax_cents": 686,
+    "total_cents": 11661
+   },
+   "ocr": {
+    "merchant": "Bright Kettle Market :",
+    "date": "2024-11-21"
+   },
+   "text_only": {
+    "merchant": "Bright Kettle Market",
+    "date": "2024-11-21",
+    "total_cents": 11661
+   },
+   "ocr_ms": 200,
+   "ocr_text": "Bright Kettle Market :\n363 Bayview Blvd © -\n. Port Ellery\n. Tel 555-0105\nDate: 21 November, 2024 17:22\nReg 3 Clerk 75 : “0 i\n“Tomatoes 3 @ 4:62 13.86\nRice 3 @ 17.96 53.88\nBananas 4 @ 5,42 21.68\nPacking Tape 6.90\nPaper Towels - © 10.46\n‘Croissant t 2.97\nSUBTOTAL 109.75\nTax : 6.86\nTotal, a . USD116.61\nCash : 120.00\nChange E 3.39,\nHave a nice day\n"
+  },
+  {
+   "id": "r069",
+   "tier": "clean",
+   "file": "r069.png",
+   "sha256": "6e47412ac4a38ed602756fb372c0aec625f89911faf5b341521fe15c92e464b0",
+   "truth": {
+    "merchant": "QUIET THISTLE CAFE",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 8201,
+    "tax_cents": 328,
+    "total_cents": 10005
+   },
+   "ocr": {
+    "merchant": "QUIET THISTLE CAFE",
+    "total_cents": 10005
+   },
+   "text_only": {
+    "merchant": "QUIET THISTLE CAFE",
+    "total_cents": 10005
+   },
+   "ocr_ms": 174,
+   "ocr_text": "QUIET THISTLE CAFE\n356 Mill Ave\nMillbrook Falls\nTel 555-0198\nDate: 02/10/2026 11:03\nReg 5 Clerk 87\nNotebook 3 @ 9.67 29.01\nPacking Tape 17.39\nCoffee Beans 13.16\nLight Bulb 1.64\nOat Milk 20.81\nSubtotal 82.01\nSales Tax 3.28\nTip 14.76\nBalance Due 100.05\ncash 120.00\nChange 19.95\nHave a nice day\n"
+  },
+  {
+   "id": "r070",
+   "tier": "clean",
+   "file": "r070.png",
+   "sha256": "92cfa40f6b2be866dd627ee220519d5b4b843755a035c384bcb926243ddf7462",
+   "truth": {
+    "merchant": "Juniper Otter Garden Center",
+    "date": "2025-08-28",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 46651,
+    "tax_cents": 0,
+    "total_cents": 46651
+   },
+   "ocr": {
+    "merchant": "Juniper Otter Garden Center",
+    "total_cents": 46651
+   },
+   "text_only": {
+    "merchant": "Juniper Otter Garden Center",
+    "total_cents": 46651
+   },
+   "ocr_ms": 202,
+   "ocr_text": "Juniper Otter Garden Center\n562 Kestrel Ave\nRiverton\nTel 555-0192\n\nDate: 28-08-2025 11:22\nReg 9 Clerk 58\nEspresso Machine 405.14\nDish Soap 20.56\nPasta 2.90\nSparkling Water 15.70\nGarden Hose 5.31\nGreen Tea 16.90\nSub Total 466.51\nTax 0.00\nTOTAL: 466.51\nCash 480.00\nChange 13.49\n\nHave a nice day\n"
+  },
+  {
+   "id": "r071",
+   "tier": "hard",
+   "file": "r071.jpg",
+   "sha256": "54d7a6a086c0a28334b19a65e1a4b30c03556096bc800126790c341ee2341611",
+   "truth": {
+    "merchant": "WILLOW THISTLE GARDEN CENTER",
+    "date": "2025-10-16",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 17708,
+    "tax_cents": 1240,
+    "total_cents": 18948
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "WILLOW THISTLE GARDEN CENTER",
+    "date": "2025-10-16",
+    "total_cents": 18948
+   },
+   "ocr_ms": 25,
+   "ocr_text": "g\n"
+  },
+  {
+   "id": "r072",
+   "tier": "hard",
+   "file": "r072.jpg",
+   "sha256": "b0aba3bc8989f3c90ddd8a260de18bc0d98c2c7e662590b7d3cb5e010092c365",
+   "truth": {
+    "merchant": "JUNIPER ANCHOR MARKET",
+    "date": "2024-04-20",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 3823,
+    "tax_cents": 268,
+    "total_cents": 4091
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "JUNIPER ANCHOR MARKET",
+    "total_cents": 4091
+   },
+   "ocr_ms": 33,
+   "ocr_text": "F |\n"
+  },
+  {
+   "id": "r073",
+   "tier": "hard",
+   "file": "r073.jpg",
+   "sha256": "aa8d4056fd5a991f52736a1cb101508b152f2bb886bf57e9bbd160c106956796",
+   "truth": {
+    "merchant": "Bright Heron Pantry",
+    "date": "2026-02-28",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 4832,
+    "tax_cents": 387,
+    "total_cents": 5219
+   },
+   "ocr": {
+    "merchant": "gright Heron Pantry",
+    "total_cents": 5219
+   },
+   "text_only": {
+    "merchant": "Bright Heron Pantry",
+    "total_cents": 5219
+   },
+   "ocr_ms": 147,
+   "ocr_text": "gright Heron Pantry\n928 Hawthorn Ave\nRiverton\nTel, 555-0155\nFeb. 28, 2026 16:30\nReg 6 Clerk 12\nWood Glue 10.78\nCroissant 24.50\nOat Milk 13.04\nsub Total 48.32\nTax © 3.87\nTOTAL 52.19 USD\nDebit, ending 6465 52.19\npetarn by. March 30, 2026\nThank you; come -3gain\n"
+  },
+  {
+   "id": "r074",
+   "tier": "mild",
+   "file": "r074.jpg",
+   "sha256": "a17051bbd62640c69b03b1c3f759f59e4d9ece26d7cba91083e23e913f7ec8e9",
+   "truth": {
+    "merchant": "Maple Acorn Pantry",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 259040,
+    "tax_cents": 20723,
+    "total_cents": 279763
+   },
+   "ocr": {
+    "merchant": "©: MapleAcomPanty"
+   },
+   "text_only": {
+    "merchant": "Maple Acorn Pantry",
+    "total_cents": 279763
+   },
+   "ocr_ms": 166,
+   "ocr_text": "©: MapleAcomPanty\n\nNE 385 Elm Ave chon\n- Cedar Hollow .\n\nTel 555-0154 .\nDate: 06-08:2025 °° 15:58\nReg 5 Clerk 79 i a |\nDesk Chair'4 @ 64148 2565.92\nDishSoap4 @6.12 24.48\nSUBTOTAL 2,590.40\nSales Tax. 207.23\nBalance Due * 2,797.63\nMastercard ending 2221 2,797.63\n- Thanks for visiting .\n"
+  },
+  {
+   "id": "r075",
+   "tier": "mild",
+   "file": "r075.jpg",
+   "sha256": "c9fd644ac507ccc4d6762b1d33d299dbb786a5a9b08fc08748a6b7467b9cc89d",
+   "truth": {
+    "merchant": "WILLOW THISTLE DELI",
+    "date": "2026-01-22",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 7005,
+    "tax_cents": 560,
+    "total_cents": 7565
+   },
+   "ocr": {
+    "merchant": "~~ WILLOW THISTLE DELI |",
+    "total_cents": 7565
+   },
+   "text_only": {
+    "merchant": "WILLOW THISTLE DELI",
+    "total_cents": 7565
+   },
+   "ocr_ms": 188,
+   "ocr_text": "~~ WILLOW THISTLE DELI |\n508 Elm St\n! ; Millbrook Falls . :\na Tel 555-0181 : he\nDate: 22-01-2026 11:50\nReg 9 Clerk 65 i :\nEggs Dozen | 24.66\n‘Sparkling Water 17.53\nCheddar2 @ 3.54 . . 7.08\nPacking Tape ot 20.78\nSub Total © 70.05\nSales Tax i : 5.60\nBalance Due 75.65 USD\nDebit ending 1026 75.65\n’ Thanks for visiting +\n"
+  },
+  {
+   "id": "r076",
+   "tier": "hard",
+   "file": "r076.jpg",
+   "sha256": "606893b25a51768fe65816068e632386320971f5d8043377a2da4a62a0a6140e",
+   "truth": {
+    "merchant": "ROUTE 70 KITCHEN",
+    "date": "2024-06-20",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 8445,
+    "tax_cents": 749,
+    "total_cents": 9194
+   },
+   "ocr": {
+    "merchant": "Cedar Hollow",
+    "date": "2024-06-20"
+   },
+   "text_only": {
+    "merchant": "Cedar Hollow",
+    "date": "2024-06-20",
+    "total_cents": 9194
+   },
+   "ocr_ms": 139,
+   "ocr_text": "ROUTE 70 kiTcHEN\n582 Orcharg Lane\nCedar Hollow\nTel 555.0193\nJun 20, 2024 16:14\nReg 6 Clerk 45\nWood Giue 2.@ 18.65 37.30\nAA Batteries 252\nWood Glue . 20.82\nPasta 2381\nTotal hems 4\nSubtotal 84.45\nSales Tax 7.49\nTotal Dye 91.94 USD\nMastercard ending 3519 91.94\nThanks for visiting\n"
+  },
+  {
+   "id": "r077",
+   "tier": "hard",
+   "file": "r077.jpg",
+   "sha256": "f9724c45af21e79d139e4d242fe330809a7c6075a8b58b05c9a80422cffe181d",
+   "truth": {
+    "merchant": "WILLOW SPARROW SUPPLY",
+    "date": "2026-01-25",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 6074,
+    "tax_cents": 539,
+    "total_cents": 6613
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "WILLOW SPARROW SUPPLY",
+    "date": "2026-01-25",
+    "total_cents": 6613
+   },
+   "ocr_ms": 11,
+   "ocr_text": ""
+  },
+  {
+   "id": "r078",
+   "tier": "hard",
+   "file": "r078.jpg",
+   "sha256": "aa836dd2bd858022c3f255e6cce532d48d364ea801b34c1111508c6a376956f9",
+   "truth": {
+    "merchant": "Maple Birch Supply",
+    "date": "2025-11-17",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 11412,
+    "tax_cents": 1013,
+    "total_cents": 12425
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Maple Birch Supply",
+    "date": "2025-11-17",
+    "total_cents": 12425
+   },
+   "ocr_ms": 10,
+   "ocr_text": ""
+  },
+  {
+   "id": "r079",
+   "tier": "hard",
+   "file": "r079.jpg",
+   "sha256": "c26115640b4a4112a2fca0ff494352d13e1865666bdf38a7ef30928369fc3be3",
+   "truth": {
+    "merchant": "HARBOR LANTERN PANTRY",
+    "date": "2024-07-20",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 4831,
+    "tax_cents": 0,
+    "total_cents": 4831
+   },
+   "ocr": {
+    "merchant": "HARRB( IR LANT ERN PANT RY"
+   },
+   "text_only": {
+    "merchant": "HARBOR LANTERN PANTRY",
+    "date": "2024-07-20",
+    "total_cents": 4831
+   },
+   "ocr_ms": 136,
+   "ocr_text": "HARRB( IR LANT ERN PANT RY\n457 Orchard rq\nMillbrook Fafls\nTel 555-0164\nDATE ju) 2, 2024 09:13\nReg 3 Clefcag ‘\nOat Milk 16.08\nPaper Towels 16.73\nWood Glye 4.68\nPaper Toivels 10.82\nSUBTOTAL 48.31\nTax 0.00\nBalance pye 48.31 USD\nCash 60,00\nChange 1.69.\nThank you, come again\n"
+  },
+  {
+   "id": "r080",
+   "tier": "hard",
+   "file": "r080.jpg",
+   "sha256": "1aad6c8df2b44ffce3cc72f385cd1370d9ef1b460942f3530ac6483bcc68b946",
+   "truth": {
+    "merchant": "BLUE ANCHOR SUPPLY",
+    "date": "2024-05-13",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 11765,
+    "tax_cents": 824,
+    "total_cents": 12589
+   },
+   "ocr": {
+    "merchant": "BLUE ANCHOR SUPPLY. < \"+",
+    "date": "2024-05-13"
+   },
+   "text_only": {
+    "merchant": "BLUE ANCHOR SUPPLY",
+    "date": "2024-05-13",
+    "total_cents": 12589
+   },
+   "ocr_ms": 124,
+   "ocr_text": "BLUE ANCHOR SUPPLY. < \"+\n138 Larch Ad\nEastbrook\nTot 555-0191\nBATE May 13, 2024 15:48\nReg.5 Clerk 67\nCroissant 4 ® 2342 +o gases\nPast 497\nDish Soap 13.48\nYogurt 552\nsubtotal 1785\nSales Tax 824\n© Total Due < 125.89\nCash 140.00\nchange . Jan\nThanks for visiing\n"
+  },
+  {
+   "id": "r081",
+   "tier": "mild",
+   "file": "r081.jpg",
+   "sha256": "98d8ce3b62fb0bad155510722e21fa7183971646734f62ab15b91bcdf231aeff",
+   "truth": {
+    "merchant": "Lucky Otter Pantry",
+    "date": "2026-04-14",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 7754,
+    "tax_cents": 485,
+    "total_cents": 8239
+   },
+   "ocr": {
+    "merchant": "Lucky Otter Pantry *",
+    "date": "2026-04-14",
+    "total_cents": 8239
+   },
+   "text_only": {
+    "merchant": "Lucky Otter Pantry",
+    "date": "2026-04-14",
+    "total_cents": 8239
+   },
+   "ocr_ms": 158,
+   "ocr_text": "Lucky Otter Pantry *\n\"* 10 Kestrel Rd\n: Cedar Hollow .\nTel 555-0103\n2026-04-14 E 11:24\nReg 3 Clerk 71\nPasta 1.48 |\nSparkling Water : 14.76\nGreen Tea | 19.92\nCoffee Beans 2 @ 20.69 41.38 .\nSubtotal . © 77.54\nSales Tax 4.85\nBalance Due $82.39\nVISA ending 9283 82.39\nThanks for visiting\n"
+  },
+  {
+   "id": "r082",
+   "tier": "mild",
+   "file": "r082.png",
+   "sha256": "9bb3b1d45f9149b2a28f7683e1c3683ba96073ae71a14a36f688212fd5eeedf4",
+   "truth": {
+    "merchant": "WILLOW ANCHOR BAKERY",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 1974,
+    "tax_cents": 0,
+    "total_cents": 1974
+   },
+   "ocr": {
+    "merchant": "i WILLOW ANCHOR BAKERY"
+   },
+   "text_only": {
+    "merchant": "WILLOW ANCHOR BAKERY",
+    "total_cents": 1974
+   },
+   "ocr_ms": 129,
+   "ocr_text": "i WILLOW ANCHOR BAKERY\n746 Bayview Ave.\nMillbrook Falls .\n. Tel 555-0105 Ce\nReg 4 Clerk 48 | .\nBananas - 13:26\nOlive Oil | 6.48\nSUBTOTAL , .. . 19.74\nTax 5 0.00\"\nGrand Total, USD 19.74\nVISA eriding 6949 ©1974\n.. Thanksforvisiing ~~\n"
+  },
+  {
+   "id": "r083",
+   "tier": "hard",
+   "file": "r083.jpg",
+   "sha256": "7d719be51681b52ca70f28a1d4745ce8e208a6fc94de3813fba82e814ed8212b",
+   "truth": {
+    "merchant": "GREEN MEADOW MARKET",
+    "date": "2024-02-22",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 777,
+    "tax_cents": 0,
+    "total_cents": 777
+   },
+   "ocr": {
+    "merchant": "GREEN. MEADOW MARKET",
+    "date": "2024-02-22"
+   },
+   "text_only": {
+    "merchant": "GREEN MEADOW MARKET",
+    "date": "2024-02-22",
+    "total_cents": 777
+   },
+   "ocr_ms": 113,
+   "ocr_text": "GREEN. MEADOW MARKET\n730 Lacch Lope\nPort ‘Ellery\nTel 553-919;\n22 February, 2024 09:97\nReg 5 Clerk 78\nCoffee Beans 1.89\nDish Soap 5.88\nSub Total 7.77\nTax 0.60\nBalance pue 7.77\nCash 20.00\nChange 12.23\nHave a nice gay\n"
+  },
+  {
+   "id": "r084",
+   "tier": "clean",
+   "file": "r084.png",
+   "sha256": "7a4e19c58f84247e62bda0a928d7301b14546f09df161a38acc21524aec83c5a",
+   "truth": {
+    "merchant": "Old Mill Birch Hardware",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 14574,
+    "tax_cents": 1293,
+    "total_cents": 15867
+   },
+   "ocr": {
+    "merchant": "Old Mill Birch Hardware",
+    "total_cents": 15867
+   },
+   "text_only": {
+    "merchant": "Old Mill Birch Hardware",
+    "total_cents": 15867
+   },
+   "ocr_ms": 175,
+   "ocr_text": "Old Mill Birch Hardware\n634 Orchard Blvd\nPort Ellery\nTel 555-0193\n\n06.01.2024 10:34\nReg 5 Clerk 96\nNotebook 4 @ 22.82 91.28\nLight Bulb 9.38\nApples 13.40\nAA Batteries 4 @ 1.18 4.72\nApples 24.84\nEggs Dozen 2.12\nSubtotal 145.74\nTax 12.93\nTOTAL 158.67\nVISA ending 5843 158.67\n\nHave a nice day\n"
+  },
+  {
+   "id": "r085",
+   "tier": "hard",
+   "file": "r085.jpg",
+   "sha256": "db10080c8b917760f0d83e5b9642af492de69186570d577425170041e6b87539",
+   "truth": {
+    "merchant": "BRIGHT BIRCH BISTRO",
+    "date": "2025-11-19",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 1392,
+    "tax_cents": 97,
+    "total_cents": 1698
+   },
+   "ocr": {
+    "merchant": "I BRIGHT BIRCH BISTRO",
+    "date": "2025-11-19"
+   },
+   "text_only": {
+    "merchant": "BRIGHT BIRCH BISTRO",
+    "date": "2025-11-19",
+    "total_cents": 1698
+   },
+   "ocr_ms": 132,
+   "ocr_text": "I BRIGHT BIRCH BISTRO\n\"434 Orchard Rg\nMillbrook Falls\nTel 555-0165\n19th Nov 2025 ; 12:18\nReg I Clerk 73\nSourdough Loaf 1.51\nOat Milk 12,41\nSubtotal 13.92\nTax 0.97\nTip 2.09\nAmount Dye USD 16.98\nCash 20.00\nChange 3.02\nThank you, come again\n"
+  },
+  {
+   "id": "r086",
+   "tier": "hard",
+   "file": "r086.jpg",
+   "sha256": "169313f14a02a4fabaf7a164b14369c7d2d25d366fbcbab04fd36ede433682af",
+   "truth": {
+    "merchant": "Dock 15 Pantry",
+    "date": "2026-07-29",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 3698,
+    "tax_cents": 148,
+    "total_cents": 3846
+   },
+   "ocr": {
+    "merchant": "Dock TE Pantry"
+   },
+   "text_only": {
+    "merchant": "Cedar Hollow",
+    "date": "2026-07-29",
+    "total_cents": 3846
+   },
+   "ocr_ms": 94,
+   "ocr_text": "Dock TE Pantry\n234 Bayview BIvd\nCeglar Hollow\nTol 555-0161\nLight Bulb as?\neh 16.6\nGroen Toa =\nSut Tota oe\nTax ih\nGrand Tot! ie\nMastercard ending 6818 a\nhank you; ome again\n"
+  },
+  {
+   "id": "r087",
+   "tier": "clean",
+   "file": "r087.png",
+   "sha256": "1e1e1887a9cf77edaa00dd7b3474e8fb69b50d2622c2a0a9700c9e60086d07f5",
+   "truth": {
+    "merchant": "TWIN OAKS BIRCH PHARMACY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 11858,
+    "tax_cents": 830,
+    "total_cents": 12688
+   },
+   "ocr": {
+    "merchant": "TWIN OAKS BIRCH PHARMACY",
+    "total_cents": 12688
+   },
+   "text_only": {
+    "merchant": "TWIN OAKS BIRCH PHARMACY",
+    "total_cents": 12688
+   },
+   "ocr_ms": 146,
+   "ocr_text": "TWIN OAKS BIRCH PHARMACY\n170 Mill Ave\nPort Ellery\n\nTel 555-0194\nDATE 10.03.2026 12:38\nReg 2 Clerk 79\nSparkling Water 23.18\nOat Milk 4 @ 23.85 95.40\nSUBTOTAL 118.58\nSales Tax 8.30\nBalance Due 126.88\nDebit ending 8658 126.88\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r088",
+   "tier": "clean",
+   "file": "r088.png",
+   "sha256": "4be5b38f98075d1672eb7c8badf40297c26071f23ee9b974b795ca9411b3b7f8",
+   "truth": {
+    "merchant": "Bright Heron Deli",
+    "date": "2024-09-01",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 3395,
+    "tax_cents": 0,
+    "total_cents": 3395
+   },
+   "ocr": {
+    "merchant": "Bright Heron Deli",
+    "date": "2024-09-01",
+    "total_cents": 3395
+   },
+   "text_only": {
+    "merchant": "Bright Heron Deli",
+    "date": "2024-09-01",
+    "total_cents": 3395
+   },
+   "ocr_ms": 128,
+   "ocr_text": "Bright Heron Deli\n415 Elm Lane\nEastbrook\nTel 555-0104\nDate: 1st Sep. 2024 07:36\nReg 7 Clerk 13\nLight Bulb 12.23\nSourdough Loaf 21.72\nSub Total 33.95\nTax 0.00\nGrand Total 33.95 USD\nCash 40.00\nChange 6.05\nThanks for visiting\n"
+  },
+  {
+   "id": "r089",
+   "tier": "clean",
+   "file": "r089.png",
+   "sha256": "6bfe93d83fccd2ef8fc31a4ca70cc30f271d8293aad85d31cdb59853daef119a",
+   "truth": {
+    "merchant": "Green Anchor Bakery",
+    "date": "2025-02-04",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 10835,
+    "tax_cents": 677,
+    "total_cents": 11512
+   },
+   "ocr": {
+    "merchant": "Green Anchor Bakery",
+    "date": "2025-02-04",
+    "total_cents": 11512
+   },
+   "text_only": {
+    "merchant": "Green Anchor Bakery",
+    "date": "2025-02-04",
+    "total_cents": 11512
+   },
+   "ocr_ms": 195,
+   "ocr_text": "Green Anchor Bakery\n655 Kestrel Rd\nEastbrook\nTel 555-0190\nDATE February 4, 2025 20:07\nReg 8 Clerk 70\nGreen Tea 8.28\nGarden Hose 4.84\nOlive Oil 15.84\nLatte 23.39\nOlive Oil 3 @ 13.28 39.84\nBananas 2 @ 8.08 16.16\nTotal Items 6\nSubtotal 108.35\nTax 6.25% 6.77\nTOTAL $115.12\nDebit ending 8044 115.12\nThank you, come again\n"
+  },
+  {
+   "id": "r090",
+   "tier": "mild",
+   "file": "r090.png",
+   "sha256": "6632ad6f2bf3e10e312deab534469a2f3eb00a624b7b9eca2a5784af2c3def6d",
+   "truth": {
+    "merchant": "QUIET COMET BISTRO",
+    "date": "2025-03-26",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 7209,
+    "tax_cents": 451,
+    "total_cents": 9102
+   },
+   "ocr": {
+    "merchant": ". -QUIET COMET BISTRO .",
+    "date": "2025-03-26"
+   },
+   "text_only": {
+    "merchant": "QUIET COMET BISTRO",
+    "total_cents": 9102
+   },
+   "ocr_ms": 247,
+   "ocr_text": ". -QUIET COMET BISTRO .\n\n: + 255 Linden Lane :\n. © Westvale\n\nTel 555-0166\n\nDate: March 26, 2025 - 3 18:02\nReg 3 Clerk 91 : .\nPasta Co 6.71\nSourdough Loaf 0 7.72\nPasta . -o 15.43\n\n* Yogurt : 3.33\n- Olive Ojl co 19.48\n\n* Dish Soap 2 @ 9.71 19.42:\n\n. Subtotal 72.09\n\nTax © . : | 4.51\nTip 3 14.42:\n\n* Amount Due C0 891.02\nCash . i 100.00\nChange . i L898\n\n. \"Return by Apr252025 i\nHave a nice day\n"
+  },
+  {
+   "id": "r091",
+   "tier": "clean",
+   "file": "r091.png",
+   "sha256": "afa0aa3f525d4ec4435ae382832e5c646fcd02abc297c9d7aefb514c0848f1fb",
+   "truth": {
+    "merchant": "Lucky Birch Noodle House",
+    "date": "2026-08-11",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 6194,
+    "tax_cents": 387,
+    "total_cents": 7696
+   },
+   "ocr": {
+    "merchant": "Lucky Birch Noodle House",
+    "date": "2026-08-11",
+    "total_cents": 7696
+   },
+   "text_only": {
+    "merchant": "Lucky Birch Noodle House",
+    "date": "2026-08-11",
+    "total_cents": 7696
+   },
+   "ocr_ms": 189,
+   "ocr_text": "Lucky Birch Noodle House\n102 Mill Ave\nEastbrook\n\nTel 555-0101\nAugust 11, 2026 20:08\nReg 6 Clerk 19\nGarden Hose 3 @ 1.96 5.88\nGreen Tea 16.42\nOat Milk 5.01\nOlive Oil 22.20\nGreen Tea 5.87\nCroissant 2 @ 3.28 6.56\nSub Total 61.94\nTax 6.25% 3.87\nTip 11.15\nAmount Due USD 76.96\nCash 80.00\nChange 3.04\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r092",
+   "tier": "mild",
+   "file": "r092.png",
+   "sha256": "54651cf5fc597271f1f87fb458ab8f95f3da7ea0f96b5dec292a63620c7f014b",
+   "truth": {
+    "merchant": "Amber Thistle Supply",
+    "date": "2025-02-03",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 11502,
+    "tax_cents": 460,
+    "total_cents": 11962
+   },
+   "ocr": {
+    "merchant": "Amber Thistle Supply",
+    "date": "2025-02-03",
+    "total_cents": 11962
+   },
+   "text_only": {
+    "merchant": "Amber Thistle Supply",
+    "date": "2025-02-03",
+    "total_cents": 11962
+   },
+   "ocr_ms": 234,
+   "ocr_text": "Amber Thistle Supply\n) 690-Larch Rd |\nMillbrook Falls 3\noo Tel 555-0176\nDATE 2025-02-03 12:49\nReg 5 Clerk 60 | i\nCroissant i . 15.59\n“Tomatoes = ° 6.64\nLight Bulb 3,74\nCheddar 4 @ 14.38 57.52 .\nGreen Tea . . 8.10\nCroissant 3 @ 7.81 123.43\nSUBTOTAL co 115.02\nSales Tax: 5 4.60\nTOTAL: $119.62\nMastercard ending 9140 119.62\n© Thanks for visiting\n"
+  },
+  {
+   "id": "r093",
+   "tier": "clean",
+   "file": "r093.png",
+   "sha256": "368ef6333f7e383c2dbd8e8ea5c1479c6679e34870f39f6219556b299b958df3",
+   "truth": {
+    "merchant": "Maple Birch Bistro",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 12707,
+    "tax_cents": 889,
+    "total_cents": 13596
+   },
+   "ocr": {
+    "merchant": "Maple Birch Bistro",
+    "total_cents": 13596
+   },
+   "text_only": {
+    "merchant": "Maple Birch Bistro",
+    "total_cents": 13596
+   },
+   "ocr_ms": 189,
+   "ocr_text": "Maple Birch Bistro\n962 Hawthorn Rd\nCedar Hollow\nTel 555-0155\n04.07.2026 15:32\nReg 2 Clerk 18\nGarden Hose 2 @ 24.43 48.86\nSoup of the Day 2 @ 16.45 32.90\nEggs Dozen 2 @ 1.38 2.76\nSparkling Water 21.47\nLight Bulb 15.34\nGarden Hose 5.74\nSubtotal 127.07\nSales Tax 8.89\nTotal Due 135.96\nDebit ending 2374 135.96\nHave a nice day\n"
+  },
+  {
+   "id": "r094",
+   "tier": "mild",
+   "file": "r094.jpg",
+   "sha256": "0e69b7f6183f7baf54de5fabe1167010deeeffb0cbf6fa71f8a926c69911cfc7",
+   "truth": {
+    "merchant": "LUCKY ANCHOR CAFE",
+    "date": "2024-10-17",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 6948,
+    "tax_cents": 556,
+    "total_cents": 7504
+   },
+   "ocr": {
+    "merchant": "LUCKY ANCHOR CAFE"
+   },
+   "text_only": {
+    "merchant": "LUCKY ANCHOR CAFE",
+    "date": "2024-10-17",
+    "total_cents": 7504
+   },
+   "ocr_ms": 168,
+   "ocr_text": "LUCKY ANCHOR CAFE\nNeighborhood Favorite i\n“115 Elm Ave i\n. Riverton - :\nTel 555-0164\nDATE17Oct2024 ~*~ 21:22\nReg 7 Clerk 79\nCoffee Beans 16.42\nLight Bulb 21.94\nEggs Dozen 4 @ 2.47 9.88\n_ Tomatoes - 2124\nSubtotal Co... 6948\nTax 8% * . 5.56\nGrand Total © USD 75.04\nDebit ending 2039 \"75.04\n| Have a nice day Lon\n"
+  },
+  {
+   "id": "r095",
+   "tier": "clean",
+   "file": "r095.png",
+   "sha256": "a85bfc471884226efd1c3062835c9122c21d260aea5318b0ffe28636d1132a24",
+   "truth": {
+    "merchant": "Twin Oaks Comet Supply",
+    "date": "2026-01-11",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 3535,
+    "tax_cents": 314,
+    "total_cents": 3849
+   },
+   "ocr": {
+    "merchant": "Twin Oaks Comet Supply",
+    "total_cents": 3849
+   },
+   "text_only": {
+    "merchant": "Twin Oaks Comet Supply",
+    "total_cents": 3849
+   },
+   "ocr_ms": 169,
+   "ocr_text": "Twin Oaks Comet Supply\n596 Mill Ave\nWestvale\nTel 555-0173\nDate: January 11, 2026 17:48\nReg 8 Clerk 99\nYogurt 12.06\nLight Bulb 23.29\nSubtotal 35.35\nTax 8.875% 3.14\nTotal 38.49 USD\nDebit ending 5702 38.49\nReturn by Feb 10, 2026\nThank you, come again\n"
+  },
+  {
+   "id": "r096",
+   "tier": "mild",
+   "file": "r096.jpg",
+   "sha256": "bc197cc62700a2d1ca9f7436f415ec1bf22e5f1446983ff710f374a68a5ce609",
+   "truth": {
+    "merchant": "RIVERBEND SPARROW PHARMACY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 7673,
+    "tax_cents": 681,
+    "total_cents": 8354
+   },
+   "ocr": {
+    "merchant": "RIVERBEND SPARROW PHARMACY",
+    "total_cents": 8354
+   },
+   "text_only": {
+    "merchant": "RIVERBEND SPARROW PHARMACY",
+    "total_cents": 8354
+   },
+   "ocr_ms": 153,
+   "ocr_text": "RIVERBEND SPARROW PHARMACY\nas 219 Bayview Blvd\nPort Ellery\n: Tel 555-0197\n\nDate: 04/03/2024 11:41\nReg 7 Clerk 80\n\nCoffee Beans 2 @ 20.94 41.88\nLatte 6.03\nSoup of the Day 6.85\nAA Batteries 21.97,\nSubtotal 76.73\nTax 6.81\nTOTAL USD 83.54\nMastercard ending 5430 83.54\n\nThank you, come again\n"
+  },
+  {
+   "id": "r097",
+   "tier": "mild",
+   "file": "r097.png",
+   "sha256": "ec5d1cf31e1c13037d4e9dec7b99cbd1e37432ed9fcfe6200f9bd3f704d177ea",
+   "truth": {
+    "merchant": "Riverbend Comet Noodle House",
+    "date": "2025-09-04",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 3867,
+    "tax_cents": 155,
+    "total_cents": 4022
+   },
+   "ocr": {
+    "merchant": "Riverbend Comet Noodle House",
+    "total_cents": 4022
+   },
+   "text_only": {
+    "merchant": "Riverbend Comet Noodle House",
+    "total_cents": 4022
+   },
+   "ocr_ms": 175,
+   "ocr_text": "Riverbend Comet Noodle House\n704 QuarryRd\n. Westvale\nTel 555-0182 ~\nSep. 4, 2025 Tab\nReg 4 Clerk43 : .\nCoffee Beans . 388\nCroissant ~ RRS 114\nYogurt Boo 15.67\nPacking Tape : 1798\nSub Total 5 . 38.67\nSales Tax - 0 155\nGrand Total 40.22 USD\nDebit ending 2301 ‘40.22\n: Return by Oct. 4 2025 - :\nHave a nice day .\n"
+  },
+  {
+   "id": "r098",
+   "tier": "clean",
+   "file": "r098.png",
+   "sha256": "9b036ec45ad8423219d1726647e0203647c25ddd2ff5f4e41d4876f8b7b1c7d0",
+   "truth": {
+    "merchant": "Red Door Comet Kitchen",
+    "date": "2025-02-28",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 4802,
+    "tax_cents": 384,
+    "total_cents": 6146
+   },
+   "ocr": {
+    "merchant": "Red Door Comet Kitchen",
+    "date": "2025-02-28",
+    "total_cents": 6146
+   },
+   "text_only": {
+    "merchant": "Red Door Comet Kitchen",
+    "date": "2025-02-28",
+    "total_cents": 6146
+   },
+   "ocr_ms": 175,
+   "ocr_text": "Red Door Comet Kitchen\n950 Ferry Lane\nWestvale\n\nTel 555-0119\nDate: February 28, 2025 21:57\nReg 5 Clerk 88\nDish Soap 3 @ 15.29 45.87\nLight Bulb 2.15\nSub Total 48.02\nSales Tax 3.84\nTip 9.60\nTOTAL: $61.46\nCash 80.00\nChange 18.54\nTotal Savings 8.79\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r099",
+   "tier": "clean",
+   "file": "r099.png",
+   "sha256": "c5f4cb6a203cd4d0aa1106cdced8f3071c6fd14914ecb73f0ad09f5b82d4735d",
+   "truth": {
+    "merchant": "TWIN OAKS PEBBLE NOODLE HOUSE",
+    "date": "2024-08-16",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 12737,
+    "tax_cents": 509,
+    "total_cents": 13246
+   },
+   "ocr": {
+    "merchant": "TWIN OAKS PEBBLE NOODLE HOUSE",
+    "date": "2024-08-16",
+    "total_cents": 13246
+   },
+   "text_only": {
+    "merchant": "TWIN OAKS PEBBLE NOODLE HOUSE",
+    "date": "2024-08-16",
+    "total_cents": 13246
+   },
+   "ocr_ms": 227,
+   "ocr_text": "TWIN OAKS PEBBLE NOODLE HOUSE\nGood Food Good Mood\n182 Hawthorn Ave\nRiverton\nTel 555-0140\n\nDate: Aug. 16 2024 12:00\nReg 8 Clerk 19\nPaper Towels 11.22\nLight Bulb 1.44\nEggs Dozen 17.53\nBananas 12.18\nCoffee Beans 3.24\nTomatoes 4 @ 20.44 81.76\nSUBTOTAL 127.37\nSales Tax 5.09\nGrand Total 132.46 USD\nMastercard ending 8851 132.46\n\nHave a nice day\n"
+  },
+  {
+   "id": "r100",
+   "tier": "mild",
+   "file": "r100.jpg",
+   "sha256": "870af58c7d15fca64c102cc77d33c1572c0304215ced042dd4c512c7bcb3aabe",
+   "truth": {
+    "merchant": "Northside Wren Cafe",
+    "date": "2025-08-25",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 5165,
+    "tax_cents": 413,
+    "total_cents": 6508
+   },
+   "ocr": {
+    "merchant": "© Northside Wren Cafe",
+    "date": "2025-08-25"
+   },
+   "text_only": {
+    "merchant": "Northside Wren Cafe",
+    "date": "2025-08-25",
+    "total_cents": 6508
+   },
+   "ocr_ms": 174,
+   "ocr_text": "© Northside Wren Cafe\nHe 768 Ferry Bivd\nMillbrook Falls\nTel 555-0107 ¢\nDate: August 25 2025 . 0829\n* Reg 1 Clerk 40 :\nSparking Water 4 @ 6.81 © - 27.24\nAA Batteries - a 1.88 °\nYogurt . 11.95\nSparkling Water 10858\nSubtotal . y 51.65\nTax : 4.13\nme 930\nAmount Due . USD 65.08\nMastercard ending 7049 65.08 .\n\"Total Savings A 3.74\nThank you, come again\n"
+  },
+  {
+   "id": "r101",
+   "tier": "mild",
+   "file": "r101.jpg",
+   "sha256": "dcb5d55b69ae802a8af5782e7eb6bd35ac2d063b4d87b02c2d350cda25264692",
+   "truth": {
+    "merchant": "RED DOOR SPARROW PANTRY",
+    "date": "2024-02-20",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 7228,
+    "tax_cents": 0,
+    "total_cents": 7228
+   },
+   "ocr": {
+    "merchant": "RED DOOR SPARROW PANTRY",
+    "date": "2024-02-20"
+   },
+   "text_only": {
+    "merchant": "RED DOOR SPARROW PANTRY",
+    "date": "2024-02-20",
+    "total_cents": 7228
+   },
+   "ocr_ms": 207,
+   "ocr_text": "RED DOOR SPARROW PANTRY\n787 Ferry Rd\nEastbrook\n- Tel 555-0116 -\nDate: 20 February 2024 16:16\n‘Reg 9 Clerk 75. ’\nCheddar. a 7.43,\nGreen Tea = 5.10\nDish Soap . 16.67\nCroissant . 18.76\nWood Glue S132\nSubtotal 72.28\nTax . 0.00\nAmount Due . . .. Usb 72.28\"\n* VISA ending 2416 - 72.28\n_ Thank you, come again 2\n"
+  },
+  {
+   "id": "r102",
+   "tier": "mild",
+   "file": "r102.jpg",
+   "sha256": "26e97e093b2c7a6335c94688d489184e3b4d609b3ddf83ff09b20eb4fef37ab8",
+   "truth": {
+    "merchant": "Lucky Heron Market",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 1979,
+    "tax_cents": 0,
+    "total_cents": 1979
+   },
+   "ocr": {
+    "merchant": "* Lucky Heron Market i",
+    "total_cents": 1979
+   },
+   "text_only": {
+    "merchant": "Lucky Heron Market",
+    "total_cents": 1979
+   },
+   "ocr_ms": 159,
+   "ocr_text": "* Lucky Heron Market i\n- 722 Orchard Ave\n: Westvale B .\nTel 555-0136 Co\n11.03.2024 10:20.\n_ Regs Clerk 51 =\n* Sparkling Water 2.25\n_ Dish Soap oo 17.54\nSUBTOTAL . 1979\nTax . 0.00\nTotal : $19.79\nDebit ending 1998 : 19.79\nTotal Savings 8.26\noF Thanks for visiting\n"
+  },
+  {
+   "id": "r103",
+   "tier": "clean",
+   "file": "r103.png",
+   "sha256": "a53d36d641c797c5103d5aee7dfd31fe0400bb684e3d13bb19853cd5735c9a49",
+   "truth": {
+    "merchant": "Little Fox Market",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 7195,
+    "tax_cents": 504,
+    "total_cents": 7699
+   },
+   "ocr": {
+    "merchant": "Little Fox Market",
+    "total_cents": 7699
+   },
+   "text_only": {
+    "merchant": "Little Fox Market",
+    "total_cents": 7699
+   },
+   "ocr_ms": 140,
+   "ocr_text": "Little Fox Market\n33 Kestrel St\nPort Ellery\nTel 555-0131\nReg 7 Clerk 84\nAA Batteries 21.33\nYogurt 9.84\n‘Wood Glue 18.99\nAA Batteries 21.79\nSubtotal 71.95\nSales Tax 5.04\nTOTAL: 76.99 USD\nMastercard ending 7091 76.99\nThanks for visiting\n"
+  },
+  {
+   "id": "r104",
+   "tier": "mild",
+   "file": "r104.jpg",
+   "sha256": "394c4ccb48a9cf63f7517a6e512d826a2dbe766409d6f9456c81101bf9f75a88",
+   "truth": {
+    "merchant": "COPPER OTTER MARKET",
+    "date": "2024-02-22",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 46945,
+    "tax_cents": 2934,
+    "total_cents": 49879
+   },
+   "ocr": {
+    "merchant": ". COPPER OTTER MARKET, ~~ -",
+    "date": "2024-02-22"
+   },
+   "text_only": {
+    "merchant": "COPPER OTTER MARKET",
+    "date": "2024-02-22",
+    "total_cents": 49879
+   },
+   "ocr_ms": 243,
+   "ocr_text": ". COPPER OTTER MARKET, ~~ -\nie 379\" Bayview St E\nCedar Hollow °°\n8 Tel 555-0115\nDATE 22 Feb. 2024 09:01 |\nReg 9 Clerk:84 :\nDesk: Chair ° 40603\n|. Wood Glue . 8.98\nOat Milk . 8.01 J\nSourdough Loaf 13.66\nGreen Teal, . 12.48\nPacking Tape ~~ 14.79\nSUBTOTAL : 2 469.45 -\nTax 6.25% Soa 29:34\nTOTAL ©. Lt $498.79\nDebit.ending 6835 . 498.79\nThank you, come. again .\n"
+  },
+  {
+   "id": "r105",
+   "tier": "clean",
+   "file": "r105.png",
+   "sha256": "1cb68dd81e218e3624caddf933c82c445be583861e379b5abc1af8a0c9927b0e",
+   "truth": {
+    "merchant": "Maple Birch Kitchen",
+    "date": "2025-01-14",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 10855,
+    "tax_cents": 760,
+    "total_cents": 11615
+   },
+   "ocr": {
+    "merchant": "Maple Birch Kitchen",
+    "date": "2025-01-14",
+    "total_cents": 11615
+   },
+   "text_only": {
+    "merchant": "Maple Birch Kitchen",
+    "date": "2025-01-14",
+    "total_cents": 11615
+   },
+   "ocr_ms": 159,
+   "ocr_text": "Maple Birch Kitchen\n471 Ferry st\nEastbrook\nTel 555-0148\nDate: 14 Jan 2025 13:24\nReg 5 Clerk 83\nOat Milk 15.13\nAR Batteries 23.22\nGarden Hose 2 @ 9.32 18.64\nGarden Hose 4 @ 12.89 51.56\nSubtotal 108.55\nTax 7% 7.60\nTOTAL: $116.15\ncash 120.00\nChange 3.85\nThank you, come again\n"
+  },
+  {
+   "id": "r106",
+   "tier": "mild",
+   "file": "r106.jpg",
+   "sha256": "69ce4f2a575ddb5c82d16cfaf043244f6380db54674cd1b8a2e0fe2173b4ad5f",
+   "truth": {
+    "merchant": "Old Mill Meadow Pharmacy",
+    "date": "2025-03-05",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 10170,
+    "tax_cents": 903,
+    "total_cents": 11073
+   },
+   "ocr": {
+    "date": "2025-03-05"
+   },
+   "text_only": {
+    "merchant": "Old Mill Meadow Pharmacy",
+    "date": "2025-03-05",
+    "total_cents": 11073
+   },
+   "ocr_ms": 202,
+   "ocr_text": "01d Mill Meadow Pharmacy\n$51 ‘Orchard Rd\n5 Westvale .\n- . Tel 555-0128\n5th March 2025 . 20:34\n| Reg 8 Clerk 60 - SE\nDish, Soap N 19.49\nNotebook 3 .@ 13.76 41.28\"\nPasta 2 @ 10.85 21.70\nAA Batteries . 5.52\nYogurt 11.49\nSoup of the Day-2 @ 1.11 2.22\nSUBTOTAL 101.70\nSales Tax 9.03\nTotal 5 110.73\nVISA ending 8148 110.73 |\n8 ‘Thanks for visiting B\n"
+  },
+  {
+   "id": "r107",
+   "tier": "hard",
+   "file": "r107.jpg",
+   "sha256": "b7d739dbb5d9bb65a5b7a0ebea41686eafca9318b098e599d9736a1df97c113b",
+   "truth": {
+    "merchant": "Twin Oaks Pebble Cafe",
+    "date": "2025-06-02",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 33129,
+    "tax_cents": 2071,
+    "total_cents": 35200
+   },
+   "ocr": {
+    "merchant": "port ELLEry"
+   },
+   "text_only": {
+    "merchant": "Twin Oaks Pebble Cafe",
+    "date": "2025-06-02",
+    "total_cents": 35200
+   },
+   "ocr_ms": 18,
+   "ocr_text": "port ELLEry\nkshelf 2.0\n"
+  },
+  {
+   "id": "r108",
+   "tier": "clean",
+   "file": "r108.png",
+   "sha256": "b43f6b3846594e36373aaa762918857881c2dbf3b2ed0baaa78233988a292477",
+   "truth": {
+    "merchant": "RIVERBEND OTTER MARKET",
+    "date": "2024-05-18",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 7998,
+    "tax_cents": 0,
+    "total_cents": 7998
+   },
+   "ocr": {
+    "merchant": "RIVERBEND OTTER MARKET",
+    "date": "2024-05-18",
+    "total_cents": 7998
+   },
+   "text_only": {
+    "merchant": "RIVERBEND OTTER MARKET",
+    "date": "2024-05-18",
+    "total_cents": 7998
+   },
+   "ocr_ms": 155,
+   "ocr_text": "RIVERBEND OTTER MARKET\n533 Elm Rd\nPort Ellery\n\nTel 555-0195\nDate: 2024-05-18 19:23\nReg 7 Clerk 87\nAA Batteries 4 @ 13.00 52.00\nSourdough Loaf 7.11\nDish Soap 20.87\nSubtotal 79.98\nTax 0.00\nTotal Due 79.98\nMastercard ending 3551 79.98\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r109",
+   "tier": "clean",
+   "file": "r109.png",
+   "sha256": "45305602d50b5f5bc56be0d7e3430a406b65c71429b88baa59d42865a1783ca8",
+   "truth": {
+    "merchant": "LITTLE SPARROW KITCHEN",
+    "date": "2026-07-28",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 6298,
+    "tax_cents": 0,
+    "total_cents": 7432
+   },
+   "ocr": {
+    "merchant": "LITTLE SPARROW KITCHEN",
+    "total_cents": 7432
+   },
+   "text_only": {
+    "merchant": "LITTLE SPARROW KITCHEN",
+    "total_cents": 7432
+   },
+   "ocr_ms": 194,
+   "ocr_text": "LITTLE SPARROW KITCHEN\nSince Forever\n966 Orchard Ave\nWestvale\nTel 555-0116\nDate: 28/07/2026 21:20\nReg 5 Clerk 60\nBananas 4.89\nCroissant 14.30\nCoffee Beans 4 @ 4.85 19.40\nApples 2.12\nApples 22.27\nSubtotal 62.98\nTax 0.00\nTip 11.34\nTOTAL: 74.32 USD\nCash 80.00\nChange 5.68\nThank you, come again\n"
+  },
+  {
+   "id": "r110",
+   "tier": "mild",
+   "file": "r110.png",
+   "sha256": "337928137f6106ea05d0d6f2f91004d508d3000ad9a59414506b0986c469a353",
+   "truth": {
+    "merchant": "Bright Thistle Noodle House",
+    "date": "2026-10-21",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 10832,
+    "tax_cents": 758,
+    "total_cents": 13540
+   },
+   "ocr": {
+    "merchant": "Cedar Hollow,"
+   },
+   "text_only": {
+    "merchant": "Bright Thistle Noodle House",
+    "total_cents": 13540
+   },
+   "ocr_ms": 223,
+   "ocr_text": ". 233 Linden Lane .\nCedar Hollow,\n’ Tel 555-0176 )\n\"DATE Oct 21, 2026 ° © 11:12\nReg 5 Clerk 56 0\nNotebook 3 @ 12.45 - 37.35\n“Wood Glue : Co 24.74\nGreen Tea : . 12.29;\nOlive 0il : : : 8.87\nApples 3'@ 11.69 . © 35.07\nSubtotal . 108.32\nTax 7% ° a 7.58\nTip : . 19.50\nTOTAL: \"135.40 USD |\nVISA ending 6447 135.40\nReturn by Nov 20, 2026.\n. Thank you, come again\n"
+  },
+  {
+   "id": "r111",
+   "tier": "clean",
+   "file": "r111.png",
+   "sha256": "ecc4c150ee5c667721dee9e75c3c328fb38a807a4b5e496f1a960630e1795d2a",
+   "truth": {
+    "merchant": "LITTLE SPARROW GARDEN CENTER",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 5000,
+    "tax_cents": 444,
+    "total_cents": 5444
+   },
+   "ocr": {
+    "merchant": "LITTLE SPARROW GARDEN CENTER",
+    "total_cents": 5444
+   },
+   "text_only": {
+    "merchant": "LITTLE SPARROW GARDEN CENTER",
+    "total_cents": 5444
+   },
+   "ocr_ms": 155,
+   "ocr_text": "LITTLE SPARROW GARDEN CENTER\n889 Elm Ave\nPort Ellery\n\nTel 555-0127\nDate: 04/09/2024 09:15\nReg 7 Clerk 51\nOat Milk 8.17\nNotebook 22.55\nOlive Oil 16.01\nWood Glue 1.69\nOat Milk 1.58\nSub Total 50.00\nTax 4.44\nTotal Due 54.44\nDebit ending 5298 54.44\n\nThank you, come again\n"
+  },
+  {
+   "id": "r112",
+   "tier": "clean",
+   "file": "r112.png",
+   "sha256": "91df958d18ec33433968d57c5fd5e3997def19a6e8c716dce680957a1da5afe4",
+   "truth": {
+    "merchant": "Copper Comet Pantry",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 18053,
+    "tax_cents": 0,
+    "total_cents": 18053
+   },
+   "ocr": {
+    "merchant": "Copper Comet Pantry",
+    "total_cents": 18053
+   },
+   "text_only": {
+    "merchant": "Copper Comet Pantry",
+    "total_cents": 18053
+   },
+   "ocr_ms": 179,
+   "ocr_text": "Copper Comet Pantry\n639 Orchard St\nRiverton\nTel 555-0139\n\nDATE 05/03/2025 08:18\nReg 9 Clerk 46\n\nCoffee Beans 1.57\nEggs Dozen 23.04\nBananas 4 @ 10.49 41.96\nApples 4 @ 23.20 92.80\nEggs Dozen 16.72\nEggs Dozen 4 @ 1.11 4.44\nSUBTOTAL 180.53\nTax 0.00\nTOTAL $180.53\nMastercard ending 3422 180.53\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r113",
+   "tier": "hard",
+   "file": "r113.jpg",
+   "sha256": "9fd7eb75d8a93983da5363ab9f0b01dbdfc435f05d80475e9823a41be5d073c6",
+   "truth": {
+    "merchant": "QUIET PEBBLE PHARMACY",
+    "date": "2026-01-29",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 9452,
+    "tax_cents": 839,
+    "total_cents": 10291
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "QUIET PEBBLE PHARMACY",
+    "total_cents": 10291
+   },
+   "ocr_ms": 27,
+   "ocr_text": "E |\n"
+  },
+  {
+   "id": "r114",
+   "tier": "hard",
+   "file": "r114.jpg",
+   "sha256": "bcd301905518d94966cc61a875b5401ed990f7d89b6d346e989354ea33569b90",
+   "truth": {
+    "merchant": "Amber Lantern Grocery",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 5433,
+    "tax_cents": 217,
+    "total_cents": 5650
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Amber Lantern Grocery",
+    "total_cents": 5650
+   },
+   "ocr_ms": 31,
+   "ocr_text": "E |\n"
+  },
+  {
+   "id": "r115",
+   "tier": "hard",
+   "file": "r115.jpg",
+   "sha256": "52a0c2e7f459f12e324ed0a500694396e15c44be59c73dc3af515456cacb7606",
+   "truth": {
+    "merchant": "Lucky Anchor Pantry",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 4172,
+    "tax_cents": 167,
+    "total_cents": 4339
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Lucky Anchor Pantry",
+    "total_cents": 4339
+   },
+   "ocr_ms": 8,
+   "ocr_text": ""
+  },
+  {
+   "id": "r116",
+   "tier": "clean",
+   "file": "r116.png",
+   "sha256": "8754e706f6acf94893e3a20c759980535723c1ad73edf5da6a1ad27512230ac0",
+   "truth": {
+    "merchant": "COPPER MEADOW MARKET",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 16057,
+    "tax_cents": 642,
+    "total_cents": 16699
+   },
+   "ocr": {
+    "merchant": "COPPER MEADOW MARKET",
+    "total_cents": 16699
+   },
+   "text_only": {
+    "merchant": "COPPER MEADOW MARKET",
+    "total_cents": 16699
+   },
+   "ocr_ms": 215,
+   "ocr_text": "COPPER MEADOW MARKET\n718 Mill Blvd\nMillbrook Falls\nTel 555-0173\n\nReg 8 Clerk 71\nSparkling Water 18.32\nDish Soap 20.80\nCoffee Beans 2 @ 10.11 20.22\nTomatoes 4 @ 18.26 73.04\nPaper Towels 16.57\nEggs Dozen 11.62\nSubtotal 160.57\nTax 4% 6.42\nTOTAL: 166.99\nVISA ending 6255 166.99\n\nThank you, come again\n"
+  },
+  {
+   "id": "r117",
+   "tier": "mild",
+   "file": "r117.png",
+   "sha256": "001bda025ee287438fe1cb8e349996b8fce0660650316236ec90c9082d8acea7",
+   "truth": {
+    "merchant": "BLUE BIRCH PANTRY",
+    "date": "2025-04-12",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 5966,
+    "tax_cents": 418,
+    "total_cents": 6384
+   },
+   "ocr": {
+    "merchant": "Riverton .",
+    "date": "2025-04-12"
+   },
+   "text_only": {
+    "merchant": "BLUE BIRCH PANTRY",
+    "date": "2025-04-12",
+    "total_cents": 6384
+   },
+   "ocr_ms": 212,
+   "ocr_text": "< BLUE BIRCH PANTRY 5\n126 Linden Ave\nRiverton .\nTel 555-0194 :\nDATE Apr 12, 2025 21:38\nReg 4 Clerk 74 . i\nOlive 0il . 9.76\nPacking Tape i \"18.97\nNotebook 6.62\nCheddar 20.02\nDish Soap i . 4.29\nTotal Items ’ 5\nSubtotal . 59.66\nTax 0 © 4.18\nGrand Total 63.84 USD -\nDebit ending 9668 63.84\n. Thank you, come, again\n"
+  },
+  {
+   "id": "r118",
+   "tier": "mild",
+   "file": "r118.jpg",
+   "sha256": "2ab49fc892cd023b4bc7ca29f900107cbe5d80adac404e45125ec9e6b99c715a",
+   "truth": {
+    "merchant": "Golden Acorn Pharmacy",
+    "date": "2024-04-17",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 10111,
+    "tax_cents": 708,
+    "total_cents": 10819
+   },
+   "ocr": {
+    "merchant": "Golden Acorn Pharmacy",
+    "date": "2024-04-17"
+   },
+   "text_only": {
+    "merchant": "Golden Acorn Pharmacy",
+    "date": "2024-04-17",
+    "total_cents": 10819
+   },
+   "ocr_ms": 186,
+   "ocr_text": "Golden Acorn Pharmacy\n288 Kestrel Ave E\nEastbrook 5\nI Tel 555-0192\n* Date: 2024-04-17 08:38\nReg 9 Clerk 43\nPasta = - ) 5.37\nPacking Tape 4 @ 14.44 57.76\nYogurt 3 @ 12.66 5 -37.98\nTotal Items CTs\nSub Total 5 101.11\nTax 7% Eg 7.08\nBalance Due . -108.19 USD\nMastercard ending 5996 108.19\n: Thank you, come again.\n"
+  },
+  {
+   "id": "r119",
+   "tier": "hard",
+   "file": "r119.jpg",
+   "sha256": "1c1fd0a4482314a3e41c0d9f73bfd40836eb6fe1446c7910f2a3ae0acf6f9397",
+   "truth": {
+    "merchant": "BRIGHT SPARROW SUPPLY",
+    "date": "2025-07-18",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 3966,
+    "tax_cents": 159,
+    "total_cents": 4125
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "BRIGHT SPARROW SUPPLY",
+    "date": "2025-07-18",
+    "total_cents": 4125
+   },
+   "ocr_ms": 28,
+   "ocr_text": "E\n"
+  },
+  {
+   "id": "r120",
+   "tier": "mild",
+   "file": "r120.png",
+   "sha256": "8d768e01c137d236cc49bf63b3887474475b50543f080a8a66fafb3da15cbdff",
+   "truth": {
+    "merchant": "Golden Lantern Grocery",
+    "date": "2025-12-25",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 2576,
+    "tax_cents": 229,
+    "total_cents": 2805
+   },
+   "ocr": {
+    "merchant": "\"Golden Lanter Grocery",
+    "date": "2025-12-25",
+    "total_cents": 2805
+   },
+   "text_only": {
+    "merchant": "Golden Lantern Grocery",
+    "date": "2025-12-25",
+    "total_cents": 2805
+   },
+   "ocr_ms": 148,
+   "ocr_text": "\"Golden Lanter Grocery\n\"473 Larch Ave -\n: “Port Ellery\n© Tel 555-0187\nDATE December 25 2025 21:29\nReg 9 Clerk 94\n\"Tomatoes 3.63\nTomatoes 22.13,\nSUBTOTAL . 25.76\nSales Tax ° : 2.29\nAmount Due USD 28.05\nVISA ending 8062 28.05\no Have a nice. day\n"
+  },
+  {
+   "id": "r121",
+   "tier": "mild",
+   "file": "r121.png",
+   "sha256": "befd51c8ebb2486400d66bab498bfb92b5aa061162a42fb7b89b3895bbd82f7c",
+   "truth": {
+    "merchant": "AMBER PINE GROCERY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 6406,
+    "tax_cents": 448,
+    "total_cents": 6854
+   },
+   "ocr": {
+    "merchant": ". AMBER PINE GROCERY."
+   },
+   "text_only": {
+    "merchant": "AMBER PINE GROCERY",
+    "total_cents": 6854
+   },
+   "ocr_ms": 196,
+   "ocr_text": ". AMBER PINE GROCERY.\nI 176 Eim Blvd Co\n40 Riverton\n- Tel 555-0151\n01-05-2024 5 13:42\nReg1Clerks4 . )\nLate ~~ CL oo”\n* Bananas . - 154\nApples 2 @ 18.60 87.20\nYogut © 1064\nNotebook So ae7\nTotal tems . 5\n* SUBTOTAL 64.06\n.SalesTax  -. 4:48\nTotal Due . $68.54\nDebitending 6338 68.54\nThank you, come again\n"
+  },
+  {
+   "id": "r122",
+   "tier": "mild",
+   "file": "r122.jpg",
+   "sha256": "171e666f43ad7d290cef5251d4904111d3fedfd691943ea77214adbd8669013e",
+   "truth": {
+    "merchant": "RED DOOR PINE GROCERY",
+    "date": "2024-04-18",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 8400,
+    "tax_cents": 336,
+    "total_cents": 8736
+   },
+   "ocr": {
+    "merchant": "RED DOOR PINE GROCERY",
+    "date": "2024-04-18"
+   },
+   "text_only": {
+    "merchant": "RED DOOR PINE GROCERY",
+    "date": "2024-04-18",
+    "total_cents": 8736
+   },
+   "ocr_ms": 154,
+   "ocr_text": "RED DOOR PINE GROCERY\ni Neighborhood Favorite\n. 100 Mill St -\nWestvale . 3\n- Tel 555-0131 )\n18 April, 2024 : © oper:\nReg’5 Clerk 18\nTomatoes 3 @ 21.21 © 6363\n_ Wood Glue . 20.37\nSubtotal i 84:00\nSales Tax 3.36\nBalance Due USD 87.36.\nCash 100.00 J\nChange 12.64\nThank you, come again *\n"
+  },
+  {
+   "id": "r123",
+   "tier": "clean",
+   "file": "r123.png",
+   "sha256": "6ced84136a5b14bbff7e1d363b204faa999e174c1e03548a0f7d71c46832d3bd",
+   "truth": {
+    "merchant": "Northside Fox Hardware",
+    "date": "2025-04-05",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 4232,
+    "tax_cents": 265,
+    "total_cents": 4497
+   },
+   "ocr": {
+    "merchant": "Northside Fox Hardware",
+    "date": "2025-04-05",
+    "total_cents": 4497
+   },
+   "text_only": {
+    "merchant": "Northside Fox Hardware",
+    "date": "2025-04-05",
+    "total_cents": 4497
+   },
+   "ocr_ms": 141,
+   "ocr_text": "Northside Fox Hardware\n947 Quarry Lane\nCedar Hollow\nTel 555-0136\nDATE 5 Apr, 2025 20:14\nReg 6 Clerk 68\nBananas 11.07\nBananas 19.96\nCheddar 11.29\nSub Total 42.32\nSales Tax 2.65\nTOTAL 44.97\nCash 60.00\nChange 15.03\nThanks for visiting\n"
+  },
+  {
+   "id": "r124",
+   "tier": "clean",
+   "file": "r124.png",
+   "sha256": "c0948f7975d9ea4fe6d2046073c423a705ba7a37ea3a438b20017da12f28e8df",
+   "truth": {
+    "merchant": "Bright Comet Garden Center",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 5401,
+    "tax_cents": 0,
+    "total_cents": 5401
+   },
+   "ocr": {
+    "merchant": "Bright Comet Garden Center",
+    "total_cents": 5401
+   },
+   "text_only": {
+    "merchant": "Bright Comet Garden Center",
+    "total_cents": 5401
+   },
+   "ocr_ms": 151,
+   "ocr_text": "Bright Comet Garden Center\n594 Hawthorn Lane\n\nMillbrook Falls\n\nTel 555-0162\nReg 1 Clerk 50\nNotebook 3 @ 4.99 14.97\nNotebook 23.24\nOlive Oil 2 @ 7.90 15.80\nTotal ltems 3\nSub Total 54.01\nTax 0.00\nBalance Due USD 54.01\nDebit ending 4430 54.01\n\nThank you, come again\n"
+  },
+  {
+   "id": "r125",
+   "tier": "hard",
+   "file": "r125.jpg",
+   "sha256": "ab77c15df7c95c183493ac92fd70fe7eb164f4165f8bed1ce48c565e3896f24a",
+   "truth": {
+    "merchant": "HARBOR FOX SUPPLY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 677,
+    "tax_cents": 27,
+    "total_cents": 704
+   },
+   "ocr": {
+    "merchant": "ARBOR FOX SUPPLY",
+    "total_cents": 400
+   },
+   "text_only": {
+    "merchant": "HARBOR FOX SUPPLY",
+    "total_cents": 704
+   },
+   "ocr_ms": 82,
+   "ocr_text": "ARBOR FOX SUPPLY\na Quarry Bivd\n08 14¢\nfe 4 Clerk 13\n1.69\npacking Tape 3\nubtotd 0.27\nBalance Due 04\n5 204\nVISA ending 7472\nThank you, come agair\n"
+  },
+  {
+   "id": "r126",
+   "tier": "clean",
+   "file": "r126.png",
+   "sha256": "aef6a74e9e44843105f3c0768900702cbf60b5a844930586bcb2fd380aa40f47",
+   "truth": {
+    "merchant": "Old Mill Acorn Grocery",
+    "date": "2024-07-22",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 5441,
+    "tax_cents": 381,
+    "total_cents": 5822
+   },
+   "ocr": {
+    "merchant": "Eastbrook",
+    "date": "2024-07-22",
+    "total_cents": 5822
+   },
+   "text_only": {
+    "merchant": "Old Mill Acorn Grocery",
+    "date": "2024-07-22",
+    "total_cents": 5822
+   },
+   "ocr_ms": 158,
+   "ocr_text": "01d Mill Acorn Grocery\n142 Mill St\nEastbrook\nTel 555-0143\nDate: 2024-07-22 17:08\nReg 5 Clerk 52\nCheddar 21.14\nCoffee Beans 3.18\nLatte 9.17\nGreen Tea 14.04\nAA Batteries 6.88\nSubtotal 54.41\nsales Tax 3.81\nBalance Due 58.22\ncash 60.00\nChange 1.78\nThank you, come again\n"
+  },
+  {
+   "id": "r127",
+   "tier": "clean",
+   "file": "r127.png",
+   "sha256": "e3a66e0ae99dfbaca8d21d9100816d01fc379d4217e7e7da7a9c4e1ed4a6bf8e",
+   "truth": {
+    "merchant": "Willow Anchor Noodle House",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 2301,
+    "tax_cents": 161,
+    "total_cents": 2922
+   },
+   "ocr": {
+    "merchant": "‘Willow Anchor Noodle House",
+    "total_cents": 2922
+   },
+   "text_only": {
+    "merchant": "Willow Anchor Noodle House",
+    "total_cents": 2922
+   },
+   "ocr_ms": 161,
+   "ocr_text": "‘Willow Anchor Noodle House\nGood Food Good Mood\n85 Orchard Blvd\nEastbrook\nTel 555-0162\n\nDATE 10-05-24 08:03\nReg 1 Clerk 70\nApples 9.61\n‘Wood Glue 13.40\nTotal Items 2\nSubtotal 23.01\nTax 1.61\nTip 4.60\nTotal 29.22\nCash 40.00\nChange 10.78\n\nThank you, come again\n"
+  },
+  {
+   "id": "r128",
+   "tier": "clean",
+   "file": "r128.png",
+   "sha256": "4694080d1876d5a0eff177acc218af480d4ee0767b14f6c86120c4714b0c0618",
+   "truth": {
+    "merchant": "QUIET ANCHOR BOOKS",
+    "date": "2024-10-06",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 57858,
+    "tax_cents": 0,
+    "total_cents": 57858
+   },
+   "ocr": {
+    "merchant": "QUIET ANCHOR BOOKS",
+    "date": "2024-10-06"
+   },
+   "text_only": {
+    "merchant": "QUIET ANCHOR BOOKS",
+    "date": "2024-10-06",
+    "total_cents": 57858
+   },
+   "ocr_ms": 210,
+   "ocr_text": "QUIET ANCHOR BOOKS\n269 Linden Ave\nRiverton\n\nTel 555-0146\nDate: 6 October 2024 10:30\nReg 5 Clerk 86\nBookshelf 450.75\nSoup of the Day 2 @ 18.36 36.72\nPasta 8.90\nOat Milk 4 @ 15.13 60.52\nLight Bulb 21.69\nSUBTOTAL 578.58\nTax 0.00\nGrand Total Usb 578.58\nMastercard ending 7887 578.58\nTotal Savings 1.29\n\nHave a nice day\n"
+  },
+  {
+   "id": "r129",
+   "tier": "hard",
+   "file": "r129.jpg",
+   "sha256": "bd8f871306c179778f0ac7228ef420ae8f5491c4400c8dcba8b55b994215ceaa",
+   "truth": {
+    "merchant": "QUIET WREN BISTRO",
+    "date": "2025-07-23",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 33075,
+    "tax_cents": 2646,
+    "total_cents": 42336
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "QUIET WREN BISTRO",
+    "date": "2025-07-23",
+    "total_cents": 42336
+   },
+   "ocr_ms": 27,
+   "ocr_text": "| |\n"
+  },
+  {
+   "id": "r130",
+   "tier": "mild",
+   "file": "r130.jpg",
+   "sha256": "0d173afea8f2dfcc3373e733d524c685ebf112213aea9cdd572a777379581bfd",
+   "truth": {
+    "merchant": "Blue Kettle Kitchen",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 9747,
+    "tax_cents": 780,
+    "total_cents": 10527
+   },
+   "ocr": {
+    "merchant": "Blue Kettle Kitchen",
+    "total_cents": 10527
+   },
+   "text_only": {
+    "merchant": "Blue Kettle Kitchen",
+    "total_cents": 10527
+   },
+   "ocr_ms": 122,
+   "ocr_text": "Blue Kettle Kitchen\n485 Hawthom Lane\n. Millbrook Falls\nTel 555-0105\nReg 4 Clerk 10\nSoup of the Day 5.61\nBananas 4 @ 16.81 67.24\nDish Soap 2 @ 12.31 24.62\nSUBTOTAL i 97.47\nSales Tax 7.80\nTOTAL: $105.27\nVISA ending 7069 105.27\nHave a nice day\n"
+  },
+  {
+   "id": "r131",
+   "tier": "clean",
+   "file": "r131.png",
+   "sha256": "51cd8fdee47109daaab88fa7e921c26ae76bab713088bf124dbb3e1a8c876647",
+   "truth": {
+    "merchant": "GOLDEN THISTLE PHARMACY",
+    "date": "2026-09-14",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 5241,
+    "tax_cents": 465,
+    "total_cents": 5706
+   },
+   "ocr": {
+    "merchant": "GOLDEN THISTLE PHARMACY",
+    "date": "2026-09-14",
+    "total_cents": 5706
+   },
+   "text_only": {
+    "merchant": "GOLDEN THISTLE PHARMACY",
+    "date": "2026-09-14",
+    "total_cents": 5706
+   },
+   "ocr_ms": 163,
+   "ocr_text": "GOLDEN THISTLE PHARMACY\n515 Elm St\nPort Ellery\nTel 555-0169\nSeptember 14, 2026 08:02\nReg 3 Clerk 19\nOat Milk 7.85\nApples 5.68\nLatte 3.30\nNotebook 14.44\nApples 14.21\nPasta 6.93\nSub Total 52.41\nTax 8.875% 4.65\nTotal $57.06\nMastercard ending 5080 57.06\nThanks for visiting\n"
+  },
+  {
+   "id": "r132",
+   "tier": "clean",
+   "file": "r132.png",
+   "sha256": "3ce77058d0ab711d45a6d586f7857b4fbbff0ab955dd7c958ffb8c42634db2fe",
+   "truth": {
+    "merchant": "CEDAR LANTERN BOOKS",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 8633,
+    "tax_cents": 345,
+    "total_cents": 8978
+   },
+   "ocr": {
+    "merchant": "CEDAR LANTERN BOOKS",
+    "total_cents": 8978
+   },
+   "text_only": {
+    "merchant": "CEDAR LANTERN BOOKS",
+    "total_cents": 8978
+   },
+   "ocr_ms": 171,
+   "ocr_text": "CEDAR LANTERN BOOKS\n430 EIm Rd\n\nMillbrook Falls\n\nTel 555-0116\n06.02.2025 08:20\nReg 7 Clerk 73\nOlive Oil 12.01\nEggs Dozen 9.30\nPacking Tape 17.84\nYogurt 9.94\nCheddar 13.01\nAA Batteries 24.23\nSubtotal 86.33\nSales Tax 3.45\nTotal $89.78\nCash 100.00\nChange 10.22\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r133",
+   "tier": "mild",
+   "file": "r133.jpg",
+   "sha256": "22c984f00f734f2b574c62f3878d005540ae6232d6645fb780b280e839abad7b",
+   "truth": {
+    "merchant": "Dock 41 Pharmacy",
+    "date": "2026-07-09",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 2916,
+    "tax_cents": 259,
+    "total_cents": 3175
+   },
+   "ocr": {
+    "merchant": "Millbrook Falls",
+    "date": "2026-07-09"
+   },
+   "text_only": {
+    "merchant": "Millbrook Falls",
+    "date": "2026-07-09",
+    "total_cents": 3175
+   },
+   "ocr_ms": 155,
+   "ocr_text": "Dock 41 Pharmacy\n309 Mill St\nMillbrook Falls\nTel 555-0166\nDATE 9 Jul, 2026 11:35\nReg 1 Clerk 63 }\nWood Glue 3.89\nPacking Tape 171\nPacking Tape 23,56\nSub Total 29.16\nTax 8.875% . 2.59\nTOTAL: Usb 31.75\nMastercard ending 6861 31.75\nHave a nice day\n"
+  },
+  {
+   "id": "r134",
+   "tier": "clean",
+   "file": "r134.png",
+   "sha256": "27ab7b8f9f12d98daf0bad286a4c188d1bca47a01f32ceb2fafa6af810d2449e",
+   "truth": {
+    "merchant": "BLUE WREN KITCHEN",
+    "date": "2026-10-14",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 3277,
+    "tax_cents": 205,
+    "total_cents": 3482
+   },
+   "ocr": {
+    "merchant": "BLUE WREN KITCHEN",
+    "total_cents": 3482
+   },
+   "text_only": {
+    "merchant": "BLUE WREN KITCHEN",
+    "total_cents": 3482
+   },
+   "ocr_ms": 162,
+   "ocr_text": "BLUE WREN KITCHEN\n836 Hawthorn St\nPort Ellery\nTel 555-0137\nOctober 14, 2026 07:29\nReg 2 Clerk 96\nEggs Dozen 19.74\nSourdough Loaf 13.03\nSub Total 32.77\nTax 6.25% 2.05\nBalance Due USD 34.82\nMastercard ending 2640 34.82\nReturn by November 13, 2026\nThanks for visiting\n"
+  },
+  {
+   "id": "r135",
+   "tier": "clean",
+   "file": "r135.png",
+   "sha256": "c21465a751eaacc48592aa8e5cab79c443781b2a86872f2cd10caf51f3de1459",
+   "truth": {
+    "merchant": "Maple Pebble Cafe",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 10776,
+    "tax_cents": 431,
+    "total_cents": 11207
+   },
+   "ocr": {
+    "merchant": "Maple Pebble Cafe",
+    "total_cents": 11207
+   },
+   "text_only": {
+    "merchant": "Maple Pebble Cafe",
+    "total_cents": 11207
+   },
+   "ocr_ms": 188,
+   "ocr_text": "Maple Pebble Cafe\n588 Mill St\nMillbrook Falls\nTel 555-0145\n01.07.2024 14:14\nReg 3 Clerk 85\nCheddar 4 @ 7.68 30.72\nGarden Hose 19.18\nAA Batteries 4 @ 13.60 54.40\nSourdough Loaf 3.46\nSUBTOTAL 107.76\nSales Tax 4.31\nTOTAL: 112.07\nCash 120.00\nChange 7.93\nThanks for visiting\n"
+  },
+  {
+   "id": "r136",
+   "tier": "clean",
+   "file": "r136.png",
+   "sha256": "99ca7a1479f17c17e62bd962668a3f5a4b4d4f5d222ec1932e29e41fe6cd3885",
+   "truth": {
+    "merchant": "PIER 84 HARDWARE",
+    "date": "2026-09-11",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 7689,
+    "tax_cents": 0,
+    "total_cents": 7689
+   },
+   "ocr": {
+    "merchant": "port Ellery",
+    "date": "2026-09-11",
+    "total_cents": 7689
+   },
+   "text_only": {
+    "merchant": "Port Ellery",
+    "date": "2026-09-11",
+    "total_cents": 7689
+   },
+   "ocr_ms": 170,
+   "ocr_text": "PIER 84 HARDWARE\n299 Elm Lane\nport Ellery\nTel 555-0116\nDate: September 11, 2026 19:08\nReg 1 Clerk 71\nCroissant 4 @ 3.12 12.48\nCheddar 22.97\nDish Soap 19.72\nRice 21.72\nSUBTOTAL 76.89\nTax 0.00\nTotal Due USD 76.89\nMastercard ending 2486 76.89\nHave a nice day\n"
+  },
+  {
+   "id": "r137",
+   "tier": "clean",
+   "file": "r137.png",
+   "sha256": "d3da2fc12c9540bd01ef3c8573d1f0d38c916da0797c1b8c05f02e4d29cc01a6",
+   "truth": {
+    "merchant": "NORTHSIDE PINE SUPPLY",
+    "date": "2024-06-22",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 7114,
+    "tax_cents": 498,
+    "total_cents": 7612
+   },
+   "ocr": {
+    "merchant": "NORTHSIDE PINE SUPPLY",
+    "date": "2024-06-22",
+    "total_cents": 7612
+   },
+   "text_only": {
+    "merchant": "NORTHSIDE PINE SUPPLY",
+    "date": "2024-06-22",
+    "total_cents": 7612
+   },
+   "ocr_ms": 202,
+   "ocr_text": "NORTHSIDE PINE SUPPLY\nGood Food Good Mood\n737 Kestrel Blvd\nPort Ellery\nTel 555-0118\n2024-06-22 09:03\nReg 1 Clerk 69\nLatte 20.37\nSoup of the Day 19.65\nLatte 13.04\nBananas 13.55\nWood Glue 4.53\nSub Total 71.14\nSales Tax 4.98\nTotal 76.12 USD\nCash 80.00\nChange 3.88\nThank you, come again\n"
+  },
+  {
+   "id": "r138",
+   "tier": "mild",
+   "file": "r138.png",
+   "sha256": "c3e5eb67a0e619a84eb735a5d8f3f16ed2e764292574d4016830768db5411074",
+   "truth": {
+    "merchant": "Lucky Otter Deli",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 10400,
+    "tax_cents": 923,
+    "total_cents": 11323
+   },
+   "ocr": {
+    "merchant": ". \"Lucky Otter Deli )"
+   },
+   "text_only": {
+    "merchant": "Lucky Otter Deli",
+    "total_cents": 11323
+   },
+   "ocr_ms": 197,
+   "ocr_text": ". \"Lucky Otter Deli )\n246 Ferry Blvd co\n\n: Port Ellery .\n\n\"Tel 555-0182 -\n12/06/2025 2 Cor\nReg 5 Clerk 96 . .\nBananas - 9.69\nYogurt 4 @ 5.96 23.84\nPaper Towels 3 @ 12.47 . 37.41\nSourdough Loaf ~~ + . 9.28 °\nGreen Tea LC 1215\n\n_ Soup of the Day 11.63\nSub Total . “104.00\n“Tax o 9.23\nTotal Due + USD 113.23\nVISA ending 6923 113.23\n\nThank you; come again .\n"
+  },
+  {
+   "id": "r139",
+   "tier": "clean",
+   "file": "r139.png",
+   "sha256": "98796babed37ad785cf22a2ec6bbd716cba794b698b69c1e904425f9518b70d6",
+   "truth": {
+    "merchant": "JUNIPER ACORN DELI",
+    "date": "2024-09-30",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 1768,
+    "tax_cents": 124,
+    "total_cents": 1892
+   },
+   "ocr": {
+    "merchant": "JUNIPER ACORN DELI",
+    "date": "2024-09-30",
+    "total_cents": 1892
+   },
+   "text_only": {
+    "merchant": "JUNIPER ACORN DELI",
+    "date": "2024-09-30",
+    "total_cents": 1892
+   },
+   "ocr_ms": 124,
+   "ocr_text": "JUNIPER ACORN DELI\n\n797 Quarry St\n\nCedar Hollow\n\nTel 555-0128\n30 September 2024 10:46\nReg 6 Clerk 66\nOat Milk 8.76\nCheddar 8.92\nSubtotal 17.68\nSales Tax 1.24\nTotal $18.92\nMastercard ending 9309 18.92\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r140",
+   "tier": "hard",
+   "file": "r140.jpg",
+   "sha256": "09de4ea8949eed3fb2ece87d63b52a8c9f66260e34e434977eea44595426c4b6",
+   "truth": {
+    "merchant": "NORTHSIDE HERON PHARMACY",
+    "date": "2024-11-17",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 87828,
+    "tax_cents": 3513,
+    "total_cents": 91341
+   },
+   "ocr": {
+    "merchant": "+ - NORTHSIDE HERON PHARMACY"
+   },
+   "text_only": {
+    "merchant": "NORTHSIDE HERON PHARMACY",
+    "total_cents": 91341
+   },
+   "ocr_ms": 163,
+   "ocr_text": "+ - NORTHSIDE HERON PHARMACY\nL565 Mill st\nEastbrook Ey\nTel 555-0149\n11/17.42024 ¢ 17:22\nReg 7 Clérk 95 i .\nBookshelf ’ 848.62\noat Milk 15.36\nsoup of the Day 9.51\npish Soap Loam\nsub Total . . 878.28\nsales Tax 35.13\nAmotnt Due $913.41\nVISA ending 5383 913,41\nThanks for visiting\n"
+  },
+  {
+   "id": "r141",
+   "tier": "mild",
+   "file": "r141.jpg",
+   "sha256": "3eccedf864abcc7fa13ecefdebc88547273c5e337e6c5d7d5611d34250824423",
+   "truth": {
+    "merchant": "Copper Anchor Market",
+    "date": "2024-01-23",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 9506,
+    "tax_cents": 665,
+    "total_cents": 10171
+   },
+   "ocr": {
+    "merchant": "- Copper Anchor Market",
+    "date": "2024-01-23",
+    "total_cents": 10171
+   },
+   "text_only": {
+    "merchant": "Copper Anchor Market",
+    "date": "2024-01-23",
+    "total_cents": 10171
+   },
+   "ocr_ms": 229,
+   "ocr_text": "- Copper Anchor Market\n238 Hawthorn Lane\ni Westvale *\nI Tel 555-0155. oo\nDate: 2024-01-23 15:57\n__Reg 6 Clerk-33\nAA Batteries 20.09 .\nRice sa 20.36\nNotebook 3.01\n“Soup of the Day =~ -. .* 20,92\nCoffee Beans + 15.94\nSourdough Loaf 14.74\nSub Total . 95.06\nsales Tax 6.65\nBalance Due $101.71\nDebit ending 3110 101.71\nThanks for visiting\n"
+  },
+  {
+   "id": "r142",
+   "tier": "hard",
+   "file": "r142.jpg",
+   "sha256": "f4c0fa9a7cd55ff4d33c7dc2e52fa988883039d9679d28780eaef1041e92e230",
+   "truth": {
+    "merchant": "Amber Acorn Kitchen",
+    "date": "2025-05-15",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 3941,
+    "tax_cents": 246,
+    "total_cents": 4778
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Amber Acorn Kitchen",
+    "date": "2025-05-15",
+    "total_cents": 4778
+   },
+   "ocr_ms": 7,
+   "ocr_text": ""
+  },
+  {
+   "id": "r143",
+   "tier": "hard",
+   "file": "r143.jpg",
+   "sha256": "0066a0ee401fffd126e6cb8940c15f533d9f7b0130e41011be3549133ef4e8bc",
+   "truth": {
+    "merchant": "Pier 56 Hardware",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 18168,
+    "tax_cents": 1272,
+    "total_cents": 19440
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Riverton",
+    "total_cents": 19440
+   },
+   "ocr_ms": 24,
+   "ocr_text": "2\n"
+  },
+  {
+   "id": "r144",
+   "tier": "mild",
+   "file": "r144.png",
+   "sha256": "ab358d9a5266f2c7eecc84539935e8bdc95e78e9866259d97f3be2ed7782a04f",
+   "truth": {
+    "merchant": "GOLDEN PEBBLE PANTRY",
+    "date": "2025-06-09",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 21133,
+    "tax_cents": 1691,
+    "total_cents": 22824
+   },
+   "ocr": {
+    "merchant": ". GOLDEN PEBBLE PANTRY",
+    "date": "2025-06-09",
+    "total_cents": 22824
+   },
+   "text_only": {
+    "merchant": "GOLDEN PEBBLE PANTRY",
+    "date": "2025-06-09",
+    "total_cents": 22824
+   },
+   "ocr_ms": 221,
+   "ocr_text": ". GOLDEN PEBBLE PANTRY\n5 \"131 Quarry St . -\nMillbrook Falls\nTel 555-0197\"  -\nDATE Jun 9, 2025 12:18\nReg 9 Clerk 14 co\nDish Soap © \"10.23\nRice ’ 17.19\nCroissant . ‘13.73\nCheddar 4 @°24.94 99.76\nWood Glue . 12.50\nPaper Towels 4 @-14.48 57.92\nTotal Items : 6\nSUBTOTAL kL : 211.33\nTax © + 16.91\nBalance Due : $228.24\nDebit ending 4432 228.24\nThank you, - come again\n"
+  },
+  {
+   "id": "r145",
+   "tier": "mild",
+   "file": "r145.png",
+   "sha256": "528c285c48a2781e5a41c9810a65b5f953ca727bcba199b54f87f3b9d8fab35f",
+   "truth": {
+    "merchant": "GOLDEN MEADOW CAFE",
+    "date": "2024-09-30",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 67832,
+    "tax_cents": 5427,
+    "total_cents": 85469
+   },
+   "ocr": {
+    "merchant": "GOLDEN MEADOW CAFE",
+    "total_cents": 85469
+   },
+   "text_only": {
+    "merchant": "GOLDEN MEADOW CAFE",
+    "total_cents": 85469
+   },
+   "ocr_ms": 209,
+   "ocr_text": "GOLDEN MEADOW CAFE\n488 Bayview Ave .\n_ . Port Ellery\nTel 555-0188\nDATE 30/09/2024 17:42\nReg 2 Clerk 51 :\nBookshelf © 625.88\nOlive 0il 20.54\n\" Olive 0il . 2.36\nCroissant 5 11.72\nWood Glue 16.11\nGarden Hose . 1.71\nSub Total . 678.32\nTax © 54.27\nTip 5 Lo © 122.10\nTOTAL: USD 854.69\nDebit ending 7098 854.69\nThanks for. visiting\n"
+  },
+  {
+   "id": "r146",
+   "tier": "mild",
+   "file": "r146.jpg",
+   "sha256": "fa5eb15f3f9a97150531f8ab5186ea2c63e2335b9c8298ac0a2de900db253344",
+   "truth": {
+    "merchant": "RIVERBEND ANCHOR HARDWARE",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 14238,
+    "tax_cents": 1139,
+    "total_cents": 15377
+   },
+   "ocr": {
+    "merchant": "* RIVERBEND ANCHOR HARDWARE"
+   },
+   "text_only": {
+    "merchant": "RIVERBEND ANCHOR HARDWARE",
+    "total_cents": 15377
+   },
+   "ocr_ms": 246,
+   "ocr_text": "* RIVERBEND ANCHOR HARDWARE\n: 555 Larch Lane. ©\nor Eastbrock ;\n¥ \"Tel 555-0131\nRedocleks\nPasta - La Cn ed\nBananas x © 2428\nAA Batteries “1309\nCroissant 4 @ 14.55 -58.20\n“iRlce 2439\n* SUBTOTAL a 142.38\nAen ee Eres\nTOTAL MPL I: I re\nVisAending1361  - * gyp\ni . Thanks for visiting ’\n"
+  },
+  {
+   "id": "r147",
+   "tier": "hard",
+   "file": "r147.jpg",
+   "sha256": "a4ea45871c669de9ea3fccc6cc8e786746735f0dea815c2c0218f7afaa27bfd1",
+   "truth": {
+    "merchant": "Twin Oaks Otter Pantry",
+    "date": "2026-08-13",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 5329,
+    "tax_cents": 333,
+    "total_cents": 5662
+   },
+   "ocr": {
+    "merchant": "Twin Oaks Otter Pantry",
+    "date": "2026-08-13",
+    "total_cents": 5662
+   },
+   "text_only": {
+    "merchant": "Twin Oaks Otter Pantry",
+    "date": "2026-08-13",
+    "total_cents": 5662
+   },
+   "ocr_ms": 154,
+   "ocr_text": "Twin Oaks Otter Pantry\n401 Orchard Bivd\nMillbrook Falls\nTel 555-0167\nDATE 2026-08-13 08:06\nReg 8 Clerk 87\nApples 16.90\nEggs Dozen 1.10\nCoffee Beans 23.74\nCheddar 1.42\nApples 4.37\nSourdough Loaf 5.76\nSub Total 53.29\nTax 6.25% 3.33\nTotal $56.62\nMastercard ending go7¢ 56.62\nThank you, come again\n"
+  },
+  {
+   "id": "r148",
+   "tier": "clean",
+   "file": "r148.png",
+   "sha256": "f2090c95a4009313c991aa953d5433dbdbe9f39f6adaa99b9a0db169f1315925",
+   "truth": {
+    "merchant": "OLD MILL PEBBLE BOOKS",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 8146,
+    "tax_cents": 0,
+    "total_cents": 8146
+   },
+   "ocr": {
+    "merchant": "OLD MILL PEBBLE BOOKS",
+    "total_cents": 8146
+   },
+   "text_only": {
+    "merchant": "OLD MILL PEBBLE BOOKS",
+    "total_cents": 8146
+   },
+   "ocr_ms": 162,
+   "ocr_text": "OLD MILL PEBBLE BOOKS\n375 Bayview Lane\nRiverton\nTel 555-0194\n\n06/10/2025 10:54\nReg 6 Clerk 45\nNotebook 10.27\nDish Soap 20.13\nSparkling Water 5.34\nGarden Hose 2 @ 22.86 45.72\nSUBTOTAL 81.46\nTax 0.00\nTOTAL 81.46 USD\nMastercard ending 2856 81.46\n\nHave a nice day\n"
+  },
+  {
+   "id": "r149",
+   "tier": "mild",
+   "file": "r149.png",
+   "sha256": "4ad6ed5e6191778658211d8f4c363fdf1b9ef8b77d6086dc39c73f7f64befd5f",
+   "truth": {
+    "merchant": "AMBER MEADOW HARDWARE",
+    "date": "2025-04-05",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 7967,
+    "tax_cents": 707,
+    "total_cents": 8674
+   },
+   "ocr": {
+    "merchant": "AMBER MEADOW HARDWARE",
+    "date": "2025-04-05",
+    "total_cents": 8674
+   },
+   "text_only": {
+    "merchant": "AMBER MEADOW HARDWARE",
+    "date": "2025-04-05",
+    "total_cents": 8674
+   },
+   "ocr_ms": 208,
+   "ocr_text": "AMBER MEADOW HARDWARE\n836 Bayview Rd\n: Riverton :\n\n. Tel.555-0198 Le\nDATE Apr 5 2025 07:16\nReg 1 Clerk 46 N :\nWood Glue 24.85\nOat Milk . 19.51\nSoup of the Day 4.38\nWood Glue : 8 20.43\nPaper Towels 10.50\nSub Total ~ © 79.67\nTax 7.07.\nBalance Due $86.74\nCash . 0 100.00,\nChange 13.26\n\n’ Thanks “for visiting i\n"
+  },
+  {
+   "id": "r150",
+   "tier": "hard",
+   "file": "r150.jpg",
+   "sha256": "1e5e9d7b9838fc5d7b6b1a637910f23486b1fb3f85997fb672016214a4e5d9a5",
+   "truth": {
+    "merchant": "COPPER OTTER PHARMACY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 9062,
+    "tax_cents": 725,
+    "total_cents": 9787
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "COPPER OTTER PHARMACY",
+    "total_cents": 9787
+   },
+   "ocr_ms": 7,
+   "ocr_text": ""
+  },
+  {
+   "id": "r151",
+   "tier": "clean",
+   "file": "r151.png",
+   "sha256": "3f2df922dcc9791652d727e66e9a3ce179d3fa775c48a0da3d14ff0852a34244",
+   "truth": {
+    "merchant": "BRIGHT ANCHOR MARKET",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 16154,
+    "tax_cents": 0,
+    "total_cents": 16154
+   },
+   "ocr": {
+    "merchant": "BRIGHT ANCHOR MARKET",
+    "total_cents": 16154
+   },
+   "text_only": {
+    "merchant": "BRIGHT ANCHOR MARKET",
+    "total_cents": 16154
+   },
+   "ocr_ms": 166,
+   "ocr_text": "BRIGHT ANCHOR MARKET\n811 Hawthorn Ave\nPort Ellery\nTel 555-0132\n\nReg 7 Clerk 48\nOlive Oil 4 @ 4.79 19.16\nApples 18.54\nCroissant 17.47\nEggs Dozen 4 @ 24.97 99.88\nApples 3.53\nCroissant 2.96\nSub Total 161.54\nTax 0.00\nTotal Due 161.54 USD\nCash 180.00\nChange 18.46\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r152",
+   "tier": "mild",
+   "file": "r152.png",
+   "sha256": "c524bc0a7bd4afb92edf077cf9e1f7372902992a2bdc1cf816b1db56489d3f94",
+   "truth": {
+    "merchant": "JUNIPER HERON MARKET",
+    "date": "2024-07-14",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 6080,
+    "tax_cents": 540,
+    "total_cents": 6620
+   },
+   "ocr": {
+    "merchant": "| B JUNIPER HERON MARKET B"
+   },
+   "text_only": {
+    "merchant": "JUNIPER HERON MARKET",
+    "total_cents": 6620
+   },
+   "ocr_ms": 251,
+   "ocr_text": "| B JUNIPER HERON MARKET B\n‘151 Linden Ave\n. Port Ellery\n5 Tel 555-0188\n(DATE Jul. 14, 2024 . 07:15\nReg 8 Clerk 69 .- 0\n\"Light Buib 2 @ 8.32 16.64 |\nWood Glue -- . 7.31\nYogurt = & 19.70\nCroissant .  ° 17,15\nSlbtotal 60.80\nTEx CL © 5.40\nTotal ToT 66.20\nVISA ending 6968 . . 66.20\n“+ Return. by Aug 13 2024 °\n) Thank you, come again |\n"
+  },
+  {
+   "id": "r153",
+   "tier": "hard",
+   "file": "r153.jpg",
+   "sha256": "8c0306b0bb8a3514ed19a7758ad2baa217c6de465499e94feb21d1b625a9e2c1",
+   "truth": {
+    "merchant": "Old Mill Sparrow Pharmacy",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 7088,
+    "tax_cents": 0,
+    "total_cents": 7088
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Old Mill Sparrow Pharmacy",
+    "total_cents": 7088
+   },
+   "ocr_ms": 9,
+   "ocr_text": ""
+  },
+  {
+   "id": "r154",
+   "tier": "clean",
+   "file": "r154.png",
+   "sha256": "df79498529c4d59e0e4d405147f20db8e8ce98837533b13e6fad37a7f03fec5b",
+   "truth": {
+    "merchant": "AMBER THISTLE HARDWARE",
+    "date": "2026-08-16",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 65827,
+    "tax_cents": 4608,
+    "total_cents": 70435
+   },
+   "ocr": {
+    "merchant": "AMBER THISTLE HARDWARE",
+    "date": "2026-08-16",
+    "total_cents": 70435
+   },
+   "text_only": {
+    "merchant": "AMBER THISTLE HARDWARE",
+    "date": "2026-08-16",
+    "total_cents": 70435
+   },
+   "ocr_ms": 175,
+   "ocr_text": "AMBER THISTLE HARDWARE\n\n531 Mill Blvd\n\nCedar Hollow\n\nTel 555-0118\nAugust 16, 2026 18:44\nReg 6 Clerk 49\nEspresso Machine 626.41\nAA Batteries 3.45\nPacking Tape 3 @ 7.92 23.76\nSourdough Loaf 4.65\nSUBTOTAL 658.27\nTax 46.08\nTOTAL 704.35\nMastercard ending 8680 704.35\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r155",
+   "tier": "hard",
+   "file": "r155.jpg",
+   "sha256": "1d16da722fdd4538f298024db201314efb35746c69e23875aa217d6ecddb282b",
+   "truth": {
+    "merchant": "DOCK 4 PANTRY",
+    "date": "2024-07-14",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 17939,
+    "tax_cents": 1256,
+    "total_cents": 19195
+   },
+   "ocr": {
+    "merchant": "DOCK ¢ PANTRY",
+    "date": "2074-07-14"
+   },
+   "text_only": {
+    "merchant": "Riverton",
+    "total_cents": 19195
+   },
+   "ocr_ms": 134,
+   "ocr_text": "DOCK ¢ PANTRY\n820 Bayviow Ay\nRiverton\nDate: July 14, 2074 pas\nReg 9 Clark 8\nWood Gui 4 @ 22 7 i.\nCotte Boars 3 5 pg er\nNotebook 27\nOat hie so\nSourdough [oat x\nTax 7: moo\nBalance Oye sap 125\nDebt ending 257 Jaras\nTotal Saving se\nRBG by August 13, 20 124\nHave a nice ay\n"
+  },
+  {
+   "id": "r156",
+   "tier": "mild",
+   "file": "r156.png",
+   "sha256": "45c71a0afd30971b34c64c51fa99120223e51f4b21468a333163c5245f4ff5a2",
+   "truth": {
+    "merchant": "Copper Pebble Grocery",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 12998,
+    "tax_cents": 1040,
+    "total_cents": 14038
+   },
+   "ocr": {
+    "merchant": "\" \"Copper Pebble Grocery",
+    "total_cents": 14038
+   },
+   "text_only": {
+    "merchant": "Copper Pebble Grocery",
+    "total_cents": 14038
+   },
+   "ocr_ms": 199,
+   "ocr_text": "\" \"Copper Pebble Grocery\n5 528 Quarry Rd Co\n. Riverton\n© Tel 555-0150 - .\n02-03-2025 asm\nReg 8 Clerk 63 Co.\n\n-Pasta2 @4.86 4 B 9:72\nDish Soap 4 @ 12.47 49.88\n‘Apples . ° 14.01 °}\nLatte 12,20\n\nGarden Hose 24.15 |\nNotebook 20.02\n\n‘SubTotal + 120.08\nSales Tax oo 10.40\nTOTAL 140.38\nDebit ending 4493 _ © 140.38\n\n. Have a nice day 5\n"
+  },
+  {
+   "id": "r157",
+   "tier": "clean",
+   "file": "r157.png",
+   "sha256": "88f4e1325a6da064fd86f8f1113933d8ee193d4ef2a9df51e0305ccd7b0c0b11",
+   "truth": {
+    "merchant": "PIER 3 NOODLE HOUSE",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 8468,
+    "tax_cents": 752,
+    "total_cents": 9220
+   },
+   "ocr": {
+    "merchant": "Eastbrook",
+    "total_cents": 9220
+   },
+   "text_only": {
+    "merchant": "Eastbrook",
+    "total_cents": 9220
+   },
+   "ocr_ms": 146,
+   "ocr_text": "PIER 3 NOODLE HOUSE\n660 Ferry Blvd\nEastbrook\nTel 555-0107\n\n11.10.2025 16:05\nReg 5 Clerk 33\n\nOat Milk 21.44\nDish Soap 2 @ 23.99 47.98\nPaper Towels 15.26\nSubtotal 84.68\nTax 8.875% 7-52\nTotal 92.20 USD\nCash 100.00\nChange 7.80\n\nThank you, come again\n"
+  },
+  {
+   "id": "r158",
+   "tier": "mild",
+   "file": "r158.png",
+   "sha256": "a754cbd6340c65e298def39efd512751bf4c77ec2ae5ace66828b3385f4f8a1d",
+   "truth": {
+    "merchant": "MAPLE OTTER MARKET",
+    "date": "2024-12-02",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 15096,
+    "tax_cents": 944,
+    "total_cents": 16040
+   },
+   "ocr": {
+    "merchant": "MAPLE OTTER MARKET"
+   },
+   "text_only": {
+    "merchant": "MAPLE OTTER MARKET",
+    "total_cents": 16040
+   },
+   "ocr_ms": 197,
+   "ocr_text": "MAPLE OTTER MARKET\n445 Orchard Lane\nCedar Hollow :\nTel 555-0145\nDATE: December 2 2024 -11:15\nReg 6 Clerk 71\nDish Soap 10.36\nGarden Hose 4 @ 23.81 95.24\nDish Soap 21.24\nYogurt 24.12\nSUBTOTAL 150.96\nTax 19.44\nBalance Due + USD 160,40\nVISA ending 7489 160.40\nReturn by Jan 1, 2025\nThank you, come again\n"
+  },
+  {
+   "id": "r159",
+   "tier": "mild",
+   "file": "r159.png",
+   "sha256": "0acc3084d0aaadab8d6417d713f812dcb4bb7f9ada60f398efa86ad0e3fd4edd",
+   "truth": {
+    "merchant": "Golden Wren Pharmacy",
+    "date": "2025-01-12",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 1778,
+    "tax_cents": 111,
+    "total_cents": 1889
+   },
+   "ocr": {
+    "merchant": "Golden'Wren Pharmacy",
+    "date": "2025-01-12",
+    "total_cents": 1889
+   },
+   "text_only": {
+    "merchant": "Golden Wren Pharmacy",
+    "date": "2025-01-12",
+    "total_cents": 1889
+   },
+   "ocr_ms": 177,
+   "ocr_text": "Golden'Wren Pharmacy\n: : + 659 Bayview Rd\n©. Westvale .\n© Tel 555-0124 | B\nDate: January 12 2025 . 16:32\nReg 4 Clerk 56\n. Pasta” BE -. 8836\nSoup of the Day. i 9.42\nSubTotal : ©1778\nTax 6.25% . 1.1\nGrand Total $18.89\nCash Lo so 20.00\nChange * ° . 1.1\n° . Thanks for visiting Co\n"
+  },
+  {
+   "id": "r160",
+   "tier": "mild",
+   "file": "r160.png",
+   "sha256": "62bced0a2e8a94f1f6a4161cd3c46a62a5d094ef6645b6665352a0968cf119d7",
+   "truth": {
+    "merchant": "WILLOW THISTLE NOODLE HOUSE",
+    "date": "2024-11-10",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 4568,
+    "tax_cents": 286,
+    "total_cents": 5768
+   },
+   "ocr": {
+    "merchant": "WILLOW THISTLE NOODLE HOUSE",
+    "date": "2024-11-10"
+   },
+   "text_only": {
+    "merchant": "WILLOW THISTLE NOODLE HOUSE",
+    "date": "2024-11-10",
+    "total_cents": 5768
+   },
+   "ocr_ms": 186,
+   "ocr_text": "WILLOW THISTLE NOODLE HOUSE\nGood Food Good Mood .\n©. 976 Kestrel St\nB . Riverton )\n0° \"Tel 555-0115\n\nDATE 10 Nov, 2024 i 18:48\nReg9Clerk71 |\n\nPaper Towels 9.72\nNotebook 2 @ 17.98 35.96 °\nSub Total ©. 4568\nTak 6.25% . 2.86\nTip* C914\nTOTAL: h 57.68 USD |\nCash i oe 60.00\nChange 2.32\n\nHave a nice day .\n"
+  },
+  {
+   "id": "r161",
+   "tier": "mild",
+   "file": "r161.jpg",
+   "sha256": "474d226aeb8b2b7d1a1033aa4fc5078d07ca9fd7685dc4de3f910dd6d9013926",
+   "truth": {
+    "merchant": "QUIET HERON PANTRY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 13870,
+    "tax_cents": 1231,
+    "total_cents": 15101
+   },
+   "ocr": {
+    "merchant": "| QUIET HERON PANTRY"
+   },
+   "text_only": {
+    "merchant": "QUIET HERON PANTRY",
+    "total_cents": 15101
+   },
+   "ocr_ms": 227,
+   "ocr_text": "| QUIET HERON PANTRY\n. 433 Ferry Lane\nRiverton i\n\n. Tel 555-0155 .\n\n‘Date: 04/11/2024 : 7 a8i20\nReg 8 Clerk 42 | h i we -\nCheddar TEE . 2415\nSoup of the Day . 14.65\nNotebook 2 @ 5.00, : 10.00.\nCheddar- 8.97\nPaper Towels 4 @15.99.  * ~. = 63.96\nBananas E + 16.97\nSUBTOTAL i : 138.70\nTax 8.875% : 12.31\nTOTAL . | . 151.01\nVISA ending 2814 151.01\n\ni Have nice day\n"
+  },
+  {
+   "id": "r162",
+   "tier": "mild",
+   "file": "r162.jpg",
+   "sha256": "0b7055a43888e58cc99320094970f3d35ce3df6e244a6295c31221a144ba0e02",
+   "truth": {
+    "merchant": "RIVERBEND PINE BOOKS",
+    "date": "2024-01-23",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 8751,
+    "tax_cents": 350,
+    "total_cents": 9101
+   },
+   "ocr": {
+    "merchant": "RIVERBEND PINE BOOKS"
+   },
+   "text_only": {
+    "merchant": "RIVERBEND PINE BOOKS",
+    "total_cents": 9101
+   },
+   "ocr_ms": 198,
+   "ocr_text": "RIVERBEND PINE BOOKS\n. 270EmMRd\ncen Eastbrook\nLL Telss5-0134 )\nDate: 23/01/2024 13:19.\nReg 2 Clerk 38 : :\n‘Apples - & 5.91\n. Eggs Dozen - 854\nYogurt a 9.06\nLatte - 22.14\nApples it 21.21\n. Light Bulb 20.65\nSUBTOTAL © 87.51\nSales Tax 3.50\nTOTAL: * 91.01\nViSAending 2041 91.01\nTotal Savings wo He 3.16 °\n. Thank you, come again\n"
+  },
+  {
+   "id": "r163",
+   "tier": "clean",
+   "file": "r163.png",
+   "sha256": "d83bd23ee0a1abf062a70fc7a6e364da1196464edd1a08db8614049a7500570e",
+   "truth": {
+    "merchant": "GREEN FOX MARKET",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 2105,
+    "tax_cents": 132,
+    "total_cents": 2237
+   },
+   "ocr": {
+    "merchant": "GREEN FOX MARKET",
+    "total_cents": 2237
+   },
+   "text_only": {
+    "merchant": "GREEN FOX MARKET",
+    "total_cents": 2237
+   },
+   "ocr_ms": 135,
+   "ocr_text": "GREEN FOX MARKET\n363 Orchard Blvd\nCedar Hollow\nTel 555-0155\nReg 6 Clerk 26\nPacking Tape 14.35\nBananas 6.70\nSUBTOTAL 21.05\nTax 6.25% 1.32\nTotal Due 22.37\nVISA ending 9176 22.37\nTotal Savings 1.90\nThank you, come again\n"
+  },
+  {
+   "id": "r164",
+   "tier": "clean",
+   "file": "r164.png",
+   "sha256": "3bf182b7f3b2ab98cce3c525e1cdac42354fd92b29df916be969babdf6d9d1c6",
+   "truth": {
+    "merchant": "SILVER BIRCH BISTRO",
+    "date": "2024-01-13",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 10479,
+    "tax_cents": 930,
+    "total_cents": 11409
+   },
+   "ocr": {
+    "merchant": "SILVER BIRCH BISTRO",
+    "date": "2024-01-13",
+    "total_cents": 11409
+   },
+   "text_only": {
+    "merchant": "SILVER BIRCH BISTRO",
+    "date": "2024-01-13",
+    "total_cents": 11409
+   },
+   "ocr_ms": 176,
+   "ocr_text": "SILVER BIRCH BISTRO\n119 Ferry Lane\nWestvale\n\nTel 555-0157\nDate: 2024-01-13 08:26\nReg 2 Clerk 71\nOat Milk 9.31\nYogurt 4 @ 13.66 54.64\nBananas 15.34\nSoup of the Day 16.29\nNotebook 9.21\nSubtotal 104.79\nTax 8.875% 9.30\nGrand Total 114.09\nMastercard ending 6550 114.09\nTotal Savings 8.67\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r165",
+   "tier": "mild",
+   "file": "r165.png",
+   "sha256": "926be1ead55e56400d80d3755a51cdf173a4eb45e164392ff9a1aca40c751c1a",
+   "truth": {
+    "merchant": "NORTHSIDE PINE HARDWARE",
+    "date": "2025-05-14",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 7442,
+    "tax_cents": 0,
+    "total_cents": 7442
+   },
+   "ocr": {
+    "date": "2025-05-14"
+   },
+   "text_only": {
+    "merchant": "NORTHSIDE PINE HARDWARE",
+    "date": "2025-05-14",
+    "total_cents": 7442
+   },
+   "ocr_ms": 240,
+   "ocr_text": "2 NORTHSIDE PINE HARDWARE\"\n494 Kestrel Blvd + . .\n: «. + Millbrook Falls ° 0\nce Telsssoi40 Cc\nDate: 14 May, 2025 10:36\n‘Rég4 Clerks ~~. -..\nSparkling Water RR 10.56\n| EggsDozen3@1819 54.57\n. Yogurt - © 9.29\nSubtotal ~~. - 74.42.\nTax . a. 0.00\nTotal  -. s, : $74.42\nCash” Le 80.00\nChange 5 © 558\n© *. Thanks for visiting\n"
+  },
+  {
+   "id": "r166",
+   "tier": "hard",
+   "file": "r166.jpg",
+   "sha256": "670d13755b303ed2da9787ee89d23e4b1012e6cf16ff40abd3bce44516529dac",
+   "truth": {
+    "merchant": "Lucky Lantern Garden Center",
+    "date": "2025-03-27",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 2738,
+    "tax_cents": 0,
+    "total_cents": 2738
+   },
+   "ocr": {
+    "merchant": "Lucky Lantern Garden Center"
+   },
+   "text_only": {
+    "merchant": "Lucky Lantern Garden Center",
+    "total_cents": 2738
+   },
+   "ocr_ms": 139,
+   "ocr_text": "Lucky Lantern Garden Center\n897 Quarry Blvd\nEastbrook\nTel 555-9193\n27/03/2025 14:12\nReg 2 Clerk 85\nCoffee Beans 12.07\nSoup of the Day 4.81\nDish Soap 10.50\nSubtotal 27.38\nTax 0.00\nTotal 27.38 Usp\nVISA ending 5848 27.38\nHave a nice day\n"
+  },
+  {
+   "id": "r167",
+   "tier": "hard",
+   "file": "r167.jpg",
+   "sha256": "434441238a2491b550d98e434aa2d66c74c26f4efe0e9619bed54e5a1b0baa9e",
+   "truth": {
+    "merchant": "Quiet Acorn Pharmacy",
+    "date": "2026-02-15",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 14623,
+    "tax_cents": 585,
+    "total_cents": 15208
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "Quiet Acorn Pharmacy",
+    "date": "2026-02-15",
+    "total_cents": 15208
+   },
+   "ocr_ms": 26,
+   "ocr_text": "|\n"
+  },
+  {
+   "id": "r168",
+   "tier": "clean",
+   "file": "r168.png",
+   "sha256": "24ce735a4f98af4e2691898531a02de4fcde950c85ac626438413e2334e0eeb5",
+   "truth": {
+    "merchant": "Juniper Otter Garden Center",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 14703,
+    "tax_cents": 919,
+    "total_cents": 15622
+   },
+   "ocr": {
+    "merchant": "Juniper Otter Garden Center",
+    "total_cents": 15622
+   },
+   "text_only": {
+    "merchant": "Juniper Otter Garden Center",
+    "total_cents": 15622
+   },
+   "ocr_ms": 188,
+   "ocr_text": "Juniper Otter Garden Center\n460 Larch St\nMillbrook Falls\nTel 555-0177\n01-02-2024 14:24\nReg 4 Clerk 35\nPasta 19.40\nLatte 19.04\nLight Bulb 4 @ 20.42 81.68\nCoffee Beans 18.54\nOlive 0il 6.08\nCroissant 2.29\nSubtotal 147.03\nSales Tax 9.19\nTOTAL 156.22 USD\nDebit ending 8518 156.22\nHave a nice day\n"
+  },
+  {
+   "id": "r169",
+   "tier": "clean",
+   "file": "r169.png",
+   "sha256": "495385c53ae4b5b5d828d2236a85615066cf17c9a3e01479b7e80f65ee4f871b",
+   "truth": {
+    "merchant": "Northside Birch Market",
+    "date": "2024-11-28",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 3069,
+    "tax_cents": 0,
+    "total_cents": 3069
+   },
+   "ocr": {
+    "merchant": "Northside Birch Market",
+    "total_cents": 3069
+   },
+   "text_only": {
+    "merchant": "Northside Birch Market",
+    "total_cents": 3069
+   },
+   "ocr_ms": 174,
+   "ocr_text": "Northside Birch Market\n\n123 Mill Ave\n\nCedar Hollow\n\nTel 555-0147\nDate: 11-28-2024 07:14\nReg 3 Clerk 20\nSparkling Water 16.34\nSparkling Water 1.89\nGarden Hose 10.83\nGarden Hose 1.63\nSubtotal 30.69\nTax 0.00\nAmount Due UsD 30.69\nCash 40.00\nChange 9.31\n\nHave a nice day\n"
+  },
+  {
+   "id": "r170",
+   "tier": "clean",
+   "file": "r170.png",
+   "sha256": "113321439f65dc895fb7336323e71ecf876122649cf020718b3c36f4ae1623e5",
+   "truth": {
+    "merchant": "RED DOOR BIRCH BISTRO",
+    "date": "2024-01-08",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 5841,
+    "tax_cents": 234,
+    "total_cents": 6075
+   },
+   "ocr": {
+    "merchant": "RED DOOR BIRCH BISTRO",
+    "total_cents": 6075
+   },
+   "text_only": {
+    "merchant": "RED DOOR BIRCH BISTRO",
+    "total_cents": 6075
+   },
+   "ocr_ms": 220,
+   "ocr_text": "RED DOOR BIRCH BISTRO\n673 Orchard St\nWestvale\nTel 555-0108\nDate: January 8, 2024 18:44\nReg 3 Clerk 54\nAA Batteries 23.20\nCheddar 12.38\nSoup of the Day 13.28\nPasta 3.23\nWood Glue 6.32\nSUBTOTAL 58.41\nTax 4% 2.34\nAmount Due 60.75\nCash 80.00\nChange 19.25\nTotal Savings 4.92\nReturn by February 7 2024\nThank you, come again\n"
+  },
+  {
+   "id": "r171",
+   "tier": "mild",
+   "file": "r171.png",
+   "sha256": "2dd34586d7e0085a47aedd4ced41d76adbddbe157ecc502f87c690340306b185",
+   "truth": {
+    "merchant": "STATION 27 BISTRO",
+    "date": "2026-03-17",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 3637,
+    "tax_cents": 0,
+    "total_cents": 4183
+   },
+   "ocr": {
+    "merchant": ". Cedar Hollow",
+    "date": "2026-03-17"
+   },
+   "text_only": {
+    "merchant": "Cedar Hollow",
+    "date": "2026-03-17",
+    "total_cents": 4183
+   },
+   "ocr_ms": 182,
+   "ocr_text": "STATION 27 BISTRO\nLo 751 Larch St o\n. Cedar Hollow\nTel 555-0187 :\nMarch 17, 2026 B 11:25\nReg 1 Clerk 83 :\nAA Batteries 20.82\nTomatoes : 10.11\nOlive 0il : : 5.44\nTotal Items : 3\nSUBTOTAL - 36.37\nTax 0.00\nTip - 5.46\n+ Balance Due . USD 41.83\nVISA ending 9427 41.83 °\nHave a nice day .\n"
+  },
+  {
+   "id": "r172",
+   "tier": "mild",
+   "file": "r172.jpg",
+   "sha256": "b45a0c21e89d51fb625133082b2e649916ef93247a132166850fd4a514cfbfe5",
+   "truth": {
+    "merchant": "Cedar Sparrow Books",
+    "date": "2025-12-16",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 11286,
+    "tax_cents": 790,
+    "total_cents": 12076
+   },
+   "ocr": {
+    "merchant": "\"Cedar Sparrow Books :"
+   },
+   "text_only": {
+    "merchant": "Cedar Sparrow Books",
+    "total_cents": 12076
+   },
+   "ocr_ms": 185,
+   "ocr_text": "\"Cedar Sparrow Books :\n98 Hawthorn Ave\nCedar Hollow i\n- Tel 655-0192 -\n16-12-2025 . © 00:36\nReg 7 Clerk 45 oR\nEggs Dozen 4 @ 22.23 88.92\nGreen Tea 2 @ 11.97 23.94\nTotal ltems © 2\n‘Subtotal . 112.86\nSales Tax ’ 7.90\nTotal i . + 120.76 USD\nVISA ending 7421 Co 120.76\"\nTotal Savings . 354\n. Have a nice day\n"
+  },
+  {
+   "id": "r173",
+   "tier": "mild",
+   "file": "r173.jpg",
+   "sha256": "b64f8036480050513b66a384e92a090f4aed14f948e8ef791e69b102c3f8cc39",
+   "truth": {
+    "merchant": "WILLOW THISTLE PHARMACY",
+    "date": "2026-10-01",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 53954,
+    "tax_cents": 2158,
+    "total_cents": 56112
+   },
+   "ocr": {
+    "merchant": "WILLOW THISTLE PHARMACY °",
+    "date": "2026-10-01",
+    "total_cents": 56112
+   },
+   "text_only": {
+    "merchant": "WILLOW THISTLE PHARMACY",
+    "date": "2026-10-01",
+    "total_cents": 56112
+   },
+   "ocr_ms": 194,
+   "ocr_text": "WILLOW THISTLE PHARMACY °\n308 Larch st\nEastbrook =\nTel 555-0126\nOctober 1, 2026 © 18:40\nReg 9 Clerk 56\n* Area Rug ; 449.76\nRice : 10.51\nEggs Dozen 4.82:\nSparkling Water 23.85.\nOlive 0il - - 18.42\nTomatoes 2 @ 16.09 . 32.18\nSubtotal “539.54\nTax 4% 21.58\nTotal 561.12 USD\nCash : 580.00\nChange 18.88\nHave a nice day\n"
+  },
+  {
+   "id": "r174",
+   "tier": "clean",
+   "file": "r174.png",
+   "sha256": "153db1196aaee07d0f9df00c279a0340ce3c2cb8a9ff5da2423dc39ce59db5b9",
+   "truth": {
+    "merchant": "Twin Oaks Lantern Books",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 2488,
+    "tax_cents": 156,
+    "total_cents": 2644
+   },
+   "ocr": {
+    "merchant": "Twin Oaks Lantern Books",
+    "total_cents": 2644
+   },
+   "text_only": {
+    "merchant": "Twin Oaks Lantern Books",
+    "total_cents": 2644
+   },
+   "ocr_ms": 167,
+   "ocr_text": "Twin Oaks Lantern Books\n233 Orchard Ave\nCedar Hollow\nTel 555-0107\nReg 3 Clerk 72\nWood Glue 4.28\nPaper Towels 12.97\nAA Batteries 7.63\nSubtotal 24.88\nSales Tax 1.56\nTOTAL: 26.44 USD\nDebit ending 8732 26.44\nTotal Savings 5.91\nHave a nice day\n"
+  },
+  {
+   "id": "r175",
+   "tier": "hard",
+   "file": "r175.jpg",
+   "sha256": "a619d3426fdcf3678f181c52b7bd5b597aeccbbd138289bce553e37f323169d1",
+   "truth": {
+    "merchant": "GOLDEN PINE SUPPLY",
+    "date": "2024-08-10",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 11232,
+    "tax_cents": 786,
+    "total_cents": 12018
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "GOLDEN PINE SUPPLY",
+    "date": "2024-08-10",
+    "total_cents": 12018
+   },
+   "ocr_ms": 23,
+   "ocr_text": "|]\n"
+  },
+  {
+   "id": "r176",
+   "tier": "hard",
+   "file": "r176.jpg",
+   "sha256": "f8856b3ad0b50a273240bc8a977400b49308cc745ccb7a43f55df7e6c7dbc8a3",
+   "truth": {
+    "merchant": "Old Mill Thistle Pantry",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 24913,
+    "tax_cents": 2211,
+    "total_cents": 27124
+   },
+   "ocr": {
+    "merchant": "old Mill Thistle Pantry.",
+    "total_cents": 27124
+   },
+   "text_only": {
+    "merchant": "Old Mill Thistle Pantry",
+    "total_cents": 27124
+   },
+   "ocr_ms": 224,
+   "ocr_text": "old Mill Thistle Pantry.\nfeighborhood Favorite\n\\ 29 Elm Ave\ny Millbrook Falls\nTel 555-0130\nDATE 12.01.25 13:55\nReg 2 Clerk 73 A\nAA Batteries 4 @ 20.26 81.04\nTomatoes 6.16\nPacking Tape a@7.5 30.290\nPacking tape 4 @ 22.90 91.60\nTomatoes 3.61\nCheddar 2.@ 18.26 36.52\nSUBTOTAL 249.13\nTax B:B75% 22.11\nTOTAL: $271.24\n. Cash 7 . 280.00 -\nchange . 8.76\nHave a nice day\n"
+  },
+  {
+   "id": "r177",
+   "tier": "mild",
+   "file": "r177.jpg",
+   "sha256": "c1f4c5562df4d64ac1a6ab171579c2630760a6f4f56c712ccfedeabe0b87f748",
+   "truth": {
+    "merchant": "Riverbend Sparrow Supply",
+    "date": "2025-01-30",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 12425,
+    "tax_cents": 1103,
+    "total_cents": 13528
+   },
+   "ocr": {
+    "merchant": "+ © Riverbend Sparrow Supply.",
+    "date": "2025-01-30"
+   },
+   "text_only": {
+    "merchant": "Riverbend Sparrow Supply",
+    "date": "2025-01-30",
+    "total_cents": 13528
+   },
+   "ocr_ms": 198,
+   "ocr_text": "+ © Riverbend Sparrow Supply.\n437 Elm Rd\n| Port Ellery i\n. . Tel 555-0121-\n30 January. 2025 ‘18:03\nReg 2 Clerk 83 :\nWood Glue 3 @ 18.01 54.03\nGarden Hose, . 20.06\nPaper Towels  ° “17.07\nGarden Hose 3 @ 11.03 33.09.\nSUBTOTAL . 124.25\nTax 11.03\nTotal .Due - 135.28\nCash . 140.00 °\nChange _ ©4092\n: Thanks for visiting\n"
+  },
+  {
+   "id": "r178",
+   "tier": "mild",
+   "file": "r178.jpg",
+   "sha256": "6ec66d5b191164a6fd3f9af36f02586635226a41395e8d561f88f171dc23544c",
+   "truth": {
+    "merchant": "SILVER PEBBLE BISTRO",
+    "date": "2025-03-22",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 73243,
+    "tax_cents": 0,
+    "total_cents": 86427
+   },
+   "ocr": {
+    "merchant": "SILVER PEBBLE BISTRO",
+    "total_cents": 86427
+   },
+   "text_only": {
+    "merchant": "SILVER PEBBLE BISTRO",
+    "total_cents": 86427
+   },
+   "ocr_ms": 172,
+   "ocr_text": "SILVER PEBBLE BISTRO\n957 Linden Rd :\nWestvale\nTel 555-0116\nMar 22 2025 21:43\nReg 7 Clerk 65\nStanding Fan he 728.88\n* Wood.Glue 3.55\nSUBTOTAL 732.43\nTax 0.00\nTip * 131.84\nTOTAL 864.27\n‘Mastercard ending 3039 864.27\nReturn by Apr 21, 2025\nThank you, come: again .\n"
+  },
+  {
+   "id": "r179",
+   "tier": "clean",
+   "file": "r179.png",
+   "sha256": "90883189fc7545cda4196db318594e7eadbdad47df583860870101ab525b0e59",
+   "truth": {
+    "merchant": "Lucky Acorn Cafe",
+    "date": "2025-04-28",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 46091,
+    "tax_cents": 4091,
+    "total_cents": 57096
+   },
+   "ocr": {
+    "merchant": "Lucky Acorn Cafe",
+    "total_cents": 57096
+   },
+   "text_only": {
+    "merchant": "Lucky Acorn Cafe",
+    "total_cents": 57096
+   },
+   "ocr_ms": 218,
+   "ocr_text": "Lucky Acorn Cafe\n\n476 Orchard Blvd\n\nMillbrook Falls\n\nTel 555-0105\nDATE Apr. 28, 2025 12:16\nReg 4 Clerk 78\nArea Rug 377.14\nAA Batteries 9.28\nPaper Towels 4 @ 17.17 68.68\nSparkling Water 5.81\nSub Total 460.91\nTax 8.875% 40.91\nTip 69.14\nGrand Total $570.96\nVISA ending 1641 570.96\nReturn by May 28, 2025\nHave a nice day\n"
+  },
+  {
+   "id": "r180",
+   "tier": "clean",
+   "file": "r180.png",
+   "sha256": "87fedac92a314d04fa2e67c0827bfdd4dd47adb375f9633299e01d2273c6c022",
+   "truth": {
+    "merchant": "GOLDEN ANCHOR NOODLE HOUSE",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 10748,
+    "tax_cents": 672,
+    "total_cents": 11420
+   },
+   "ocr": {
+    "merchant": "GOLDEN ANCHOR NOODLE HOUSE",
+    "total_cents": 11420
+   },
+   "text_only": {
+    "merchant": "GOLDEN ANCHOR NOODLE HOUSE",
+    "total_cents": 11420
+   },
+   "ocr_ms": 170,
+   "ocr_text": "GOLDEN ANCHOR NOODLE HOUSE\n\n756 Larch Ave\n\nPort Ellery\n\nTel 555-0136\nDATE 07/02/2025 18:06\nReg 6 Clerk 91\nPaper Towels 20.65\nNotebook 4 @ 13.74 54.96\nApples 13.99\nGarden Hose 17.88\nSubtotal 107.48\nTax 6.25% 6.72\nTOTAL: USD 114.20\ncash 120.00\nChange 5.80\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r181",
+   "tier": "hard",
+   "file": "r181.jpg",
+   "sha256": "09d8e2634ab80a9e875f0e92654e6a3fa23bf68db4afe57abd3c28cfa36cf266",
+   "truth": {
+    "merchant": "Green Comet Kitchen",
+    "date": "2026-05-28",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 6239,
+    "tax_cents": 437,
+    "total_cents": 6676
+   },
+   "ocr": {
+    "merchant": "Westvale"
+   },
+   "text_only": {
+    "merchant": "Green Comet Kitchen",
+    "date": "2026-05-28",
+    "total_cents": 6676
+   },
+   "ocr_ms": 82,
+   "ocr_text": "(3reen Cott Kitchen\n49:4 Bayview Lane\nWestvale\nDATE 28 May-2026 To\nRig 8 Clerk 48\nNotebook 4.05\nCheddar 28s\nPast 409\nPaper Towe 200\nOnt Milk 2428\nChange oe\nHane day\n"
+  },
+  {
+   "id": "r182",
+   "tier": "mild",
+   "file": "r182.jpg",
+   "sha256": "a82ec784f550d22aca05eea77a956a8383150b9b35d7df7cf26cff71a4f00d9b",
+   "truth": {
+    "merchant": "Riverbend Pebble Garden Center",
+    "date": "2025-03-06",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 2466,
+    "tax_cents": 219,
+    "total_cents": 2685
+   },
+   "ocr": {
+    "merchant": "Riverbend Pebble Garden Center",
+    "date": "2025-03-06",
+    "total_cents": 2685
+   },
+   "text_only": {
+    "merchant": "Riverbend Pebble Garden Center",
+    "date": "2025-03-06",
+    "total_cents": 2685
+   },
+   "ocr_ms": 140,
+   "ocr_text": "Riverbend Pebble Garden Center\n\n© 599 Mill Lane\n\nPort Ellery\n\nTel 555-0163\nMar 6 2025 © 12:39\nReg 8 Clerk 66 | :\nGarden Hose 3.85\nCheddar . 20.81\nSUBTOTAL : 24.66\nTax 8.875% SER 219\nTOTAL 26.85 USD\nVISA ending 8430 +26.85\n; Have a nice day\n"
+  },
+  {
+   "id": "r183",
+   "tier": "clean",
+   "file": "r183.png",
+   "sha256": "71cb95ca595359419cb3d61df48e4ac29acd646a5714c0b9f3e27ead7e909491",
+   "truth": {
+    "merchant": "Riverbend Pine Kitchen",
+    "date": null,
+    "date_kind": "none",
+    "date_expect": "refuse",
+    "subtotal_cents": 6651,
+    "tax_cents": 0,
+    "total_cents": 6651
+   },
+   "ocr": {
+    "merchant": "Riverbend Pine Kitchen",
+    "total_cents": 6651
+   },
+   "text_only": {
+    "merchant": "Riverbend Pine Kitchen",
+    "total_cents": 6651
+   },
+   "ocr_ms": 153,
+   "ocr_text": "Riverbend Pine Kitchen\n921 Ferry Blvd\nPort Ellery\nTel 555-0106\nReg 4 Clerk 54\nWood Glue 1.47\nSparkling Water 13.84\nCheddar 5.56\nCoffee Beans 17.56\nGreen Tea 20.01\nGreen Tea 8.07\nSub Total 66.51\nTax 0.00\nTotal $66.51\nVISA ending 3143 66.51\nThank you, come again\n"
+  },
+  {
+   "id": "r184",
+   "tier": "mild",
+   "file": "r184.png",
+   "sha256": "5867a0e082ee402b2468a0ac265f926b39a39ba51e149fcc8a6848cdaa4c7dbe",
+   "truth": {
+    "merchant": "LITTLE LANTERN KITCHEN",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 9873,
+    "tax_cents": 691,
+    "total_cents": 12045
+   },
+   "ocr": {
+    "merchant": "LITTLE LANTERN KITCHEN"
+   },
+   "text_only": {
+    "merchant": "LITTLE LANTERN KITCHEN",
+    "total_cents": 12045
+   },
+   "ocr_ms": 200,
+   "ocr_text": "LITTLE LANTERN KITCHEN\nGood Food Good Mood 5 4\n754 Mill St\nMillbrook Falls\n. Tel 555-0110 .\nDATE 02-05-26\" 50 12:15\nReg 9 Clerk 37 .\nLatte 3 @ 9.49 18.98\nSourdough Loaf © 650\nRice oo. OED\nCroissant 4 @ 13.02 52.08\nGarden Hose 8.45\nNotebook 3.62\nSubtotal : 98.73\nTax 7% 2 6.01\"\nTip Co 14.81\nTOTAL: . $120.45\nCash 5 ) 140.00\nChange ’ 19.55\nThanks for visiting\n"
+  },
+  {
+   "id": "r185",
+   "tier": "clean",
+   "file": "r185.png",
+   "sha256": "d14723a14cb1246388b353ed5453d7b49132822995c62b4e866063c5b134207a",
+   "truth": {
+    "merchant": "Lucky Otter Noodle House",
+    "date": "2024-06-06",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 14925,
+    "tax_cents": 933,
+    "total_cents": 18097
+   },
+   "ocr": {
+    "merchant": "Lucky Otter Noodle House",
+    "total_cents": 18097
+   },
+   "text_only": {
+    "merchant": "Lucky Otter Noodle House",
+    "total_cents": 18097
+   },
+   "ocr_ms": 223,
+   "ocr_text": "Lucky Otter Noodle House\n329 Larch Lane\nWestvale\nTel 555-0197\nDATE June 6 2024 19:26\nReg 3 Clerk 34\nCheddar 1.97\nCheddar 13.24\nOat Milk 3 @ 19.47 58.41\nPacking Tape 2 @ 20.62 41.24\nOlive 0il 23.03\nRice 11.36\nSub Total 149.25\nTax 6.25% 9.33\nTip 22.39\nTOTAL: $180.97\nVISA ending 4924 180.97\nReturn by Jul 6 2024\nThank you, come again\n"
+  },
+  {
+   "id": "r186",
+   "tier": "hard",
+   "file": "r186.jpg",
+   "sha256": "2fd4e1fc4781c9546d04ece2e7cbdeec05b66d43bfd7207b0b10baf9178c6c1b",
+   "truth": {
+    "merchant": "Golden Kettle Bakery",
+    "date": "2025-01-08",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 9163,
+    "tax_cents": 573,
+    "total_cents": 9736
+   },
+   "ocr": {
+    "merchant": "Golden Kettle Bakery",
+    "total_cents": 9736
+   },
+   "text_only": {
+    "merchant": "Golden Kettle Bakery",
+    "date": "2025-01-08",
+    "total_cents": 9736
+   },
+   "ocr_ms": 176,
+   "ocr_text": "Golden Kettle Bakery\nFresh Local Goods.\n352 Larch Ave\nRiverton\nTel 555-0130.\ngth January. 2025 19:01\nReg 1 Clerk 35\nCroissant 9.50\nAA [Batteries 2 13.72 27.44\nBanana 21.41\nwood Glue 10.01\nCoffee Beans 23.27\nSub Tota 91.63\nTax 5.73\nBalance Due 97.36\nCast 100.00\nChange 2.64\nThanks for visiting\n"
+  },
+  {
+   "id": "r187",
+   "tier": "mild",
+   "file": "r187.jpg",
+   "sha256": "ccf85ca384dd871a8b35ddf880af2db847110103d43fad038edbaba5626263b0",
+   "truth": {
+    "merchant": "Red Door Kettle Garden Center",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 4458,
+    "tax_cents": 0,
+    "total_cents": 4458
+   },
+   "ocr": {
+    "merchant": "Red Door Kettle Garden Center"
+   },
+   "text_only": {
+    "merchant": "Red Door Kettle Garden Center",
+    "total_cents": 4458
+   },
+   "ocr_ms": 186,
+   "ocr_text": "Red Door Kettle Garden Center\n875 Ferry Rd\nEastbrook\n\nTel 555-0177 |\nDate: 02.08.24 16:12\nReg 6 Clerk 50\nPacking Tape 2.23\nEggs Dozen 2 @ 1.58 3.16\nSoup of the Day 23.36\nWood Glue ~ 15.83\nSUBTOTAL 44.58\nTax 0.00\nTOTAL: g 44.58\nCash 60.00\n- Change © 15.42\n\nThank you, come again\n"
+  },
+  {
+   "id": "r188",
+   "tier": "clean",
+   "file": "r188.png",
+   "sha256": "7dcabbf11c7f7bc94789127a73daf5f1ae5837e4ece94a5d81462372eeaa3bc1",
+   "truth": {
+    "merchant": "NORTHSIDE OTTER KITCHEN",
+    "date": "2026-05-09",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 4666,
+    "tax_cents": 373,
+    "total_cents": 5739
+   },
+   "ocr": {
+    "merchant": "NORTHSIDE OTTER KITCHEN",
+    "date": "2026-05-09",
+    "total_cents": 5739
+   },
+   "text_only": {
+    "merchant": "NORTHSIDE OTTER KITCHEN",
+    "date": "2026-05-09",
+    "total_cents": 5739
+   },
+   "ocr_ms": 190,
+   "ocr_text": "NORTHSIDE OTTER KITCHEN\n\n656 Ferry Rd\n\nCedar Hollow\n\nTel 555-0155\nDate: 2026-05-09 18:41\nReg 8 Clerk 61\nEggs Dozen 8.18\nCoffee Beans 7.32\nRice 24.17\nSoup of the Day 6.99\nSub Total 46.66\nTax 3.73\nTip 7.00\nTotal Due 57.39 USD\nCash 60.00\nChange 2.61\n\nThanks for visiting\n"
+  },
+  {
+   "id": "r189",
+   "tier": "mild",
+   "file": "r189.png",
+   "sha256": "c842024dae6ab832a6125a1c2f8d478941ab6cb202510d2b2869772e0fe8c755",
+   "truth": {
+    "merchant": "Riverbend Thistle Pharmacy",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 11805,
+    "tax_cents": 0,
+    "total_cents": 11805
+   },
+   "ocr": {
+    "merchant": "* Riverbend Thistle Pharmacy"
+   },
+   "text_only": {
+    "merchant": "Riverbend Thistle Pharmacy",
+    "total_cents": 11805
+   },
+   "ocr_ms": 241,
+   "ocr_text": "* Riverbend Thistle Pharmacy\n694 Hawthorn Lane .\n| ©. Westvale CL\nTel 555-0161 Co\nDATE 07.11.24 © les:32\nReg 7. Clerk 45 oo\nGreen Tea Ca.\nEggs Dozen 3 @ 14.17 42.51\nWood Glue ©. 22.85\nWood Glue p 24.44\n«Dish Soap . 23.81\nSub Total RR 118.05\nTax co ‘0.00\nTotal . $118.05\nDebit ending 7265\" 118.05\nE Thanks, for visiting .\n"
+  },
+  {
+   "id": "r190",
+   "tier": "mild",
+   "file": "r190.png",
+   "sha256": "a72c7d1b91035f8a529fb957f84eca2ddddff61ca3c19c2e86255098e36c2d6b",
+   "truth": {
+    "merchant": "SILVER KETTLE NOODLE HOUSE",
+    "date": "2025-03-27",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 5790,
+    "tax_cents": 463,
+    "total_cents": 7411
+   },
+   "ocr": {
+    "merchant": "I SILVER KETTLE NOODLE HOUSE",
+    "total_cents": 7411
+   },
+   "text_only": {
+    "merchant": "SILVER KETTLE NOODLE HOUSE",
+    "total_cents": 7411
+   },
+   "ocr_ms": 222,
+   "ocr_text": "I SILVER KETTLE NOODLE HOUSE\n: 322 Quarry Rd i\n. “Port Ellery\n: Tel 555-0176 . :\nDATE Mar. 27, 2025 17:55 .\nReg 8 Clerk 38 - i\nDish Soap Do. 21.23 -\nCroissant i 24.07\nCroissant 3 @ 4.20 . 12.60\nSubtotal 57.90\nTax . 2 4.63\nTip : 11.58\nGrand Total 74.11 USD\nMastercard ending 7292 74.11\n.*. Return by April 26, 2035. -\n: Have a nice day ~\n"
+  },
+  {
+   "id": "r191",
+   "tier": "mild",
+   "file": "r191.jpg",
+   "sha256": "2fbdcc6ddcb8f95fc03ada8da957436d47874596c280e8592d1848007806b2ac",
+   "truth": {
+    "merchant": "STATION 68 NOODLE HOUSE",
+    "date": "2025-04-18",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 5519,
+    "tax_cents": 221,
+    "total_cents": 6844
+   },
+   "ocr": {
+    "merchant": ". Cedar Hollow",
+    "date": "2025-04-18"
+   },
+   "text_only": {
+    "merchant": "Cedar Hollow",
+    "date": "2025-04-18",
+    "total_cents": 6844
+   },
+   "ocr_ms": 220,
+   "ocr_text": "STATION 68 NOODLE HOUSE\n© 108 Kestrel Rd\n. Cedar Hollow\nTel 555-0192 *\nApr 18, 2025 13:06\n\"Reg 8 Clerk 75° By 5\nLight Bulb Co 10.01 .\nSparkling Water © 8.96\noat Milk . EE\n' BA Batteries 2 € 16.50 33.00\nSubtotal : 55.19\nTax 4% oF\nTip i - 7 11.04\nBalance Due -'68.44 USD\nVISA ending 7980 68.44 -\n: Thanks for visiting\n"
+  },
+  {
+   "id": "r192",
+   "tier": "clean",
+   "file": "r192.png",
+   "sha256": "1fb1285e18ef36cd101f74193d4be414d81488fddcc9a6b7fb173bb6c61d650f",
+   "truth": {
+    "merchant": "Cedar Wren Bistro",
+    "date": "2024-08-01",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 83635,
+    "tax_cents": 0,
+    "total_cents": 83635
+   },
+   "ocr": {
+    "merchant": "Cedar Wren Bistro",
+    "date": "2024-08-01",
+    "total_cents": 83635
+   },
+   "text_only": {
+    "merchant": "Cedar Wren Bistro",
+    "date": "2024-08-01",
+    "total_cents": 83635
+   },
+   "ocr_ms": 172,
+   "ocr_text": "Cedar Wren Bistro\n83 Ferry St\n\nCedar Hollow\n\nTel 555-0121\nDate: 1 Aug, 2024 21:17\nReg 8 Clerk 51\nStanding Fan 796.67\nSparkling Water 4 @ 1.23 4.92\nPasta 8.65\nPasta 21.75\nPaper Towels 4.36\nSubtotal 836.35\nTax 0.00\nAmount Due $836.35\nVISA ending 7253 836.35\n\nThank you, come again\n"
+  },
+  {
+   "id": "r193",
+   "tier": "hard",
+   "file": "r193.jpg",
+   "sha256": "0801bc7ea71f176f8d9f688f74d4e5d2bf28f85bcaf7bb000c39f854dcb27331",
+   "truth": {
+    "merchant": "MAPLE FOX HARDWARE",
+    "date": "2025-04-24",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 6948,
+    "tax_cents": 278,
+    "total_cents": 7226
+   },
+   "ocr": {},
+   "text_only": {
+    "merchant": "MAPLE FOX HARDWARE",
+    "date": "2025-04-24",
+    "total_cents": 7226
+   },
+   "ocr_ms": 9,
+   "ocr_text": ""
+  },
+  {
+   "id": "r194",
+   "tier": "clean",
+   "file": "r194.png",
+   "sha256": "725f96e44afeefa080d182b8f81b77c5025155a7b8f5520b1c43efaf8f19c188",
+   "truth": {
+    "merchant": "Bright Kettle Supply",
+    "date": "2024-01-29",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 6786,
+    "tax_cents": 0,
+    "total_cents": 6786
+   },
+   "ocr": {
+    "merchant": "Bright Kettle Supply",
+    "date": "2024-01-29",
+    "total_cents": 6786
+   },
+   "text_only": {
+    "merchant": "Bright Kettle Supply",
+    "date": "2024-01-29",
+    "total_cents": 6786
+   },
+   "ocr_ms": 158,
+   "ocr_text": "Bright Kettle Supply\n584 Bayview Rd\nRiverton\nTel 555-0135\n\n2024-01-29 20:48\nReg 4 Clerk 81\nOat Milk 2 @ 5.56 11.12\nPasta 24.33\nNotebook 9.58\nGarden Hose 22.83\nSub Total 67.86\nTax 0.00\nTOTAL USD 67.86\nCash 80.00\nChange 12.14\nTotal Savings 7.82\n\nHave a nice day\n"
+  },
+  {
+   "id": "r195",
+   "tier": "hard",
+   "file": "r195.jpg",
+   "sha256": "f718690b19228ecbf574e4be5d9a3b5008b66751cf70d43173a20a8efeb5d325",
+   "truth": {
+    "merchant": "Lucky Pebble Kitchen",
+    "date": "2024-11-15",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 6225,
+    "tax_cents": 498,
+    "total_cents": 7657
+   },
+   "ocr": {
+    "merchant": "Luteky Pebble Kitcher"
+   },
+   "text_only": {
+    "merchant": "Lucky Pebble Kitchen",
+    "date": "2024-11-15",
+    "total_cents": 7657
+   },
+   "ocr_ms": 109,
+   "ocr_text": "Luteky Pebble Kitcher\nqurHawthorn St\nEasthrook\nTel 555-0142\nDATE Nov 15,5024 15:01\nReg Clerk 75\nPacking Tape 481\nGroen Tea 4 @ 14.36 5744\nTotal Items a\nSubtotal 62.35\nTax 1.98\nTip 9.34\nBalance Dug $76.5\nVISA ending 4880 76.5\nThink you, come again\n"
+  },
+  {
+   "id": "r196",
+   "tier": "mild",
+   "file": "r196.jpg",
+   "sha256": "66b8e5dbd35820fbbd45987a98b8ede44e8434caebaf8afc3928635c9d30330f",
+   "truth": {
+    "merchant": "CEDAR LANTERN KITCHEN",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 7380,
+    "tax_cents": 590,
+    "total_cents": 7970
+   },
+   "ocr": {
+    "merchant": "CEDAR LANTERN KITCHEN ~~"
+   },
+   "text_only": {
+    "merchant": "CEDAR LANTERN KITCHEN",
+    "total_cents": 7970
+   },
+   "ocr_ms": 209,
+   "ocr_text": "CEDAR LANTERN KITCHEN ~~\n] 428 Kestrel Ave\n: : Westvale ee\n* Tel 555-0179\nDate: 08-04-24 : -08:30\nReg 9 Clerk 24 ) So\nSoup of the Day : 15.37\nLatte 4 @ 9.58 . i . 38.32\n.Squp of the Day 4 @ 3.29 13.16\nSourdough Loaf . : 6.95\nSubtotal + . 2 <= 73:80\nTax 0 ce 5.90\nTotal - 79.70\nCash i 80.00\nChange 0.30\n\"Thanks for visiting\n"
+  },
+  {
+   "id": "r197",
+   "tier": "mild",
+   "file": "r197.jpg",
+   "sha256": "91135417cc6e0f8ba2cd8636fc1fc4b4e7a8c746d5f953de25b3d420ce92809c",
+   "truth": {
+    "merchant": "RED DOOR HERON NOODLE HOUSE",
+    "date": "2024-09-29",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 9685,
+    "tax_cents": 387,
+    "total_cents": 10072
+   },
+   "ocr": {
+    "merchant": "RED DOOR HERON NOODLE HOUSE |",
+    "date": "2024-09-29"
+   },
+   "text_only": {
+    "merchant": "RED DOOR HERON NOODLE HOUSE",
+    "date": "2024-09-29",
+    "total_cents": 10072
+   },
+   "ocr_ms": 198,
+   "ocr_text": "RED DOOR HERON NOODLE HOUSE |\nLE 801 Quarry Ave\n* Riverton\nTel 555-0138\n29th September, 2024 : 11:47\nReg 4 Clerk 26 :\nSoup of the Day 20.32\nGarden Hose 4 @ 12.96 B . 51.84\nCoffee Beans ph . 12.94\nCroissant a 11.75\nSubtotal 96.85\nSales Tax oo 3.87\nBalance Due A $100.72\n‘Cash CT . 120.00\nChange . 19.28\n. Thanksforvisitng © -\n"
+  },
+  {
+   "id": "r198",
+   "tier": "mild",
+   "file": "r198.jpg",
+   "sha256": "6c558bf21bd19fbd6bd1e2b4a638ddfda6282d647b443fff15daa0a65b677622",
+   "truth": {
+    "merchant": "QUIET LANTERN GARDEN CENTER",
+    "date": "2026-02-06",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 6067,
+    "tax_cents": 243,
+    "total_cents": 6310
+   },
+   "ocr": {
+    "merchant": "QUIET LANTERN GARDEN CENTER",
+    "total_cents": 6310
+   },
+   "text_only": {
+    "merchant": "QUIET LANTERN GARDEN CENTER",
+    "total_cents": 6310
+   },
+   "ocr_ms": 172,
+   "ocr_text": "QUIET LANTERN GARDEN CENTER\n\n} 935 Quay Ave |:\n\nMillbrook Falls\n\nTel 555-0103 .\nFebruary 6, 2026 20:50\nReg5Clerk93\n\n* Packing Tape 1911\nNotebook 5.25\nApples 6.69\nPaper Towels 964’\nWood Glue 11.59\nGreen Tea : 839\nSubtotal 60.67 |\nTax 4% 2.43\nAmount Due USD 63.10\nVISA énding 5338 - 63.10\nReturn by March 8, 2026\nHave a nice day\n"
+  },
+  {
+   "id": "r199",
+   "tier": "clean",
+   "file": "r199.png",
+   "sha256": "a641432d5147461410762ae0e3a067395cef8c1ba247dd96d62f925e43a0fafc",
+   "truth": {
+    "merchant": "Little Comet Deli",
+    "date": "2024-11-01",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 1923,
+    "tax_cents": 0,
+    "total_cents": 1923
+   },
+   "ocr": {
+    "merchant": "Little Comet Deli",
+    "total_cents": 1923
+   },
+   "text_only": {
+    "merchant": "Little Comet Deli",
+    "total_cents": 1923
+   },
+   "ocr_ms": 169,
+   "ocr_text": "Little Comet Deli\nNeighborhood Favorite\n379 Orchard Blvd\nCedar Hollow\nTel 555-0152\nDate: Nov 1 2024 10:36\nReg 8 Clerk 82\nAA Batteries 7.48\nCroissant 11.75\nSUBTOTAL 19.23\nTax 0.00\nAmount Due UsD 19.23\nVISA ending 5542 19.23\nReturn by Dec. 1, 2024\nThank you, come again\n"
+  }
+ ]
+}

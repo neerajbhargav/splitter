@@ -13,7 +13,7 @@ Your money in one place: spending, budget, paychecks, accounts, debt payoff, sub
 - **Add people by name before they sign up.** They claim their spot from the invite link, or are linked automatically when they sign in with the email you added
 - **Expenses** split equally, by exact amounts, percentages or shares, with one or multiple payers. Every split is stored in integer cents and always adds up exactly
 - **Split by days lived there.** Give people move-in and move-out dates in group settings, then pick **By days** and the dates a bill covers (for example a utility's service period). Each person pays for their days only; anyone without dates counts every day. Works for upcoming bills too, and a paid upcoming bill keeps its period
-- **Simplify debts** per group: settles everyone in the fewest payments (at most people minus 1)
+- **Simplify debts** per group: settles everyone in at most people minus 1 payments, and in the fewest possible when the exact search finishes in time ([measured](eval/README.md#debt-simplification))
 - **Settle up**: record full or partial payments, with suggested amounts
 - **Reminders**: one tap opens your SMS or mail app with a pre-written nudge (uses the phone or email you saved)
 - **Live sync** across every device and member (Supabase Realtime), plus refresh on reconnect and tab focus
@@ -94,9 +94,9 @@ npm test                     # split + debt math tests
 
 ## How the money math works
 
-- Amounts are integer cents. Even splits give leftover cents to the first people in the list; percentage and share splits use the largest-remainder method, so parts always sum to the total.
+- Amounts are integer cents. Even splits give leftover cents to the first people in the list; percentage and share splits use the largest-remainder method in exact integer math, so parts always sum to the total and equal remainders go to the earlier person.
 - **Not simplified:** within each expense, the people who owe pay back whoever paid, then each pair of people is netted.
-- **Simplified** (Splitwise's rules): nobody's total changes, the group settles in the fewest payments possible, nobody who is owed money is asked to pay, and among the fewest-payment answers the one closest to who already owed whom wins. It searches payment routes from people who owe to people who are owed; very large groups fall back to biggest-debtor-pays-biggest-creditor.
+- **Simplified** (Splitwise's rules): nobody's total changes, the group settles in the fewest payments possible, nobody who is owed money is asked to pay, and among the fewest-payment answers the one closest to who already owed whom wins. It searches payment routes from people who owe to people who are owed. After 300,000 route combinations or 250 ms it falls back to biggest-debtor-pays-biggest-creditor, which can use more than the fewest payments. [eval/README.md](eval/README.md#debt-simplification) measures how often that happens.
 - **By days:** shares are weighted by the days of the bill's period each person lived there (move-in and move-out dates are inclusive), using the same largest-remainder method.
 - A payment is stored as an expense where the payer "paid" and the receiver "owes" the same amount, which cancels the debt.
 

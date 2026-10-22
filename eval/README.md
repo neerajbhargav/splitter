@@ -3,7 +3,7 @@
 Two offline scripts live here. Neither needs a key, a network call or a database.
 
 - `npm run eval:receipts` scores receipt extraction (this page).
-- `npm run bench:simplify` checks and times debt simplification. Its method is in the header of `bench-simplify.ts`.
+- `npm run bench:simplify` checks and times debt simplification ([below](#debt-simplification)).
 
 ## Receipt extraction
 
@@ -99,3 +99,65 @@ Rendered images go to `eval/.cache/` (gitignored).
 To accept a new baseline on purpose, rerun with `--write-subset` and commit the new results file and fixtures together.
 
 Tesseract's WebAssembly build uses relaxed SIMD where the CPU has it, so OCR text can differ slightly between machines. The baseline was recorded on an Apple M4 Pro and passes on the Linux runner in CI.
+
+## Debt simplification
+
+"Simplify debts" turns a group's balances into a short list of payments. `npm run bench:simplify` runs seeded groups through `simplifyDebtsInfo`, the search behind the group page and the dashboard. For every group it checks four things: every balance settles, nobody who is owed money pays and nobody who owes receives (no relays), the group uses at most n-1 payments (n = people with a balance), and an exact answer uses the fewest payments possible. The fewest is computed by an independent subset DP in `tests/random-ledger.ts`: n minus the most zero-sum parts the balances split into.
+
+### Results
+
+Sources: [`results/simplify-bench-2026-10-22.json`](results/simplify-bench-2026-10-22.json), [`results/simplify-bench-circles-2026-10-22.json`](results/simplify-bench-circles-2026-10-22.json) and [`results/simplify-bench-circles-cap2-2026-10-22.json`](results/simplify-bench-circles-cap2-2026-10-22.json), each with a `.txt` copy of the printed table. Run on 2026-10-22 with `src/lib/debts.ts` as of `2530b66`, Node 24.17.0, Apple M4 Pro, seed 1, 500 groups per run, 1 to 30 expenses per group.
+
+Caveats first:
+
+- The groups are synthetic. In "random" groups each expense is shared by a random subset of everyone. In "circles" groups the members form 2 to n/2 circles (like couples in a house) and each expense stays inside one circle, so a circle can settle on its own.
+- The times come from one laptop with a load average of about 5 from other work. Treat them as rough. The counts are seeded and repeat on any machine, except which groups hit the time cap.
+- `greedy_at_min` counts the groups where plain greedy (biggest debtor pays biggest creditor) also reaches the fewest payments. The gap between it and `at_min` is what the exact search adds.
+
+| Run | People | at_min | greedy_at_min | Invariant failures | Time cap fired | ms p50 / p95 / max | Payments, raw to simplified |
+|---|---|---|---|---|---|---|---|
+| Random, 250 ms cap | 2 to 10 | 500/500 | 500/500 | 0 | 53 | 0.12 / 251 / 253 | 7,741 to 2,432 (68.6% fewer) |
+| Circles, 250 ms cap | 4 to 10 | 500/500 | 368/500 | 0 | 0 | 0.02 / 0.42 / 22 | 3,136 to 1,965 (37.3% fewer) |
+| Circles, 2 ms cap | 4 to 10 | 500/500 | 368/500 | 0 | 5 | 0.02 / 0.44 / 3.7 | 3,136 to 1,965 (37.3% fewer) |
+
+Random groups by size (250 ms cap):
+
+| People | Groups | Time cap fired | p95 ms | Max ms | Payments, raw to simplified |
+|---|---|---|---|---|---|
+| 2 | 52 | 0 | 0.04 | 0.04 | 52 to 52 (0.0% fewer) |
+| 3 | 57 | 0 | 0.05 | 0.05 | 166 to 113 (31.9% fewer) |
+| 4 | 63 | 0 | 0.06 | 0.09 | 367 to 189 (48.5% fewer) |
+| 5 | 58 | 0 | 0.15 | 0.25 | 559 to 231 (58.7% fewer) |
+| 6 | 53 | 0 | 0.78 | 0.86 | 714 to 263 (63.2% fewer) |
+| 7 | 59 | 0 | 5.7 | 5.9 | 1,083 to 342 (68.4% fewer) |
+| 8 | 54 | 0 | 66 | 70 | 1,224 to 369 (69.9% fewer) |
+| 9 | 54 | 16 | 252 | 252 | 1,710 to 429 (74.9% fewer) |
+| 10 | 50 | 37 | 252 | 253 | 1,866 to 444 (76.2% fewer) |
+
+A memo hit (the same ledger again, as on a refetch) took at most 0.06 ms.
+
+### What the numbers say
+
+- On random groups the exact search never beats greedy. Their balances do not split into zero-sum parts, so n-1 payments is the minimum, and greedy reaches it too. A test that only uses such groups cannot tell the exact search from greedy.
+- On circle groups greedy misses the minimum in 132 of 500. The exact search reaches it in all 500, and the slowest one took 22 ms.
+- Large random groups are the slow case. For 9 and 10 people the search hit the 250 ms cap in 53 of 104 groups. Rerun with no cap, all 53 kept the same payment count. 17 gave identical payments, because the uncapped search also ran out of combinations (after up to 2 s). The other 36 suggest different payer and payee pairs than the uncapped search.
+- The cap rarely costs a payment. With a 2 ms cap, 5 circle groups fell back to greedy and all 5 kept the fewest payments. A 2 ms cap on this laptop stands in for the 250 ms cap on a device about 100 times slower (assumed: search time scales with device speed).
+
+### Where the search falls back
+
+`simplifyDebtsInfo` tries sets of payment routes from people who owe to people who are owed, starting at the subset-DP minimum and going up. It stops early in two cases and then returns greedy:
+
+1. after 300,000 route combinations (`SIMPLIFY_BUDGET`), the limit the app always had;
+2. after 250 ms of wall-clock time (`SIMPLIFY_TIME_CAP_MS`, the clock is read every 256 combinations).
+
+Greedy settles everyone with no relays in at most n-1 payments, but it can use more than the fewest. `fallback` in the result says which stop fired. With more than 16 people with a balance, the DP bound is skipped and the search starts at n-1. A time-capped answer can differ between a fast and a slow device for the same ledger.
+
+`tests/simplify-property.test.ts` runs in `npm test` with no time cap: 300 random groups of 2 to 7 people and 300 circle groups of 4 to 8 people. In all 600 the search is exact and uses the fewest payments. Both sets match golden digests computed by `debts.ts` as it was on `main` (`108950d`), before the memo and the time cap.
+
+### Commands
+
+```sh
+npm run bench:simplify                                       # random groups, about 40 s
+npm run bench:simplify -- --shape circles --min-n 4          # circle groups, under 1 s
+npm run bench:simplify -- --compare --json /tmp/simplify.json # also rerun time-capped groups with no cap
+```

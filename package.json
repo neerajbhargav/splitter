@@ -11,7 +11,8 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "node --test tests/*.test.ts",
-    "bench:simplify": "node eval/bench-simplify.ts"
+    "bench:simplify": "node eval/bench-simplify.ts",
+    "eval:receipts": "node eval/eval-receipts.ts"
   },
   "engines": {
     "node": ">=20"
@@ -29,11 +30,13 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
+    "@tesseract.js-data/eng": "1.0.0",
     "@types/node": "^26.6.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.3.8",
+    "sharp": "^0.35.5",
     "typescript": "^5.9.3"
   },
   "type": "module"

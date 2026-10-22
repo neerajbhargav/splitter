@@ -1,6 +1,5 @@
 // Seeded random group ledgers for the simplify property test and `npm run bench:simplify`.
 // Synthetic only: members are "m0".."m{n-1}", amounts are random cents.
-import { splitByWeights, splitEqual } from "../src/lib/split.ts";
 import type { LedgerEntry } from "../src/lib/debts.ts";
 
 /** mulberry32: small, fast, and the same sequence on every machine for a given seed. */
@@ -19,6 +18,7 @@ export type Group = { ids: string[]; entries: LedgerEntry[] };
 /**
  * One random group: `n` members and `expenses` expenses. Each expense has one payer (sometimes two),
  * is shared by a random subset of 70% odds per member, and is split equally or by small integer shares.
+ * The split is done here, not with src/lib/split.ts, so changes there cannot change these ledgers.
  */
 export function randomGroup(rand: () => number, n: number, expenses: number): Group {
   const ri = (a: number, b: number) => a + Math.floor(rand() * (b - a + 1));
@@ -28,9 +28,10 @@ export function randomGroup(rand: () => number, n: number, expenses: number): Gr
     const total = ri(100, 50_000);
     const among = ids.filter(() => rand() < 0.7);
     if (!among.length) among.push(ids[ri(0, n - 1)]);
-    const parts = rand() < 0.7
-      ? splitEqual(total, among)
-      : splitByWeights(total, among.map((id) => ({ id, weight: ri(1, 5) })));
+    const w = rand() < 0.7 ? among.map(() => 1) : among.map(() => ri(1, 5));
+    const sum = w.reduce((x, y) => x + y, 0);
+    const parts = among.map((id, i) => ({ id, amount: Math.floor((total * w[i]) / sum) }));
+    parts[0].amount += total - parts.reduce((x, p) => x + p.amount, 0);
     const p1 = ids[ri(0, n - 1)];
     const p2 = ids[ri(0, n - 1)];
     const first = p1 !== p2 && rand() < 0.2 ? ri(1, total - 1) : total;

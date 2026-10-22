@@ -32,30 +32,35 @@ export function splitEqual(total: number, ids: string[]): Portion[] {
   return ids.map((id, i) => ({ id, amount: base + (i < rem ? 1 : 0) }));
 }
 
+/** A weight as the exact decimal it prints as ("33.33" -> 3333 / 10^2), so 0.1 + 0.2 style float error never enters. */
+function decimal(w: number): { digits: bigint; scale: number } {
+  const [mantissa, exp = "0"] = String(w).split(/e/i);
+  const [whole, frac = ""] = mantissa.split(".");
+  const scale = frac.length - Number(exp);
+  const digits = BigInt(whole + frac);
+  return scale < 0 ? { digits: digits * 10n ** BigInt(-scale), scale: 0 } : { digits, scale };
+}
+
 /**
- * Split by weights (percentages or shares) with the largest-remainder method,
- * so the parts always sum to exactly `total`.
+ * Split by weights (percentages, shares or days) with the largest-remainder method, so the parts
+ * always sum to exactly `total`. Each person gets the floor of their exact share; the leftover cents
+ * go to the largest remainders, and equal remainders go to whoever is earlier in the list.
+ * Integer (BigInt) arithmetic on the weights as typed: float division used to break exact ties
+ * the wrong way, e.g. days [18,17,4,26,5,14,27,22] on 59736 gave the tied cent to the 3rd person.
  */
 export function splitByWeights(total: number, weights: { id: string; weight: number }[]): Portion[] {
   const valid = weights.filter((w) => Number.isFinite(w.weight) && w.weight > 0);
-  const sum = valid.reduce((a, w) => a + w.weight, 0);
-  if (!valid.length || sum <= 0 || total <= 0) return [];
-  const raw = valid.map((w, i) => {
-    const exact = (total * w.weight) / sum;
-    const floor = Math.floor(exact + 1e-9);
-    return { id: w.id, floor, frac: exact - floor, i };
-  });
-  let rem = total - raw.reduce((a, r) => a + r.floor, 0);
-  const order = [...raw].sort((a, b) => b.frac - a.frac || a.i - b.i);
-  for (let k = 0; rem > 0 && order.length; k = (k + 1) % order.length, rem--) order[k].floor += 1;
-  // Float edge case: floors overshot. Take the extra cents back from the smallest fractions.
-  for (let k = order.length - 1; rem < 0 && k >= 0; k--) {
-    if (order[k].floor > 0) {
-      order[k].floor -= 1;
-      rem++;
-    }
-  }
-  return raw.map((r) => ({ id: r.id, amount: r.floor }));
+  if (!valid.length || !Number.isSafeInteger(total) || total <= 0) return [];
+  const dec = valid.map((w) => decimal(w.weight));
+  const scale = Math.max(...dec.map((d) => d.scale));
+  const W = dec.map((d) => d.digits * 10n ** BigInt(scale - d.scale));
+  const sum = W.reduce((a, w) => a + w, 0n);
+  const T = BigInt(total);
+  const raw = valid.map((w, i) => ({ id: w.id, floor: (T * W[i]) / sum, rem: (T * W[i]) % sum, i }));
+  let left = T - raw.reduce((a, r) => a + r.floor, 0n);
+  const order = [...raw].sort((a, b) => (a.rem === b.rem ? a.i - b.i : a.rem > b.rem ? -1 : 1));
+  for (let k = 0; left > 0n; k++, left--) order[k].floor += 1n;
+  return raw.map((r) => ({ id: r.id, amount: Number(r.floor) }));
 }
 
 const dayNo = (iso: string) => Date.parse(iso + "T00:00:00Z") / 864e5;

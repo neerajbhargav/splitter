@@ -1,0 +1,17 @@
+$ npm run bench:simplify -- --shape circles --min-n 4 --compare --json eval/results/simplify-bench-circles-2026-10-22.json
+
+simplify bench: shape=circles seed=1 people=4-10 expenses=1-30 cap=250ms budget=300000
+node v24.17.0 darwin arm64 Apple M4 Pro, load avg 5.3 6.7 6.6
+groups=500 at_min=500/500 greedy_at_min=368/500 invariant_failures=0 fallback_budget=0 fallback_time=0
+uncached ms: p50=0.02 p95=0.42 max=22   memo hit ms: p50=0.00 max=0.01
+payments: raw=3136 simplified=1965 reduction=37.3%
+time-capped groups rerun with no cap: 0; same payment count 0/0; identical payments 0/0; uncapped hit the budget 0/0; uncapped ms p50=0.00 max=0.00
+
+ n  groups  at_min  greedy_at_min  fb_budget  fb_time  failures  p50_ms  p95_ms  max_ms   raw  simplified  reduction
+ 4      82   82/82          82/82          0        0         0    0.01    0.02    0.03   177         147      16.9%
+ 5      74   74/74          74/74          0        0         0    0.01    0.03    0.09   286         204      28.7%
+ 6      65   65/65          55/65          0        0         0    0.02    0.07    0.18   300         214      28.7%
+ 7      67   67/67          45/67          0        0         0    0.03    0.18    0.47   479         287      40.1%
+ 8      73   73/73          42/73          0        0         0    0.03    0.34    6.14   506         317      37.4%
+ 9      66   66/66          30/66          0        0         0    0.07    1.62      22   670         363      45.8%
+10      73   73/73          40/73          0        0         0    0.07    2.61      22   718         433      39.7%

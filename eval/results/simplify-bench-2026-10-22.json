@@ -1,5 +1,5 @@
 {
- "date": "2026-10-22T04:13:40.820Z",
+ "date": "2026-10-22T17:22:14.258Z",
  "command": "npm run bench:simplify -- --compare --json eval/results/simplify-bench-2026-10-22.json",
  "config": {
   "seed": 1,
@@ -9,42 +9,44 @@
   "minE": 1,
   "maxE": 30,
   "timeCapMs": "250ms",
-  "budget": 300000
+  "budget": 300000,
+  "shape": "random"
  },
  "node": "v24.17.0",
  "platform": "darwin arm64",
  "cpu": "Apple M4 Pro",
  "loadavg": [
-  6.40234375,
-  18.59375,
-  28.20458984375
+  5.28759765625,
+  7.318359375,
+  6.76318359375
  ],
  "compare_time_capped": {
-  "groups": 54,
-  "same_count": 54,
+  "groups": 53,
+  "same_count": 53,
   "identical": 17,
   "uncapped_hit_budget": 17,
   "uncapped_ms": {
-   "p50": 930.7178330000024,
-   "max": 2198.3690420000003
+   "p50": 836.1404169999987,
+   "max": 1982.9952920000032
   }
  },
  "totals": {
   "groups": 500,
   "at_min": 500,
+  "greedy_at_min": 500,
   "invariant_failures": 0,
   "fallback_budget": 0,
-  "fallback_time": 54,
+  "fallback_time": 53,
   "raw_payments": 7741,
   "simplified_payments": 2432,
   "uncached_ms": {
-   "p50": 0.11370800000076997,
-   "p95": 250.75787500000024,
-   "max": 253.2088330000006
+   "p50": 0.12366600000314065,
+   "p95": 250.85412499999802,
+   "max": 252.66654199999903
   },
   "memo_hit_ms": {
-   "p50": 0.002374999996391125,
-   "max": 0.028999999999996362
+   "p50": 0.002290999999786436,
+   "max": 0.06349999999656575
   }
  },
  "by_n": [
@@ -52,135 +54,144 @@
    "n": 2,
    "groups": 52,
    "at_min": 52,
+   "greedy_at_min": 52,
    "fallback_budget": 0,
    "fallback_time": 0,
    "invariant_failures": 0,
    "raw_payments": 52,
    "simplified_payments": 52,
    "ms": {
-    "p50": 0.0061659999992116354,
-    "p95": 0.019957999997131992,
-    "max": 0.021957999999358435
+    "p50": 0.00941699999384582,
+    "p95": 0.04433299999800511,
+    "max": 0.044957999998587184
    }
   },
   {
    "n": 3,
    "groups": 57,
    "at_min": 57,
+   "greedy_at_min": 57,
    "fallback_budget": 0,
    "fallback_time": 0,
    "invariant_failures": 0,
    "raw_payments": 166,
    "simplified_payments": 113,
    "ms": {
-    "p50": 0.008792000000539701,
-    "p95": 0.027792000000772532,
-    "max": 0.028249999999843567
+    "p50": 0.01583299999765586,
+    "p95": 0.04754200000024866,
+    "max": 0.053749999999126885
    }
   },
   {
    "n": 4,
    "groups": 63,
    "at_min": 63,
+   "greedy_at_min": 63,
    "fallback_budget": 0,
    "fallback_time": 0,
    "invariant_failures": 0,
    "raw_payments": 367,
    "simplified_payments": 189,
    "ms": {
-    "p50": 0.02629200000956189,
-    "p95": 0.04604199999994307,
-    "max": 0.13979199999999992
+    "p50": 0.029249999999592546,
+    "p95": 0.056749999999738066,
+    "max": 0.09375
    }
   },
   {
    "n": 5,
    "groups": 58,
    "at_min": 58,
+   "greedy_at_min": 58,
    "fallback_budget": 0,
    "fallback_time": 0,
    "invariant_failures": 0,
    "raw_payments": 559,
    "simplified_payments": 231,
    "ms": {
-    "p50": 0.06345800000053714,
-    "p95": 0.1394159999981639,
-    "max": 0.15370800000027884
+    "p50": 0.07295799999701558,
+    "p95": 0.1479170000020531,
+    "max": 0.25308400000358233
    }
   },
   {
    "n": 6,
    "groups": 53,
    "at_min": 53,
+   "greedy_at_min": 53,
    "fallback_budget": 0,
    "fallback_time": 0,
    "invariant_failures": 0,
    "raw_payments": 714,
    "simplified_payments": 263,
    "ms": {
-    "p50": 0.2922919999982696,
-    "p95": 0.7540420000004815,
-    "max": 0.9594169999982114
+    "p50": 0.29958299999998417,
+    "p95": 0.784417000002577,
+    "max": 0.8551669999869773
    }
   },
   {
    "n": 7,
    "groups": 59,
    "at_min": 59,
+   "greedy_at_min": 59,
    "fallback_budget": 0,
    "fallback_time": 0,
    "invariant_failures": 0,
    "raw_payments": 1083,
    "simplified_payments": 342,
    "ms": {
-    "p50": 1.3406250000116415,
-    "p95": 6.580292000006011,
-    "max": 8.809333000000152
+    "p50": 1.2760420000013255,
+    "p95": 5.679791000002297,
+    "max": 5.851791999999477
    }
   },
   {
    "n": 8,
    "groups": 54,
    "at_min": 54,
+   "greedy_at_min": 54,
    "fallback_budget": 0,
    "fallback_time": 0,
    "invariant_failures": 0,
    "raw_payments": 1224,
    "simplified_payments": 369,
    "ms": {
-    "p50": 11.06054099999892,
-    "p95": 66.09200000000419,
-    "max": 72.34258300000147
+    "p50": 10.098375000001397,
+    "p95": 65.53341700000237,
+    "max": 69.77279200000339
    }
   },
   {
    "n": 9,
    "groups": 54,
    "at_min": 54,
+   "greedy_at_min": 54,
    "fallback_budget": 0,
-   "fallback_time": 17,
+   "fallback_time": 16,
    "invariant_failures": 0,
    "raw_payments": 1710,
    "simplified_payments": 429,
    "ms": {
-    "p50": 132.19054199999664,
-    "p95": 251.75449999999546,
-    "max": 252.61766599999999
+    "p50": 124.85450000000128,
+    "p95": 251.70858299999963,
+    "max": 251.98720800000228
    }
   },
   {
    "n": 10,
    "groups": 50,
    "at_min": 50,
+   "greedy_at_min": 50,
    "fallback_budget": 0,
    "fallback_time": 37,
    "invariant_failures": 0,
    "raw_payments": 1866,
    "simplified_payments": 444,
    "ms": {
-    "p50": 250.48879200000374,
-    "p95": 252.64766699999973,
-    "max": 253.2088330000006
+    "p50": 250.3387909999983,
+    "p95": 251.7034160000003,
+    "max": 252.66654199999903
    }
   }
  ]

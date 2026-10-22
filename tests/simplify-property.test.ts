@@ -4,17 +4,24 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { netBalances, pairwiseDebts, simplifyDebts, simplifyDebtsInfo, type Tx } from "../src/lib/debts.ts";
-import { fewestPayments, randomGroup, randomGroups, rng } from "./random-ledger.ts";
+import { fewestPayments, randomGroup, randomGroups, rng, type Group } from "./random-ledger.ts";
 
-// 300 groups of 2-7 people with 1-25 expenses, about 0.5 s of CPU. Larger groups are slow to search
-// exactly, so they live in `npm run bench:simplify` instead. No time cap here, so a slow CI machine
-// gets the same answers as a fast one.
+// Two populations, about 0.5 s of CPU together. No time cap here, so a slow CI machine gets the same
+// answers as a fast one. Larger groups are slow to search exactly, so they live in `npm run bench:simplify`.
+// - random: 300 groups of 2-7 people with 1-25 expenses. Their balances almost never split into zero-sum
+//   parts, so the fewest payments is n-1 and plain greedy reaches it too.
+// - circles: 300 groups of 4-8 people whose expenses stay inside 2 to n/2 circles. Each circle settles on
+//   its own, so the fewest payments is often below n-1, and greedy misses it in some groups. These are
+//   the groups where the exact search matters.
 const SEED = 20261022;
-const groups = randomGroups(SEED, 300, 2, 7, 1, 25).map((g) => {
+const CIRCLE_SEED = 20261023;
+const run = (gs: Group[]) => gs.map((g) => {
   const net = netBalances(g.ids, g.entries);
   const raw = pairwiseDebts(g.entries);
   return { net, raw, ...simplifyDebtsInfo(net, raw, { timeCapMs: Infinity }) };
 });
+const groups = run(randomGroups(SEED, 300, 2, 7, 1, 25));
+const circles = run(randomGroups(CIRCLE_SEED, 300, 4, 8, 1, 25, true));
 const GOLDEN = new URL("./fixtures/simplify-golden.json", import.meta.url);
 
 const settle = (net: Record<string, number>, tx: Tx[]) => {
@@ -27,27 +34,34 @@ const settle = (net: Record<string, number>, tx: Tx[]) => {
 };
 const digest = (tx: Tx[]) => createHash("sha256").update(JSON.stringify(tx)).digest("hex").slice(0, 16);
 
-test("simplify settles every random group exactly, with no relays, in the fewest possible payments", () => {
-  let atMin = 0;
-  for (const [i, { net, tx, fallback }] of groups.entries()) {
-    const people = Object.values(net).filter((v) => v !== 0).length;
-    const ctx = `group ${i}: ${JSON.stringify(net)} -> ${JSON.stringify(tx)}`;
-    assert.ok(Object.values(settle(net, tx)).every((v) => v === 0), `every balance settles; ${ctx}`);
-    for (const t of tx) {
-      assert.ok(Number.isSafeInteger(t.amount) && t.amount > 0, `whole positive cents; ${ctx}`);
-      assert.ok(net[t.from] < 0 && net[t.to] > 0, `no relays: only people who owe pay, only people owed receive; ${ctx}`);
+for (const [label, set] of [["random", groups], ["circle", circles]] as const) {
+  test(`simplify settles every ${label} group exactly, with no relays, in the fewest possible payments`, () => {
+    for (const [i, { net, tx, fallback }] of set.entries()) {
+      const people = Object.values(net).filter((v) => v !== 0).length;
+      const ctx = `${label} group ${i}: ${JSON.stringify(net)} -> ${JSON.stringify(tx)}`;
+      assert.ok(Object.values(settle(net, tx)).every((v) => v === 0), `every balance settles; ${ctx}`);
+      for (const t of tx) {
+        assert.ok(Number.isSafeInteger(t.amount) && t.amount > 0, `whole positive cents; ${ctx}`);
+        assert.ok(net[t.from] < 0 && net[t.to] > 0, `no relays: only people who owe pay, only people owed receive; ${ctx}`);
+      }
+      assert.ok(tx.length <= Math.max(0, people - 1), `at most n-1 payments; ${ctx}`);
+      // The search is exact unless it ran out of combinations; at these sizes it never does.
+      assert.equal(fallback, null, `exact search finished; ${ctx}`);
+      assert.equal(tx.length, fewestPayments(Object.values(net)), `fewest payments (exact subset-DP bound); ${ctx}`);
     }
-    assert.ok(tx.length <= Math.max(0, people - 1), `at most n-1 payments; ${ctx}`);
-    // The search is exact unless it ran out of combinations; up to 7 people it never does.
-    assert.equal(fallback, null, `exact search finished; ${ctx}`);
-    assert.equal(tx.length, fewestPayments(Object.values(net)), `fewest payments (exact subset-DP bound); ${ctx}`);
-    atMin++;
-  }
-  assert.equal(atMin, groups.length);
+  });
+}
+
+test("the circle groups need the exact search: greedy alone uses more payments in some of them", (t) => {
+  const worse = circles.filter(({ net, raw, tx }) => simplifyDebtsInfo(net, raw, { budget: 0 }).tx.length > tx.length).length;
+  const belowN1 = circles.filter(({ net, tx }) => tx.length < Object.values(net).filter((v) => v !== 0).length - 1).length;
+  t.diagnostic(`circle groups below n-1 payments: ${belowN1}/${circles.length}; greedy uses more payments: ${worse}/${circles.length}`);
+  // If these hit 0, the fewest-payments check above would pass with greedy alone and prove nothing.
+  assert.ok(belowN1 > 0 && worse > 0, `below n-1: ${belowN1}, greedy worse: ${worse}`);
 });
 
 test("the memoized simplifyDebts returns the exact search's payments, as fresh copies", () => {
-  for (const { net, raw, tx } of groups) {
+  for (const { net, raw, tx } of [...groups, ...circles]) {
     assert.deepEqual(simplifyDebts(net, raw, { timeCapMs: Infinity }), tx);
     const again = simplifyDebts(net, raw, { timeCapMs: Infinity });
     assert.deepEqual(again, tx, "a memo hit returns the same payments");
@@ -75,15 +89,22 @@ test("past the time cap or the combination budget, simplify falls back to greedy
   assert.equal(simplifyDebtsInfo({}, []).fallback, null, "nothing to settle is exact");
 });
 
-test("simplify outputs match the golden file recorded before the memo and time cap were added", () => {
-  // The memo test above shows simplifyDebts returns these same payments.
+test("simplify outputs match the golden file recorded from the code before the memo and time cap were added", () => {
+  // Both digest lists were computed by src/lib/debts.ts as it was on main (108950d). The memo test above
+  // shows simplifyDebts returns these same payments.
   const got = groups.map((g) => digest(g.tx));
+  const gotCircles = circles.map((g) => digest(g.tx));
   if (process.env.UPDATE_GOLDEN) {
     fs.mkdirSync(new URL("./fixtures/", import.meta.url), { recursive: true });
-    fs.writeFileSync(GOLDEN, JSON.stringify({ seed: SEED, groups: groups.length, digests: got }, null, 1) + "\n");
+    const circleEntry = { seed: CIRCLE_SEED, groups: circles.length, digests: gotCircles };
+    fs.writeFileSync(GOLDEN, JSON.stringify({ seed: SEED, groups: groups.length, digests: got, circles: circleEntry }, null, 1) + "\n");
   }
-  const want = JSON.parse(fs.readFileSync(GOLDEN, "utf8")) as { seed: number; digests: string[] };
+  const want = JSON.parse(fs.readFileSync(GOLDEN, "utf8")) as { seed: number; digests: string[]; circles: { seed: number; digests: string[] } };
   assert.equal(want.seed, SEED);
-  const diff = got.map((d, i) => (d === want.digests[i] ? -1 : i)).filter((i) => i >= 0);
-  assert.deepEqual(diff, [], `groups whose payments changed: ${diff.slice(0, 10).join(", ")}`);
+  assert.equal(want.circles.seed, CIRCLE_SEED);
+  const changed = (a: string[], b: string[]) => a.map((d, i) => (d === b[i] ? -1 : i)).filter((i) => i >= 0);
+  assert.equal(want.digests.length, got.length);
+  assert.equal(want.circles.digests.length, gotCircles.length);
+  assert.deepEqual(changed(got, want.digests), [], "random groups whose payments changed");
+  assert.deepEqual(changed(gotCircles, want.circles.digests), [], "circle groups whose payments changed");
 });

@@ -159,7 +159,7 @@ export default function GroupSettings() {
           <div className="between" style={{ paddingTop: 4 }}>
             <div>
               <div style={{ fontWeight: 500 }}>Simplify debts</div>
-              <div className="hint">Settle the group in the fewest payments.</div>
+              <div className="hint">Settle the group in fewer payments.</div>
             </div>
             <Switch on={group.simplify_debts} label="Simplify debts" onChange={(v) => api.updateGroup(group.id, { simplify: v }).catch(toast.err)} />
           </div>

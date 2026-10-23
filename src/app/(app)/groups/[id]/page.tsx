@@ -307,7 +307,7 @@ export default function GroupPage() {
               )}
               <p className="hint" style={{ margin: "8px 0 0" }}>
                 {group.simplify_debts
-                  ? "Simplify uses the fewest payments, keeps everyone paying people they already owe whenever possible, and never changes anyone's total."
+                  ? "Simplify uses the fewest payments it can find (at most one fewer than the number of people), keeps everyone paying people they already owe whenever possible, and never changes anyone's total."
                   : "Each person pays back whoever covered their share of each expense."}
               </p>
             </div>

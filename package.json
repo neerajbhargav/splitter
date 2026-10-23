@@ -2,7 +2,7 @@
   "name": "splitter",
   "version": "1.0.0",
   "private": true,
-  "description": "SPLITTER - split shared expenses with roommates, friends and trips. Realtime sync, OAuth, simplify debts.",
+  "description": "Shared expenses and personal finance, exact to the cent. Next.js 16, Supabase, Postgres RLS on every table.",
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
@@ -16,7 +16,7 @@
     "eval:receipts": "node eval/eval-receipts.ts"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

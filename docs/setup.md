@@ -58,7 +58,7 @@ npm run dev                  # http://localhost:3000
 
 ## Upgrading an existing database
 
-A fresh database needs only `supabase/schema.sql`. An existing one gets the migrations in `supabase/migrations/`, in name order, before the matching app version is deployed. Every migration is safe to re-run: the PGlite tests apply each one twice.
+A fresh database needs only `supabase/schema.sql`. An existing one gets the migrations in `supabase/migrations/`, in name order, before the matching app version is deployed. Every migration is safe to re-run: `tests/migrations.test.ts` applies each one twice on top of the current `schema.sql`. It does not rebuild an older database, so it cannot prove an upgrade from one.
 
 | Migration | Adds |
 |---|---|
@@ -70,10 +70,13 @@ A fresh database needs only `supabase/schema.sql`. An existing one gets the migr
 | `20261006_credit_score_sync.sql` | idempotent credit score sync |
 | `20261021_group_fixes.sql` | split by days, owner-only group delete, first-name joining, check marks that survive edits |
 | `20261021_personal_tokens.sql` | calendar and score-sync links |
+| `20261023_revoke_internal_helpers.sql` | removes EXECUTE from `member_balance`, `suggest_spot` and `spot_looks_like_me`, which answered outside the group; the app keeps working |
 
 There is no migration version table. Track what you applied yourself.
 
-From 2026-10-02 until commit `9d1845b`, `schema.sql` alone had broken `itemized_splits` and `convert_itemized_bill` functions (the migrations were correct). A database whose last run was that `schema.sql`, not the two migrations, refuses every itemized bill whose tax plus tip is below its item total, and every foreign-currency itemized bill. Re-running the current `schema.sql`, or the two migrations, fixes it. No stored expense was affected: the broken function was either refused by `save_expense` or gave the same shares.
+From 2026-10-02 until commit `9d1845b`, `schema.sql` alone had broken `itemized_splits` and `convert_itemized_bill` functions (the migrations were correct). A database whose last run was that `schema.sql`, not the two migrations, refuses nearly every itemized bill and every foreign-currency itemized bill. It accepts an itemized bill only when tax plus tip equals the item total or is a few cents above it. Re-running the current `schema.sql`, or the two migrations, fixes it.
+
+No stored expense was affected, because an accepted bill got the same shares as the fixed function. The broken share was `2 × base + extra`; the fixed one is `base + floor(exact) + extra`, where `base` is a person's item total and `exact` is their part of tax plus tip. `save_expense` checks that shares add up, so it accepted a bill only when the sum of `floor(exact)` equalled the sum of `base`. That needs tax plus tip of at least the item total, which makes `floor(exact)` at least `base` for every person, so the two are equal for every person.
 
 ## Bank sync (optional, Plaid)
 

@@ -6,8 +6,8 @@ import { createHash } from "node:crypto";
 import { netBalances, pairwiseDebts, simplifyDebts, simplifyDebtsInfo, type Tx } from "../src/lib/debts.ts";
 import { fewestPayments, randomGroup, randomGroups, rng, type Group } from "./random-ledger.ts";
 
-// Two populations, about 0.5 s of CPU together. No time cap here, so a slow CI machine gets the same
-// answers as a fast one. Larger groups are slow to search exactly, so they live in `npm run bench:simplify`.
+// Two populations, about 0.5 s of CPU together. Larger groups are slow to search exactly, so they live in
+// `npm run bench:simplify`.
 // - random: 300 groups of 2-7 people with 1-25 expenses. Their balances almost never split into zero-sum
 //   parts, so the fewest payments is n-1 and plain greedy reaches it too.
 // - circles: 300 groups of 4-8 people whose expenses stay inside 2 to n/2 circles. Each circle settles on
@@ -18,7 +18,7 @@ const CIRCLE_SEED = 20261023;
 const run = (gs: Group[]) => gs.map((g) => {
   const net = netBalances(g.ids, g.entries);
   const raw = pairwiseDebts(g.entries);
-  return { net, raw, ...simplifyDebtsInfo(net, raw, { timeCapMs: Infinity }) };
+  return { net, raw, ...simplifyDebtsInfo(net, raw) };
 });
 const groups = run(randomGroups(SEED, 300, 2, 7, 1, 25));
 const circles = run(randomGroups(CIRCLE_SEED, 300, 4, 8, 1, 25, true));
@@ -62,26 +62,20 @@ test("the circle groups need the exact search: greedy alone uses more payments i
 
 test("the memoized simplifyDebts returns the exact search's payments, as fresh copies", () => {
   for (const { net, raw, tx } of [...groups, ...circles]) {
-    assert.deepEqual(simplifyDebts(net, raw, { timeCapMs: Infinity }), tx);
-    const again = simplifyDebts(net, raw, { timeCapMs: Infinity });
+    assert.deepEqual(simplifyDebts(net, raw), tx);
+    const again = simplifyDebts(net, raw);
     assert.deepEqual(again, tx, "a memo hit returns the same payments");
     for (const t of again) t.amount = -1;
-    assert.deepEqual(simplifyDebts(net, raw, { timeCapMs: Infinity }), tx, "editing a returned list does not touch the memo");
+    assert.deepEqual(simplifyDebts(net, raw), tx, "editing a returned list does not touch the memo");
   }
 });
 
-test("past the time cap or the combination budget, simplify falls back to greedy, which still settles everyone", () => {
-  // A 9-person group with many expenses: the exact search needs well over 256 combinations here.
+test("past the combination budget, simplify falls back to greedy, which still settles everyone", () => {
   const g = randomGroup(rng(9), 9, 30);
   const net = netBalances(g.ids, g.entries);
   const raw = pairwiseDebts(g.entries);
-  let clock = 0;
-  const timed = simplifyDebtsInfo(net, raw, { timeCapMs: 100, now: () => (clock += 1000) });
-  assert.equal(timed.fallback, "time");
-  assert.equal(timed.tried, 256, "the clock is read every 256 combinations, and the 1st read is already past 100 ms");
   const budget = simplifyDebtsInfo(net, raw, { budget: 0 });
   assert.equal(budget.fallback, "budget");
-  assert.deepEqual(timed.tx, budget.tx, "both stops return the same greedy answer");
   const people = Object.values(net).filter((v) => v !== 0).length;
   assert.ok(budget.tx.length <= people - 1);
   assert.ok(Object.values(settle(net, budget.tx)).every((v) => v === 0));
@@ -89,7 +83,27 @@ test("past the time cap or the combination budget, simplify falls back to greedy
   assert.equal(simplifyDebtsInfo({}, []).fallback, null, "nothing to settle is exact");
 });
 
-test("simplify outputs match the golden file recorded from the code before the memo and time cap were added", () => {
+test("simplify ignores the clock, so a slow device suggests the same payments as a fast one", () => {
+  // 8 people, 20 expenses: the exact search tries 792 route sets, and its answer differs from greedy's.
+  // A clock that jumps 1 s per read stands in for a very slow phone. A wall-clock cap (2530b66) gave up
+  // after 256 combinations here and returned the greedy answer instead.
+  const g = randomGroup(rng(1), 8, 20);
+  const net = netBalances(g.ids, g.entries);
+  const raw = pairwiseDebts(g.entries);
+  const fast = simplifyDebtsInfo(net, raw);
+  assert.notDeepEqual(fast.tx, simplifyDebtsInfo(net, raw, { budget: 0 }).tx, "this group must tell the exact search from greedy");
+  const real = performance.now;
+  let clock = 0;
+  performance.now = () => (clock += 1000);
+  try {
+    assert.deepEqual(simplifyDebtsInfo(net, raw), fast);
+    assert.deepEqual(simplifyDebts({ ...net }, raw.map((t) => ({ ...t }))), fast.tx);
+  } finally {
+    performance.now = real;
+  }
+});
+
+test("simplify outputs match the golden file recorded from the code before the memo was added", () => {
   // Both digest lists were computed by src/lib/debts.ts as it was on main (108950d). The memo test above
   // shows simplifyDebts returns these same payments.
   const got = groups.map((g) => digest(g.tx));

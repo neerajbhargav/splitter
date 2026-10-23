@@ -229,14 +229,12 @@ function finish(tx: Tx[]): Tx[] {
   return tx.sort((a, b) => b.amount - a.amount || a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
 }
 
-/** Wall-clock cap for one simplify search in the browser. Past it, simplify returns the greedy answer. */
-export const SIMPLIFY_TIME_CAP_MS = 250;
-/** Payment-route combinations tried before the greedy fallback. */
+/** Payment-route combinations tried before the greedy fallback. A count, not a clock, so every device
+ *  computes the same payments for the same ledger. */
 export const SIMPLIFY_BUDGET = 300_000;
 
-export type SimplifyOptions = { budget?: number; timeCapMs?: number; now?: () => number };
-/** `fallback` says why the exact search stopped early, if it did: too many combinations, or too slow. */
-export type SimplifyResult = { tx: Tx[]; fallback: "budget" | "time" | null; tried: number };
+/** `fallback` is "budget" when the exact search ran out of combinations and returned greedy. */
+export type SimplifyResult = { tx: Tx[]; fallback: "budget" | null };
 
 /**
  * Simplified debts. `raw` (the unsimplified debts) tells us who already owes whom,
@@ -244,21 +242,17 @@ export type SimplifyResult = { tx: Tx[]; fallback: "budget" | "time" | null; tri
  * doesn't cost an extra payment.
  *
  * Exact when `fallback` is null: the fewest payments possible, found by searching route sets of
- * the subset-DP size upward. The search stops early after `budget` combinations or `timeCapMs`,
+ * the subset-DP size upward. The search stops early after `budget` combinations,
  * and then returns the greedy answer, which still settles everyone with no relays in at most
  * n-1 payments but may use more than the fewest. The DP bound is exact only for up to 16 people
  * with a balance; above that the search starts at n-1.
  */
-export function simplifyDebtsInfo(net: Record<string, number>, raw: Tx[] = [], opts: SimplifyOptions = {}): SimplifyResult {
+export function simplifyDebtsInfo(net: Record<string, number>, raw: Tx[] = [], opts: { budget?: number } = {}): SimplifyResult {
   const ids = Object.keys(net).filter((id) => net[id] !== 0).sort();
-  if (!ids.length) return { tx: [], fallback: null, tried: 0 };
+  if (!ids.length) return { tx: [], fallback: null };
   const fallback = greedy(net);
   const target = minPayments(ids.map((id) => net[id]));
-  const cap = opts.timeCapMs ?? SIMPLIFY_TIME_CAP_MS;
-  const now = opts.now ?? (() => performance.now());
-  const t0 = now();
-  let tried = 0;
-  const done = (tx: Tx[], why: SimplifyResult["fallback"]): SimplifyResult => ({ tx: finish(tx), fallback: why, tried });
+  const done = (tx: Tx[], why: SimplifyResult["fallback"]): SimplifyResult => ({ tx: finish(tx), fallback: why });
 
   const rawAmt = new Map(raw.map((t) => [`${t.from}\u0000${t.to}`, t.amount]));
   const outTotal = new Map<string, number>();
@@ -307,7 +301,6 @@ export function simplifyDebtsInfo(net: Record<string, number>, raw: Tx[] = [], o
       let bestScore = Infinity;
       for (const old of combinations(existing, k - newAllowed)) for (const added of combinations(fresh, newAllowed)) {
         if (--budget < 0) return done(fallback, "budget");
-        if ((++tried & 255) === 0 && now() - t0 > cap) return done(fallback, "time");
         const combo = old.concat(added);
         if (!coversEveryone(combo)) continue;
         const flows = route(net, combo);
@@ -331,13 +324,13 @@ export function simplifyDebtsInfo(net: Record<string, number>, raw: Tx[] = [], o
 const memo = new Map<string, Tx[]>();
 const MEMO_SIZE = 200;
 
-/** simplifyDebtsInfo's payments, memoized by ledger (non-zero balances and raw debts, in order). */
-export function simplifyDebts(net: Record<string, number>, raw: Tx[] = [], opts: { budget?: number; timeCapMs?: number } = {}): Tx[] {
+/** simplifyDebtsInfo's payments with the default budget, memoized by ledger (non-zero balances and raw debts, in order). */
+export function simplifyDebts(net: Record<string, number>, raw: Tx[] = []): Tx[] {
   const balances = Object.keys(net).filter((id) => net[id] !== 0).sort().map((id) => [id, net[id]]);
-  const key = JSON.stringify([balances, raw.map((t) => [t.from, t.to, t.amount]), opts.budget ?? null, opts.timeCapMs ?? null]);
+  const key = JSON.stringify([balances, raw.map((t) => [t.from, t.to, t.amount])]);
   let tx = memo.get(key);
   if (!tx) {
-    tx = simplifyDebtsInfo(net, raw, opts).tx;
+    tx = simplifyDebtsInfo(net, raw).tx;
     if (memo.size >= MEMO_SIZE) memo.delete(memo.keys().next().value!);
     memo.set(key, tx);
   }

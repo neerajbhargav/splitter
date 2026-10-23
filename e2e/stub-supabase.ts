@@ -41,6 +41,8 @@ createServer(async (req, res) => {
     return req.headers.authorization === `Bearer ${ACCESS_TOKEN}` ? send(res, 200, USER) : send(res, 401, { message: "invalid JWT" });
   }
   if (url.pathname.startsWith("/rest/v1/") && req.method === "GET") return send(res, 200, select(url.pathname.slice("/rest/v1/".length), url.searchParams));
+  // Any other GET, such as the Realtime socket retrying on its own timer, is not a write.
+  if (req.method === "GET") return send(res, 404, { message: "E2E stub: not served" });
 
   // Anything else changes data (insert, update, delete, an RPC, an upload, a sign-out): record and refuse.
   let text = "";

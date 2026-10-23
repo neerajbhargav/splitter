@@ -21,6 +21,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # Fails on a high or critical advisory in a runtime dependency, including ones published after merge.
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
       # Includes the PGlite tests that load supabase/schema.sql into in-memory Postgres. No secrets.

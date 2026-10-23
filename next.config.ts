@@ -15,8 +15,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // No remotePatterns: nothing uses next/image, so the optimizer must not fetch other hosts.
-  // Receipts and avatars are plain <img> tags.
+  // Nothing uses next/image (receipts and avatars are plain <img> tags), so the optimizer is turned off:
+  // /_next/image had a remote code execution advisory up to 16.4.0 (GHSA-2464-fhr4-w9xw).
+  images: { unoptimized: true },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

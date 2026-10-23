@@ -28,12 +28,18 @@ test("record the README demo", async ({ browser, baseURL }, info) => {
   await warm.close();
 
   const ctx = await browser.newContext({ viewport: size, recordVideo: { dir: info.outputPath("video"), size } });
+  const started = Date.now();
   await ctx.addCookies([cookie]);
+  // Hide the next dev indicator (the round "N" badge, bottom left), which would sit on the account avatar.
+  await ctx.addInitScript(() => addEventListener("DOMContentLoaded", () => {
+    document.head.append(Object.assign(document.createElement("style"), { textContent: "nextjs-portal { display: none !important; }" }));
+  }));
   const page = await ctx.newPage();
   const nav = page.getByRole("navigation", { name: "Your money" });
 
   await page.goto("/finance");
   await expect(page.getByText("Set up your money.")).toBeVisible();
+  const firstPaint = (Date.now() - started) / 1000; // the video is blank before this; the GIF starts here
   await hold(page, 800);
   await page.getByRole("button", { name: "Explore with sample data first" }).click();
   await expect(page.getByText("Net worth")).toBeVisible();
@@ -48,7 +54,8 @@ test("record the README demo", async ({ browser, baseURL }, info) => {
 
   await page.getByRole("link", { name: "Test House" }).click();
   await expect(page.getByRole("heading", { name: "Test House" })).toBeVisible();
-  await hold(page, 1200);
+  await page.evaluate(() => scrollTo(0, 0)); // start on the group header, not where the Debt page was scrolled
+  await hold(page, 1800);
   await page.getByRole("tab", { name: "Balances" }).click();
   await expect(page.getByText("Simplified 3 payments down to 1.")).toBeVisible();
   await glide(page.getByText("Simplified 3 payments down to 1."));
@@ -68,5 +75,5 @@ test("record the README demo", async ({ browser, baseURL }, info) => {
   const video = page.video()!;
   await ctx.close();
   const palette = "fps=10,scale=960:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96[p];[b][p]paletteuse=dither=bayer:bayer_scale=5";
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", await video.path(), "-vf", palette, "-loop", "0", "docs/demo.gif"]);
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-ss", firstPaint.toFixed(2), "-i", await video.path(), "-vf", palette, "-loop", "0", "docs/demo.gif"]);
 });

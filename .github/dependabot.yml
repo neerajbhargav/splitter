@@ -8,7 +8,9 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
     ignore:
-      # eslint-plugin-react, -import and -jsx-a11y (via eslint-config-next) accept ESLint 9 at most.
+      # eslint-plugin-react, -import and -jsx-a11y (via eslint-config-next 16.4.2) accept ESLint 9 at most.
+      # 2026-10-23: ESLint 9 is past end of support (npm ci warns) and ESLint 10.13.0 is out. Drop this
+      # ignore once those three plugins accept ^10. Dev-only: ESLint never ships in the app.
       - dependency-name: eslint
         update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions

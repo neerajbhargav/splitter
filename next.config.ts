@@ -15,6 +15,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // When an AI agent runs `next dev`, Next writes AGENTS.md and CLAUDE.md into the repo root. Dev only.
+  agentRules: false,
   // Nothing uses next/image (receipts and avatars are plain <img> tags), so the optimizer is turned off:
   // /_next/image had a remote code execution advisory up to 16.4.0 (GHSA-2464-fhr4-w9xw).
   images: { unoptimized: true },

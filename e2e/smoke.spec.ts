@@ -4,7 +4,7 @@ import { GROUP_ID, MEMBER, STUB_URL, sessionCookie } from "./fixtures.ts";
 type Write = { method: string; path: string; body: Record<string, unknown> | null };
 const writes = async (request: APIRequestContext): Promise<Write[]> => (await request.get(`${STUB_URL}/__e2e/writes`)).json();
 
-test("pages send the security headers and the image optimizer refuses other hosts", async ({ request }) => {
+test("pages send the security headers and the image optimizer is off", async ({ request }) => {
   const res = await request.get("/login");
   expect(res.status()).toBe(200);
   const h = res.headers();
@@ -13,8 +13,12 @@ test("pages send the security headers and the image optimizer refuses other host
   expect(h["permissions-policy"]).toBe("camera=(self), microphone=(), geolocation=(), payment=(), usb=()");
   expect(h["content-security-policy"]).toBe("frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
 
-  const remote = await request.get(`/_next/image?url=${encodeURIComponent("https://example.com/a.png")}&w=64&q=75`);
-  expect(remote.status()).toBe(400);
+  // images.unoptimized: /_next/image serves nothing, for other hosts or for this site's own files.
+  for (const url of ["https://example.com/a.png", "/icon-192.png", "/icon.svg"]) {
+    const img = await request.get(`/_next/image?url=${encodeURIComponent(url)}&w=64&q=75`);
+    expect(img.status(), url).toBe(404);
+  }
+  expect((await request.get("/icon-192.png")).status()).toBe(200);
 });
 
 test.describe("signed in (stub Supabase)", () => {

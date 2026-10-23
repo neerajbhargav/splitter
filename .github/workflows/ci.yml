@@ -33,6 +33,11 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # The image ships Chromium and its system libraries for the pinned @playwright/test 1.64.1, so the job
+    # skips `playwright install --with-deps`, which took from 17 s to 9.5 min on hosted runners (slow apt mirrors).
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
     steps:
       - uses: actions/checkout@v7
         with:
@@ -42,7 +47,6 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps --only-shell chromium
       # Runs next dev against e2e/stub-supabase.ts with synthetic data. No secrets, no real Supabase.
       - run: npm run e2e
       - uses: actions/upload-artifact@v7

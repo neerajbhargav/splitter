@@ -55,7 +55,6 @@ const CASES: Record<string, (f: Fx, me: Me) => Record<string, unknown>> = {
   join_group: () => ({}),
   leave_group: () => ({}),
   mark_upcoming_paid: () => ({}),
-  member_balance: () => ({}),
   member_color: () => ({}),
   name_tokens: () => ({}),
   new_invite_code: () => ({}),
@@ -90,8 +89,6 @@ const CASES: Record<string, (f: Fx, me: Me) => Record<string, unknown>> = {
   set_member_stay: () => ({}),
   set_share_paid: (f, me) => ({ mid: me.members[0] }),
   shares_group_with: () => ({}),
-  spot_looks_like_me: (f) => ({ mid: f.sam }),
-  suggest_spot: () => ({}),
   // Same bureau, day and model as the victim's score, so a sync keyed on anything but the user would overwrite it.
   sync_credit_scores_with_token: () => ({ p_rows: [{ bureau: "experian", score: 300, model: "FICO 8", as_of: "2020-01-10" }] }),
   sync_finance_credit_scores: () => ({ p_rows: [{ bureau: "experian", score: 300, model: "FICO 8", as_of: "2020-01-10" }] }),
@@ -104,17 +101,9 @@ const CASES: Record<string, (f: Fx, me: Me) => Record<string, unknown>> = {
 };
 
 // Known gaps, pinned so they cannot spread unnoticed, and so a fix makes this test ask for the entry's removal.
-// Each value is the leak this test observes today, for any caller. None of these is called by the app;
-// get_invite calls the last two internally, as the definer, so revoking EXECUTE from anon and authenticated
-// would close all three without changing the app.
-const KNOWN: Record<string, string> = {
-  // No membership check: anyone holding a member id, signed in or not, reads that member's balance.
-  member_balance: "returned -23000",
-  // No membership or invite check: a caller whose first name matches an unclaimed spot learns that spot's member id.
-  suggest_spot: 'returned {"how": "name", "member_id": ',
-  // No membership check: says whether a spot in any group matches the caller's name or email.
-  spot_looks_like_me: "returned true",
-};
+// Each value is the start of the leak message this test observes, for example `member_balance: "returned -23000"`.
+// None today: member_balance, suggest_spot and spot_looks_like_me were closed in 20261023_revoke_internal_helpers.sql.
+const KNOWN: Record<string, string> = {};
 
 /** A $30 bill paid by the first member and split equally (1 or 3 members). */
 function expense(members: string[], description: string) {
@@ -329,10 +318,10 @@ function report(t: { diagnostic: (s: string) => void }, m: Awaited<ReturnType<ty
   t.diagnostic(`functions granted: ${m.granted.length}; SECURITY DEFINER functions: ${m.definers.length}; tables: ${m.names.length}; known gaps: ${Object.keys(KNOWN).join(", ") || "none"}`);
 }
 
-// A fresh schema.sql, and schema.sql with the two 2026-10-21 migrations applied on top (twice). The second
+// A fresh schema.sql, and schema.sql with the newest migrations applied on top (twice). The second
 // checks that re-running those migrations on a current database leaves no hole. It does not rebuild an older
 // database: the harness has no copy of one.
-for (const [label, migrations] of [["fresh schema", []], ["schema plus the 2026-10-21 migrations", ["20261021_group_fixes.sql", "20261021_personal_tokens.sql"]]] as const) test(`authorization matrix (${label}): RLS on every table, search_path on every definer, and outsiders refused by every RPC`, async (t) => {
+for (const [label, migrations] of [["fresh schema", []], ["schema plus the 2026-10-21 and 2026-10-23 migrations", ["20261021_group_fixes.sql", "20261021_personal_tokens.sql", "20261023_revoke_internal_helpers.sql"]]] as const) test(`authorization matrix (${label}): RLS on every table, search_path on every definer, and outsiders refused by every RPC`, async (t) => {
   const { db, as, user } = await freshDb(...migrations);
   try {
     const m = await matrix(db, as, user);

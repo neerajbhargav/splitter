@@ -1158,6 +1158,12 @@ language sql stable security definer set search_path = public as $$
                                                     || public.name_tokens((select display_name from public.profiles where id = u.id)))));
 $$;
 
+-- Internal helpers. remove_member, get_invite and join_group call them as the definer. Granted to callers,
+-- they answered outside the group: member_balance for any member id, the spot helpers for any group.
+revoke all on function public.member_balance(uuid) from public, anon, authenticated;
+revoke all on function public.suggest_spot(uuid) from public, anon, authenticated;
+revoke all on function public.spot_looks_like_me(uuid) from public, anon, authenticated;
+
 create or replace function public.get_invite(p_code text) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare g public.groups; sug jsonb;

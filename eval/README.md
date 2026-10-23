@@ -16,6 +16,7 @@ Source: [`results/receipts-2026-10-22.json`](results/receipts-2026-10-22.json). 
 Caveats first:
 
 - The receipts are synthetic. They are rendered from SVG, not photographed, so they lack real lighting, curled paper and thermal fade. The tiers are a stress test, not a model of real photos.
+- The generator prints only formats the parser supports: its 7 total labels, its distractors ("Total Items", "Total Savings", "Cash", "Change") and its 3 fillable date kinds are exactly what `parseReceipt` accepts or skips. So the perfect-text rows are a ceiling inside that vocabulary, not a baseline. Outside it, on perfect text, the parser fills 2 of 12 total labels and 2 of 9 one-reading date formats, and fills nothing wrong ([`tests/receipt-held-out.test.ts`](../tests/receipt-held-out.test.ts)). Real receipts will show lower coverage than this table.
 - n = 200, so a 100% row still has a 95% interval that reaches down to about 95%. Intervals are Wilson intervals.
 - Pixels depend on the fonts installed. Each image's SHA-256 is in the results file. On another machine the images can differ, and so can the numbers.
 - Subtotal and tax are printed on every receipt and kept in the ground truth, but the app does not extract them, so they are not scored.
@@ -23,11 +24,11 @@ Caveats first:
 | Field | Input | Precision (correct / answered) | 95% CI | Coverage | Refusals on unknowable dates |
 |---|---|---|---|---|---|
 | Total | OCR | 99.1% (105/106) | 94.8 to 99.8% | 53.0% (106/200) | |
-| Total | Perfect text | 100% (200/200) | 98.1 to 100% | 100% | |
+| Total | Perfect text (ceiling) | 100% (200/200) | 98.1 to 100% | 100% | |
 | Date | OCR | 98.6% (71/72) | 92.5 to 99.8% | 59.8% (70/117) | 97.6% (81/83) |
-| Date | Perfect text | 100% (99/99) | 96.3 to 100% | 84.6% (99/117) | 100% (83/83) |
+| Date | Perfect text (ceiling) | 100% (99/99) | 96.3 to 100% | 84.6% (99/117) | 100% (83/83) |
 | Merchant | OCR | 57.8% (100/173) | 50.4 to 64.9% | 86.5% (173/200) | |
-| Merchant | Perfect text | 93.0% (186/200) | 88.6 to 95.8% | 100% | |
+| Merchant | Perfect text (ceiling) | 93.0% (186/200) | 88.6 to 95.8% | 100% | |
 
 OCR total by tier:
 
@@ -69,7 +70,7 @@ Tiers:
 - Mild (35%): the paper on a table, rotated up to 1.5 degrees, blur 0.4 to 0.7 px, 150 to 500 specks, up to 1 crease, dark gray ink, JPEG quality 70 to 90 half the time.
 - Hard (30%): rotated 2.5 to 6 degrees, blur 0.7 to 1.1 px, 700 to 1800 specks, 1 to 3 creases, gray ink on gray paper, JPEG quality 35 to 60.
 
-Each image goes through the app's own OCR settings and parser. The English data is the npm copy of the file the browser downloads from jsDelivr: `@tesseract.js-data/eng` 1.0.0, `4.0.0_best_int/eng.traineddata.gz`, SHA-256 `45b4cb34...ff91`. Each receipt's perfect text also goes through the parser alone. That splits OCR errors from parser limits.
+Each image goes through the app's own OCR settings and parser. The English data is the npm copy of the file the browser downloads from jsDelivr: `@tesseract.js-data/eng` 1.0.0, `4.0.0_best_int/eng.traineddata.gz`, SHA-256 `45b4cb34...ff91`. Each receipt's perfect text also goes through the parser alone. That splits OCR errors from parser limits inside the generator's vocabulary. Formats outside it are checked separately, on perfect text only, by `tests/receipt-held-out.test.ts`.
 
 Scoring:
 
@@ -106,58 +107,64 @@ Tesseract's WebAssembly build uses relaxed SIMD where the CPU has it, so OCR tex
 
 ### Results
 
-Sources: [`results/simplify-bench-2026-10-22.json`](results/simplify-bench-2026-10-22.json), [`results/simplify-bench-circles-2026-10-22.json`](results/simplify-bench-circles-2026-10-22.json) and [`results/simplify-bench-circles-cap2-2026-10-22.json`](results/simplify-bench-circles-cap2-2026-10-22.json), each with a `.txt` copy of the printed table. Run on 2026-10-22 with `src/lib/debts.ts` as of `2530b66`, Node 24.17.0, Apple M4 Pro, seed 1, 500 groups per run, 1 to 30 expenses per group.
+Sources: [`results/simplify-bench-circles-2026-10-23.json`](results/simplify-bench-circles-2026-10-23.json), [`results/simplify-bench-2026-10-23.json`](results/simplify-bench-2026-10-23.json) and [`results/simplify-vs-main-2026-10-23.json`](results/simplify-vs-main-2026-10-23.json), each with a `.txt` copy of the printed output. Run on 2026-10-23 with `src/lib/debts.ts` as of the commit that added them, Node 24.17.0, Apple M4 Pro, seed 1, 500 groups per run, 1 to 30 expenses per group.
 
 Caveats first:
 
-- The groups are synthetic. In "random" groups each expense is shared by a random subset of everyone. In "circles" groups the members form 2 to n/2 circles (like couples in a house) and each expense stays inside one circle, so a circle can settle on its own.
-- The times come from one laptop with a load average of about 5 from other work. Treat them as rough. The counts are seeded and repeat on any machine, except which groups hit the time cap.
+- The groups are synthetic. In "random" groups each expense is shared by a random subset of everyone. In "circles" groups the members form 2 to n/2 circles (like couples in a house) and each expense stays inside one circle, so a circle can settle on its own. Circle groups are built so that greedy can fail; nothing calibrates either shape to real household ledgers.
+- The times come from one laptop under heavy load from other work (load average 8 to 19 during these runs; each results file records it). Treat them as rough, and as a laptop, not a phone. The counts are seeded and repeat on any machine; the times do not.
 - `greedy_at_min` counts the groups where plain greedy (biggest debtor pays biggest creditor) also reaches the fewest payments. The gap between it and `at_min` is what the exact search adds.
 
-| Run | People | at_min | greedy_at_min | Invariant failures | Time cap fired | ms p50 / p95 / max | Payments, raw to simplified |
+| Run | People | at_min | greedy_at_min | Invariant failures | Budget fallbacks | ms p50 / p95 / max | Payments, raw to simplified |
 |---|---|---|---|---|---|---|---|
-| Random, 250 ms cap | 2 to 10 | 500/500 | 500/500 | 0 | 53 | 0.12 / 251 / 253 | 7,741 to 2,432 (68.6% fewer) |
-| Circles, 250 ms cap | 4 to 10 | 500/500 | 368/500 | 0 | 0 | 0.02 / 0.42 / 22 | 3,136 to 1,965 (37.3% fewer) |
-| Circles, 2 ms cap | 4 to 10 | 500/500 | 368/500 | 0 | 5 | 0.02 / 0.44 / 3.7 | 3,136 to 1,965 (37.3% fewer) |
+| Circles | 4 to 10 | 500/500 | 368/500 | 0 | 0 | 0.07 / 2.6 / 79 | 3,136 to 1,965 (37.3% fewer) |
+| Random | 2 to 10 | 500/500 | 500/500 | 0 | 17 | 0.19 / 1,742 / 10,824 | 7,741 to 2,432 (68.6% fewer) |
 
-Random groups by size (250 ms cap):
+Random groups by size:
 
-| People | Groups | Time cap fired | p95 ms | Max ms | Payments, raw to simplified |
+| People | Groups | Budget fallbacks | p95 ms | Max ms | Payments, raw to simplified |
 |---|---|---|---|---|---|
-| 2 | 52 | 0 | 0.04 | 0.04 | 52 to 52 (0.0% fewer) |
-| 3 | 57 | 0 | 0.05 | 0.05 | 166 to 113 (31.9% fewer) |
-| 4 | 63 | 0 | 0.06 | 0.09 | 367 to 189 (48.5% fewer) |
-| 5 | 58 | 0 | 0.15 | 0.25 | 559 to 231 (58.7% fewer) |
-| 6 | 53 | 0 | 0.78 | 0.86 | 714 to 263 (63.2% fewer) |
-| 7 | 59 | 0 | 5.7 | 5.9 | 1,083 to 342 (68.4% fewer) |
-| 8 | 54 | 0 | 66 | 70 | 1,224 to 369 (69.9% fewer) |
-| 9 | 54 | 16 | 252 | 252 | 1,710 to 429 (74.9% fewer) |
-| 10 | 50 | 37 | 252 | 253 | 1,866 to 444 (76.2% fewer) |
+| 2 | 52 | 0 | 0.08 | 0.22 | 52 to 52 (0.0% fewer) |
+| 3 | 57 | 0 | 0.14 | 0.32 | 166 to 113 (31.9% fewer) |
+| 4 | 63 | 0 | 0.09 | 0.15 | 367 to 189 (48.5% fewer) |
+| 5 | 58 | 0 | 0.26 | 15 | 559 to 231 (58.7% fewer) |
+| 6 | 53 | 0 | 1.1 | 2.6 | 714 to 263 (63.2% fewer) |
+| 7 | 59 | 0 | 12 | 18 | 1,083 to 342 (68.4% fewer) |
+| 8 | 54 | 0 | 93 | 102 | 1,224 to 369 (69.9% fewer) |
+| 9 | 54 | 0 | 1,172 | 4,707 | 1,710 to 429 (74.9% fewer) |
+| 10 | 50 | 17 | 5,372 | 10,824 | 1,866 to 444 (76.2% fewer) |
 
-A memo hit (the same ledger again, as on a refetch) took at most 0.06 ms.
+A memo hit (the same ledger again, as on a refetch) took at most 0.08 ms on random groups and 4.3 ms on circle groups.
 
 ### What the numbers say
 
-- On random groups the exact search never beats greedy. Their balances do not split into zero-sum parts, so n-1 payments is the minimum, and greedy reaches it too. A test that only uses such groups cannot tell the exact search from greedy.
-- On circle groups greedy misses the minimum in 132 of 500. The exact search reaches it in all 500, and the slowest one took 22 ms.
-- Large random groups are the slow case. For 9 and 10 people the search hit the 250 ms cap in 53 of 104 groups. Rerun with no cap, all 53 kept the same payment count. 17 gave identical payments, because the uncapped search also ran out of combinations (after up to 2 s). The other 36 suggest different payer and payee pairs than the uncapped search.
-- The cap rarely costs a payment. With a 2 ms cap, 5 circle groups fell back to greedy and all 5 kept the fewest payments. A 2 ms cap on this laptop stands in for the 250 ms cap on a device about 100 times slower (assumed: search time scales with device speed).
+- On circle groups greedy misses the minimum in 132 of 500. The exact search reaches it in all 500. This is the result that matters, on a shape built to need it.
+- On random groups the exact search never beats greedy. Their balances do not split into zero-sum parts, so n-1 payments is the minimum, and greedy reaches it too. These 500 groups are a sanity check, not evidence for the exact search.
+- Large random groups are the slow case. The search starts at the minimum count, which greedy already reaches here, and scores every working set of routes of that size (with as few new routes as possible) to pick the one closest to who already owed whom (derived from reading `simplifyDebtsInfo`). For 10 people, 17 of 50 groups ran out of the 300,000-combination budget and returned greedy, with the same payment count. It runs on the browser's main thread, so the first render of such a ledger can block the page for seconds. The memo makes every later render of the same ledger cost a lookup.
+- The branch's `simplifyDebts` returns the same payments as `main` (`108950d`) for all 1,000 groups (500 random, 500 circles) in `results/simplify-vs-main-2026-10-23.json`. The memo changes speed, not answers.
 
 ### Where the search falls back
 
-`simplifyDebtsInfo` tries sets of payment routes from people who owe to people who are owed, starting at the subset-DP minimum and going up. It stops early in two cases and then returns greedy:
+`simplifyDebtsInfo` tries sets of payment routes from people who owe to people who are owed, starting at the subset-DP minimum and going up. After 300,000 route combinations (`SIMPLIFY_BUDGET`, the limit the app always had) it stops and returns greedy, with `fallback: "budget"`. Greedy settles everyone with no relays in at most n-1 payments, but it can use more than the fewest. With more than 16 people with a balance, the DP bound is skipped and the search starts at n-1.
 
-1. after 300,000 route combinations (`SIMPLIFY_BUDGET`), the limit the app always had;
-2. after 250 ms of wall-clock time (`SIMPLIFY_TIME_CAP_MS`, the clock is read every 256 combinations).
+The stop is a count, not a clock, so every device computes the same payments for the same ledger. Commit `2530b66` had added a 250 ms wall-clock cap; it was removed because it made the answer depend on device speed. In its own bench (`eval/results/simplify-bench-2026-10-22.json`, in git history at `a5668e0`), the cap fired in 53 random groups of 9 or 10 people, and 36 of those 53 got different payer and payee pairs than the uncapped search.
 
-Greedy settles everyone with no relays in at most n-1 payments, but it can use more than the fewest. `fallback` in the result says which stop fired. With more than 16 people with a balance, the DP bound is skipped and the search starts at n-1. A time-capped answer can differ between a fast and a slow device for the same ledger.
-
-`tests/simplify-property.test.ts` runs in `npm test` with no time cap: 300 random groups of 2 to 7 people and 300 circle groups of 4 to 8 people. In all 600 the search is exact and uses the fewest payments. Both sets match golden digests computed by `debts.ts` as it was on `main` (`108950d`), before the memo and the time cap.
+`tests/simplify-property.test.ts` runs in `npm test`: 300 random groups of 2 to 7 people and 300 circle groups of 4 to 8 people. In all 600 the search is exact and uses the fewest payments. Both sets match golden digests computed by `debts.ts` as it was on `main` (`108950d`). Another test gives the search a clock that jumps 1 s per read and checks that the answer does not change.
 
 ### Commands
 
 ```sh
-npm run bench:simplify                                       # random groups, about 40 s
-npm run bench:simplify -- --shape circles --min-n 4          # circle groups, under 1 s
-npm run bench:simplify -- --compare --json /tmp/simplify.json # also rerun time-capped groups with no cap
+npm run bench:simplify                                 # random groups; minutes, because of the 9 and 10 person groups
+npm run bench:simplify -- --shape circles --min-n 4    # circle groups, a few seconds
+node eval/compare-simplify-main.ts                     # payments against main (108950d); minutes
 ```
+
+## Checks without a committed script
+
+Some commit messages on this branch report checks that were run by hand, with no script or result file in the repo. Treat them as reported, not reproducible:
+
+- `b11cfad`: the authz matrix failed on 8 kinds of planted bug. Two IDOR plants are now a committed test (`tests/authz-matrix.test.ts`, "catches planted IDORs").
+- `ad16128`: the matrix failed on a planted definer trigger without `search_path` and on a plain view.
+- `1e7dc20`: all 660 split inputs used by the tests gave the same output before and after exact-integer weights.
+- `4be91a0`: each Playwright smoke test failed on a planted bug.
+- [The CI gate](#the-ci-gate) above: the receipt gate failed on a planted largest-amount fallback (2026-10-22).

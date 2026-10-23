@@ -13,7 +13,11 @@ export async function freshDb(...migrations: string[]) {
     create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,owner uuid);
     alter table storage.objects enable row level security;
     create function storage.foldername(name text) returns text[] language sql immutable as $$ select (string_to_array(name,'/'))[1:array_length(string_to_array(name,'/'),1)-1] $$;
-    grant usage on schema public,auth,storage to anon,authenticated;grant all on all tables in schema storage to authenticated;`);
+    grant usage on schema public,auth,storage to anon,authenticated;grant all on all tables in schema storage to authenticated;
+    -- Supabase grants every new public table, sequence and function to anon and authenticated; the schema's revokes then apply.
+    alter default privileges in schema public grant all on tables to anon,authenticated;
+    alter default privileges in schema public grant all on sequences to anon,authenticated;
+    alter default privileges in schema public grant all on functions to anon,authenticated;`);
   await db.exec(read("../supabase/schema.sql"));
   // An existing deployment gets the same result from each migration, and they are safe to re-run.
   for (const m of migrations) for (let i = 0; i < 2; i++) await db.exec(read(`../supabase/migrations/${m}`));

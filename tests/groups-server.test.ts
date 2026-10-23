@@ -78,3 +78,37 @@ test("only the owner deletes a group, joining matches first names, and check mar
     await db.close();
   }
 });
+
+test("as the API's signed-in role, invites, joining and removing a member still work, and the 3 internal helpers are refused", async () => {
+  const { db, as, user } = await freshDb();
+  try {
+    const owner = "11111111-1111-4111-8111-111111111111", cleo = "44444444-4444-4444-8444-444444444444";
+    await user(owner, "owner@example.invalid", "Owner");
+    await user(cleo, "cleo@example.invalid", "Cleo Park");
+    await as(owner);
+    const gid = (await db.query<{ gid: string }>(`select public.create_group('House','home','USD','[{"name":"Cleo"},{"name":"Sam"}]') gid`)).rows[0].gid;
+    const code = (await db.query<{ c: string }>(`select invite_code c from groups where id=$1`, [gid])).rows[0].c;
+    const spot = async (name: string) => (await db.query<{ id: string; user_id: string | null }>(`select id, user_id from group_members where group_id=$1 and display_name=$2`, [gid, name])).rows[0];
+    const sam = (await spot("Sam")).id;
+
+    await as(cleo);
+    await db.exec("set role authenticated");
+    const inv = (await db.query<{ j: { suggested: { how: string } | null; placeholders: { display_name: string; looks_like_me: boolean }[] } }>(`select public.get_invite($1) j`, [code])).rows[0].j;
+    assert.equal(inv.suggested?.how, "name", "get_invite still suggests the matching spot (suggest_spot, as the definer)");
+    assert.deepEqual(inv.placeholders.map((p) => [p.display_name, p.looks_like_me]), [["Cleo", true], ["Sam", false]], "and flags it (spot_looks_like_me)");
+    await assert.rejects(db.query(`select public.member_balance($1)`, [sam]), /permission denied/);
+    await assert.rejects(db.query(`select public.spot_looks_like_me($1)`, [sam]), /permission denied/);
+    await assert.rejects(db.query(`select public.suggest_spot($1)`, [gid]), /permission denied/);
+    await db.query(`select public.join_group($1)`, [code]);
+    await db.exec("reset role");
+    assert.equal((await spot("Cleo")).user_id, cleo, "join_group claimed the matching spot");
+
+    await as(owner);
+    await db.exec("set role authenticated");
+    await db.query(`select public.remove_member($1)`, [sam]); // checks member_balance, as the definer
+    await db.exec("reset role");
+    assert.equal((await db.query(`select 1 from group_members where id=$1 and is_active`, [sam])).rows.length, 0, "Sam was removed");
+  } finally {
+    await db.close();
+  }
+});

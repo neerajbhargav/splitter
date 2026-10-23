@@ -147,7 +147,7 @@ export default function DebtPage() {
 
   // Save anything still waiting when you leave the page.
   const flushRef = useRef(flush);
-  flushRef.current = flush;
+  useEffect(() => { flushRef.current = flush; }, [flush]);
   useEffect(() => () => flushRef.current(), []);
 
   /** Applies a change on screen right away and saves it (debounced for typing). */

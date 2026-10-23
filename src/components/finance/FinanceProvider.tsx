@@ -91,6 +91,8 @@ export function FinanceProvider({ children, fallback, failure }: {
   useEffect(() => {
     setState({ status: "loading" });
     void reload();
+    // request is a counter, not a DOM node: bumping its latest value drops any load still in flight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { request.current++; };
   }, [reload]);
 
@@ -140,6 +142,8 @@ export function FinanceProvider({ children, fallback, failure }: {
   }), [bundle, currency, me.id, today, demo, setDemo, reload, settingsOpen, settingsSection]);
 
   if (!demo && state.status === "error") {
+    // retry runs from a click, never during render, so reload() touching its ref is safe.
+    // eslint-disable-next-line react-hooks/refs
     return <>{failure(state.message, () => (state.accountChanged ? window.location.reload() : void reload()), state.accountChanged)}</>;
   }
   if (!value) return <>{fallback}</>;

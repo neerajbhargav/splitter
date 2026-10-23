@@ -548,7 +548,7 @@ begin
   ), ranked as (
     select *, row_number() over(order by exact-floor(exact) desc, member_id) rank,
       (tax::numeric+tip)-sum(floor(exact)) over() remainder from raw
-  ) select jsonb_agg(jsonb_build_object('member_id',member_id,'amount_cents',base+base::bigint+case when rank<=remainder then 1 else 0 end) order by member_id)
+  ) select jsonb_agg(jsonb_build_object('member_id',member_id,'amount_cents',base+floor(exact)::bigint+case when rank<=remainder then 1 else 0 end) order by member_id)
     into result from ranked where base+floor(exact)+case when rank<=remainder then 1 else 0 end > 0;
   return coalesce(result,'[]'::jsonb);
 end $$;
@@ -621,7 +621,7 @@ begin
   ), ranked as (
     select *,row_number() over(order by fraction desc,i) rank,target_total-sum(base) over() remainder from raw
   ), allocated as (
-    select *,floor(exact)::bigint+case when rank<=remainder then 1 else 0 end converted from ranked
+    select *,base::bigint+case when rank<=remainder then 1 else 0 end converted from ranked
   ) select jsonb_build_object('items',jsonb_agg(jsonb_set(item,'{amount_cents}',to_jsonb(converted)) order by i) filter(where item is not null),
     'tax_cents',max(converted) filter(where i=jsonb_array_length(source_items)+1),
     'tip_cents',max(converted) filter(where i=jsonb_array_length(source_items)+2)) into result from allocated;
@@ -1157,6 +1157,12 @@ language sql stable security definer set search_path = public as $$
                                                     || public.name_tokens(u.raw_user_meta_data->>'name')
                                                     || public.name_tokens((select display_name from public.profiles where id = u.id)))));
 $$;
+
+-- Internal helpers. remove_member, get_invite and join_group call them as the definer. Granted to callers,
+-- they answered outside the group: member_balance for any member id, the spot helpers for any group.
+revoke all on function public.member_balance(uuid) from public, anon, authenticated;
+revoke all on function public.suggest_spot(uuid) from public, anon, authenticated;
+revoke all on function public.spot_looks_like_me(uuid) from public, anon, authenticated;
 
 create or replace function public.get_invite(p_code text) returns jsonb
 language plpgsql stable security definer set search_path = public as $$

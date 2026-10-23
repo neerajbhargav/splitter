@@ -1,0 +1,362 @@
+{
+ "note": "Every 8th receipt of npm run eval:receipts -- --seed 1 --n 200. Synthetic. Regenerate with --write-subset.",
+ "source": "eval/results/receipts-2026-10-22.json",
+ "baseline": {
+  "total_precision": 1,
+  "total_coverage": 0.56,
+  "total_correct": 14,
+  "total_answered": 14
+ },
+ "items": [
+  {
+   "id": "r000",
+   "file": "r000.png",
+   "sha256": "7a2800c928f7ca59a5b3bfb6a03f41ffced19a9d8487045b685e29ff3c88f00d",
+   "truth": {
+    "merchant": "STATION 98 SUPPLY",
+    "date": "2025-02-17",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 5366,
+    "tax_cents": 215,
+    "total_cents": 5581
+   }
+  },
+  {
+   "id": "r008",
+   "file": "r008.png",
+   "sha256": "9eb2644bc83a433665155041eebe8d17c69631a8eb44662adf162604a980bc58",
+   "truth": {
+    "merchant": "Little Kettle Pharmacy",
+    "date": "2024-11-30",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 4689,
+    "tax_cents": 0,
+    "total_cents": 4689
+   }
+  },
+  {
+   "id": "r016",
+   "file": "r016.png",
+   "sha256": "c289762a0324e816eb0b9364adcf4fd8f166ad0f7cf01980c603abc2ab01b46f",
+   "truth": {
+    "merchant": "NORTHSIDE MEADOW HARDWARE",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 1815,
+    "tax_cents": 127,
+    "total_cents": 1942
+   }
+  },
+  {
+   "id": "r024",
+   "file": "r024.png",
+   "sha256": "76ac8f9a6a6071697adac829d8cff0c048bacca0acd800d1e381b4cfc06c6412",
+   "truth": {
+    "merchant": "NORTHSIDE SPARROW GROCERY",
+    "date": "2025-10-19",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 16832,
+    "tax_cents": 1494,
+    "total_cents": 18326
+   }
+  },
+  {
+   "id": "r032",
+   "file": "r032.jpg",
+   "sha256": "f722823fc8af483bdd41f7b2b2f5451182c8ce777a500ef11fc8de6d8e752261",
+   "truth": {
+    "merchant": "BRIGHT PINE HARDWARE",
+    "date": "2025-07-16",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 5021,
+    "tax_cents": 446,
+    "total_cents": 5467
+   }
+  },
+  {
+   "id": "r040",
+   "file": "r040.png",
+   "sha256": "edc8725ed3f116490f8ff5bffe5102389d126cd29aecb300fd33c69a733c9f2b",
+   "truth": {
+    "merchant": "Amber Birch Books",
+    "date": "2024-03-12",
+    "date_kind": "iso",
+    "date_expect": "extract",
+    "subtotal_cents": 84014,
+    "tax_cents": 5881,
+    "total_cents": 89895
+   }
+  },
+  {
+   "id": "r048",
+   "file": "r048.jpg",
+   "sha256": "2a217e0ba5899b1386257f3f891effda724abb4b7cef2317c27c089e9bbf1cf1",
+   "truth": {
+    "merchant": "Riverbend Thistle Deli",
+    "date": "2026-01-29",
+    "date_kind": "numeric_one_reading",
+    "date_expect": "extract",
+    "subtotal_cents": 3932,
+    "tax_cents": 246,
+    "total_cents": 4178
+   }
+  },
+  {
+   "id": "r056",
+   "file": "r056.jpg",
+   "sha256": "b38c226ff8cd56178483bd4d8b5d1809d112cffd7d6b8d3493ddfe11689243ea",
+   "truth": {
+    "merchant": "RIVERBEND LANTERN MARKET",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 1503,
+    "tax_cents": 94,
+    "total_cents": 1597
+   }
+  },
+  {
+   "id": "r064",
+   "file": "r064.png",
+   "sha256": "b5b01026502e2ca68d412f06d9828cf4b7cbbe243353f2afbf354c5c0614f6f8",
+   "truth": {
+    "merchant": "PIER 85 BAKERY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 1931,
+    "tax_cents": 0,
+    "total_cents": 1931
+   }
+  },
+  {
+   "id": "r072",
+   "file": "r072.jpg",
+   "sha256": "b0aba3bc8989f3c90ddd8a260de18bc0d98c2c7e662590b7d3cb5e010092c365",
+   "truth": {
+    "merchant": "JUNIPER ANCHOR MARKET",
+    "date": "2024-04-20",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 3823,
+    "tax_cents": 268,
+    "total_cents": 4091
+   }
+  },
+  {
+   "id": "r080",
+   "file": "r080.jpg",
+   "sha256": "1aad6c8df2b44ffce3cc72f385cd1370d9ef1b460942f3530ac6483bcc68b946",
+   "truth": {
+    "merchant": "BLUE ANCHOR SUPPLY",
+    "date": "2024-05-13",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 11765,
+    "tax_cents": 824,
+    "total_cents": 12589
+   }
+  },
+  {
+   "id": "r088",
+   "file": "r088.png",
+   "sha256": "4be5b38f98075d1672eb7c8badf40297c26071f23ee9b974b795ca9411b3b7f8",
+   "truth": {
+    "merchant": "Bright Heron Deli",
+    "date": "2024-09-01",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 3395,
+    "tax_cents": 0,
+    "total_cents": 3395
+   }
+  },
+  {
+   "id": "r096",
+   "file": "r096.jpg",
+   "sha256": "bc197cc62700a2d1ca9f7436f415ec1bf22e5f1446983ff710f374a68a5ce609",
+   "truth": {
+    "merchant": "RIVERBEND SPARROW PHARMACY",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 7673,
+    "tax_cents": 681,
+    "total_cents": 8354
+   }
+  },
+  {
+   "id": "r104",
+   "file": "r104.jpg",
+   "sha256": "394c4ccb48a9cf63f7517a6e512d826a2dbe766409d6f9456c81101bf9f75a88",
+   "truth": {
+    "merchant": "COPPER OTTER MARKET",
+    "date": "2024-02-22",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 46945,
+    "tax_cents": 2934,
+    "total_cents": 49879
+   }
+  },
+  {
+   "id": "r112",
+   "file": "r112.png",
+   "sha256": "91df958d18ec33433968d57c5fd5e3997def19a6e8c716dce680957a1da5afe4",
+   "truth": {
+    "merchant": "Copper Comet Pantry",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 18053,
+    "tax_cents": 0,
+    "total_cents": 18053
+   }
+  },
+  {
+   "id": "r120",
+   "file": "r120.png",
+   "sha256": "8d768e01c137d236cc49bf63b3887474475b50543f080a8a66fafb3da15cbdff",
+   "truth": {
+    "merchant": "Golden Lantern Grocery",
+    "date": "2025-12-25",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 2576,
+    "tax_cents": 229,
+    "total_cents": 2805
+   }
+  },
+  {
+   "id": "r128",
+   "file": "r128.png",
+   "sha256": "4694080d1876d5a0eff177acc218af480d4ee0767b14f6c86120c4714b0c0618",
+   "truth": {
+    "merchant": "QUIET ANCHOR BOOKS",
+    "date": "2024-10-06",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 57858,
+    "tax_cents": 0,
+    "total_cents": 57858
+   }
+  },
+  {
+   "id": "r136",
+   "file": "r136.png",
+   "sha256": "99ca7a1479f17c17e62bd962668a3f5a4b4d4f5d222ec1932e29e41fe6cd3885",
+   "truth": {
+    "merchant": "PIER 84 HARDWARE",
+    "date": "2026-09-11",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 7689,
+    "tax_cents": 0,
+    "total_cents": 7689
+   }
+  },
+  {
+   "id": "r144",
+   "file": "r144.png",
+   "sha256": "ab358d9a5266f2c7eecc84539935e8bdc95e78e9866259d97f3be2ed7782a04f",
+   "truth": {
+    "merchant": "GOLDEN PEBBLE PANTRY",
+    "date": "2025-06-09",
+    "date_kind": "named_mdy",
+    "date_expect": "extract",
+    "subtotal_cents": 21133,
+    "tax_cents": 1691,
+    "total_cents": 22824
+   }
+  },
+  {
+   "id": "r152",
+   "file": "r152.png",
+   "sha256": "c524bc0a7bd4afb92edf077cf9e1f7372902992a2bdc1cf816b1db56489d3f94",
+   "truth": {
+    "merchant": "JUNIPER HERON MARKET",
+    "date": "2024-07-14",
+    "date_kind": "two_dates",
+    "date_expect": "refuse",
+    "subtotal_cents": 6080,
+    "tax_cents": 540,
+    "total_cents": 6620
+   }
+  },
+  {
+   "id": "r160",
+   "file": "r160.png",
+   "sha256": "62bced0a2e8a94f1f6a4161cd3c46a62a5d094ef6645b6665352a0968cf119d7",
+   "truth": {
+    "merchant": "WILLOW THISTLE NOODLE HOUSE",
+    "date": "2024-11-10",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 4568,
+    "tax_cents": 286,
+    "total_cents": 5768
+   }
+  },
+  {
+   "id": "r168",
+   "file": "r168.png",
+   "sha256": "24ce735a4f98af4e2691898531a02de4fcde950c85ac626438413e2334e0eeb5",
+   "truth": {
+    "merchant": "Juniper Otter Garden Center",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 14703,
+    "tax_cents": 919,
+    "total_cents": 15622
+   }
+  },
+  {
+   "id": "r176",
+   "file": "r176.jpg",
+   "sha256": "f8856b3ad0b50a273240bc8a977400b49308cc745ccb7a43f55df7e6c7dbc8a3",
+   "truth": {
+    "merchant": "Old Mill Thistle Pantry",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 24913,
+    "tax_cents": 2211,
+    "total_cents": 27124
+   }
+  },
+  {
+   "id": "r184",
+   "file": "r184.png",
+   "sha256": "5867a0e082ee402b2468a0ac265f926b39a39ba51e149fcc8a6848cdaa4c7dbe",
+   "truth": {
+    "merchant": "LITTLE LANTERN KITCHEN",
+    "date": null,
+    "date_kind": "numeric_ambiguous",
+    "date_expect": "refuse",
+    "subtotal_cents": 9873,
+    "tax_cents": 691,
+    "total_cents": 12045
+   }
+  },
+  {
+   "id": "r192",
+   "file": "r192.png",
+   "sha256": "1fb1285e18ef36cd101f74193d4be414d81488fddcc9a6b7fb173bb6c61d650f",
+   "truth": {
+    "merchant": "Cedar Wren Bistro",
+    "date": "2024-08-01",
+    "date_kind": "named_dmy",
+    "date_expect": "extract",
+    "subtotal_cents": 83635,
+    "tax_cents": 0,
+    "total_cents": 83635
+   }
+  }
+ ]
+}

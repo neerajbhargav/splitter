@@ -1,0 +1,4 @@
+$ node eval/compare-simplify-main.ts --json eval/results/simplify-vs-main-2026-10-23.json
+
+random: identical payments 500/500
+circles: identical payments 500/500

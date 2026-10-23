@@ -43,7 +43,7 @@ export function compareCalendarDates(a:string,b:string):number{
 
 // Howard Hinnant's civil-date algorithms, expressed as integer calendar arithmetic.
 function dayNumber(date:CalendarDate):number{
- let y=date.year-(date.month<=2?1:0);
+ const y=date.year-(date.month<=2?1:0);
  const era=Math.floor(y/400);
  const yoe=y-era*400;
  const mp=date.month+(date.month>2?-3:9);

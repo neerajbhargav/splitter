@@ -307,7 +307,7 @@ export default function GroupPage() {
               )}
               <p className="hint" style={{ margin: "8px 0 0" }}>
                 {group.simplify_debts
-                  ? "Simplify uses the fewest payments, keeps everyone paying people they already owe whenever possible, and never changes anyone's total."
+                  ? "Simplify uses the fewest payments it can find (at most one fewer than the number of people), keeps everyone paying people they already owe whenever possible, and never changes anyone's total."
                   : "Each person pays back whoever covered their share of each expense."}
               </p>
             </div>
@@ -500,7 +500,6 @@ function Insights({ bundle }: { bundle: GroupBundle }) {
   const total = spend.reduce((a, e) => a + e.amount_cents, 0);
   const totals = paidAndShare(spend);
   const people = bundle.members.filter((m) => totals[m.id]).map((m) => ({ m, ...totals[m.id] })).sort((x, y) => y.share - x.share);
-  const maxP = Math.max(1, ...people.map((p) => Math.max(p.paid, p.share)));
 
   if (!spend.length) {
     return <section className="card"><div className="card-body"><Empty title="Nothing to chart yet">Insights appear once the group has a few expenses.</Empty></div></section>;

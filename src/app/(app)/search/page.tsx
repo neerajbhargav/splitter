@@ -57,6 +57,8 @@ export default function SearchPage() {
   }, []);
   useEffect(() => {
     void reload();
+    // request is a counter, not a DOM node: bumping its latest value drops any load still in flight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { ++request.current; };
   }, [reload]);
   useLiveRefresh("search-page", [{ table: "activity" }, { table: "expenses" }, { table: "groups" }, { table: "group_members" }], reload);

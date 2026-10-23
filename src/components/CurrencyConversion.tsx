@@ -32,6 +32,8 @@ export function CurrencyConversion({ currency, amountCents, date, initial, fixed
     request.current?.abort(); setBusy(false);
     if (!initial?.fx_rate) { setRate(""); setProvenance(""); setRateDate(date > todayISO() ? todayISO() : date); }
   }, [date, currency, initial?.fx_rate]);
+  // Runs only when the fixed source currency changes; the saved rate is read once at that moment.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(()=>{if(fixedSource){request.current?.abort();setBusy(false);setSource(fixedSource);setRate(initial?.source_currency===fixedSource && initial.fx_rate ? String(initial.fx_rate) : "");setProvenance(initial?.source_currency===fixedSource && initial.fx_rate ? "Saved rate" : "");}},[fixedSource]);
   const sourceCents = sourceAmountCents ?? parseMoney(amount);
   const numericRate = parseRate(rate);

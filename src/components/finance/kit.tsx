@@ -121,6 +121,8 @@ export function AccountIcon({ type, gold }: { type: AccountType; gold?: boolean 
 }
 export function CategoryTile({ category, transfer, income, size }: { category?: FinanceCategory | null; transfer?: boolean; income?: boolean; size?: "sm" }) {
   const Icon = transfer ? ArrowLeftRight : income ? Banknote : categoryIcon(category?.name, category?.kind);
+  // categoryIcon returns a module-level lucide icon, not a component made during render.
+  // eslint-disable-next-line react-hooks/static-components
   return <span className={`icon-tile ${income ? "fin-in" : ""} ${size === "sm" ? "sm" : ""}`}><Icon /></span>;
 }
 

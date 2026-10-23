@@ -1,0 +1,177 @@
+{
+ "date": "2026-10-23T18:58:57.700Z",
+ "command": "npm run bench:simplify -- --json eval/results/simplify-bench-2026-10-23.json",
+ "config": {
+  "seed": 1,
+  "groups": 500,
+  "minN": 2,
+  "maxN": 10,
+  "minE": 1,
+  "maxE": 30,
+  "budget": 300000,
+  "shape": "random"
+ },
+ "node": "v24.17.0",
+ "platform": "darwin arm64",
+ "cpu": "Apple M4 Pro",
+ "loadavg": [
+  8.21044921875,
+  10.47314453125,
+  13.1455078125
+ ],
+ "totals": {
+  "groups": 500,
+  "at_min": 500,
+  "greedy_at_min": 500,
+  "invariant_failures": 0,
+  "fallback_budget": 17,
+  "raw_payments": 7741,
+  "simplified_payments": 2432,
+  "uncached_ms": {
+   "p50": 0.1925829999963753,
+   "p95": 1741.7295830000076,
+   "max": 10824.402417000005
+  },
+  "memo_hit_ms": {
+   "p50": 0.003791999999997131,
+   "max": 0.08229200000641868
+  }
+ },
+ "by_n": [
+  {
+   "n": 2,
+   "groups": 52,
+   "at_min": 52,
+   "greedy_at_min": 52,
+   "fallback_budget": 0,
+   "invariant_failures": 0,
+   "raw_payments": 52,
+   "simplified_payments": 52,
+   "ms": {
+    "p50": 0.01541599998017773,
+    "p95": 0.07550000000628643,
+    "max": 0.220458999996481
+   }
+  },
+  {
+   "n": 3,
+   "groups": 57,
+   "at_min": 57,
+   "greedy_at_min": 57,
+   "fallback_budget": 0,
+   "invariant_failures": 0,
+   "raw_payments": 166,
+   "simplified_payments": 113,
+   "ms": {
+    "p50": 0.022333000000799075,
+    "p95": 0.13641599999391474,
+    "max": 0.31691699999646517
+   }
+  },
+  {
+   "n": 4,
+   "groups": 63,
+   "at_min": 63,
+   "greedy_at_min": 63,
+   "fallback_budget": 0,
+   "invariant_failures": 0,
+   "raw_payments": 367,
+   "simplified_payments": 189,
+   "ms": {
+    "p50": 0.037958000000799075,
+    "p95": 0.08554200001526624,
+    "max": 0.1506670000089798
+   }
+  },
+  {
+   "n": 5,
+   "groups": 58,
+   "at_min": 58,
+   "greedy_at_min": 58,
+   "fallback_budget": 0,
+   "invariant_failures": 0,
+   "raw_payments": 559,
+   "simplified_payments": 231,
+   "ms": {
+    "p50": 0.10349999999743886,
+    "p95": 0.26466699998127297,
+    "max": 15.408332999999402
+   }
+  },
+  {
+   "n": 6,
+   "groups": 53,
+   "at_min": 53,
+   "greedy_at_min": 53,
+   "fallback_budget": 0,
+   "invariant_failures": 0,
+   "raw_payments": 714,
+   "simplified_payments": 263,
+   "ms": {
+    "p50": 0.3155410000181291,
+    "p95": 1.0811249999969732,
+    "max": 2.5628750000032596
+   }
+  },
+  {
+   "n": 7,
+   "groups": 59,
+   "at_min": 59,
+   "greedy_at_min": 59,
+   "fallback_budget": 0,
+   "invariant_failures": 0,
+   "raw_payments": 1083,
+   "simplified_payments": 342,
+   "ms": {
+    "p50": 2.12400000001071,
+    "p95": 11.801375000010012,
+    "max": 18.349958000006154
+   }
+  },
+  {
+   "n": 8,
+   "groups": 54,
+   "at_min": 54,
+   "greedy_at_min": 54,
+   "fallback_budget": 0,
+   "invariant_failures": 0,
+   "raw_payments": 1224,
+   "simplified_payments": 369,
+   "ms": {
+    "p50": 19.73508299997775,
+    "p95": 92.53229100001045,
+    "max": 101.95983399999386
+   }
+  },
+  {
+   "n": 9,
+   "groups": 54,
+   "at_min": 54,
+   "greedy_at_min": 54,
+   "fallback_budget": 0,
+   "invariant_failures": 0,
+   "raw_payments": 1710,
+   "simplified_payments": 429,
+   "ms": {
+    "p50": 234.5147089999955,
+    "p95": 1172.1489170000132,
+    "max": 4706.808250000002
+   }
+  },
+  {
+   "n": 10,
+   "groups": 50,
+   "at_min": 50,
+   "greedy_at_min": 50,
+   "fallback_budget": 17,
+   "invariant_failures": 0,
+   "raw_payments": 1866,
+   "simplified_payments": 444,
+   "ms": {
+    "p50": 1629.2046669999982,
+    "p95": 5371.549457999998,
+    "max": 10824.402417000005
+   }
+  }
+ ]
+}

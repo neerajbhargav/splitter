@@ -1,181 +1,164 @@
 # SPLITTER
 
-**Live:** https://usesplitter.vercel.app
+SPLITTER splits bills between housemates and tracks your own money, exact to the cent and enforced in Postgres.
 
-Your money in one place: spending, budget, paychecks, accounts, debt payoff, subscriptions and credit health. It opens on your money; **Split** is one tab of it, for rent, groceries and trips you share with the people you live and travel with. Everyone in a group sees the same numbers, live, and one tap tells you who pays whom.
+[![ci](https://github.com/neerajbhargav/splitter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/neerajbhargav/splitter/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![node 24](https://img.shields.io/badge/node-24-339933.svg)
 
-**Layout:** the sidebar (desktop) lists the money sections, then **Split** with your groups under it. On phones the tab bar is Money · Activity · Add · Budget · Split, and each area has its own row of section tabs. **Add** asks whether it's your own spending or income, or a cost to split with a group.
+![SPLITTER demo: sample-data money pages, then a group that settles in one payment and a bill split by days](docs/demo.gif)
 
-## Features
+*Recorded on 2026-10-23 by [`e2e/demo-gif.spec.ts`](e2e/demo-gif.spec.ts) on a local Supabase stub with synthetic data: a fictional 3-person house settles in one payment, and a $90.00 bill split by days comes to $38.57, $38.57 and $12.86.*
 
-- **Sign in with Google, GitHub, or an email link** (Supabase Auth, OAuth + PKCE)
-- **Groups** for a home, trip, couple or anything else, each with its own currency
-- **Add people by name before they sign up.** They claim their spot from the invite link, or are linked automatically when they sign in with the email you added
-- **Expenses** split equally, by exact amounts, percentages or shares, with one or multiple payers. Every split is stored in integer cents and always adds up exactly
-- **Split by days lived there.** Give people move-in and move-out dates in group settings, then pick **By days** and the dates a bill covers (for example a utility's service period). Each person pays for their days only; anyone without dates counts every day. Works for upcoming bills too, and a paid upcoming bill keeps its period
-- **Simplify debts** per group: settles everyone in the fewest payments (at most people minus 1)
-- **Settle up**: record full or partial payments, with suggested amounts
-- **Reminders**: one tap opens your SMS or mail app with a pre-written nudge (uses the phone or email you saved)
-- **Live sync** across every device and member (Supabase Realtime), plus refresh on reconnect and tab focus
-- **Activity feed** per group and across all groups
-- **Comments** on every expense, **receipt photos**, notes, categories
-- **Recurring expenses** (weekly, every 2 weeks, monthly, yearly). Due copies post themselves when anyone opens the app
-- **Delete with undo**, restore from activity, "show deleted" filter
-- **Dashboard** with total balance, who owes you, and whom you owe, merged per person across groups
-- **Insights**: spending by category, last 6 months, paid vs share per person
-- **CSV export** in Splitwise's format (one column per person)
-- Installable on iPhone and Android home screens (PWA manifest + icons), mobile-first layout
+**Status (2026-10-23):** live at [usesplitter.vercel.app](https://usesplitter.vercel.app). Sign in, then choose "Explore with sample data first" to look around without entering anything. The deployed build predates this October's changes here (CI, security headers, exact-integer weights, the memoized simplify, the Next.js 16.4.2 security update and the revoked helper functions), and Plaid bank sync is built but not enabled there. Migrations are applied by hand.
 
-## Stack
+## What it does
 
-Next.js 16 (App Router) · React 19 · TypeScript · Supabase (Postgres, Auth, Realtime, Storage) · plain CSS · deployed on Vercel.
+- Splits equally, by exact amounts, percentages, shares, line items (tax and tip in proportion), or by the days each person lived there. Foreign-currency bills keep the original amounts and the rate used (the ECB rate via Frankfurter, or one you enter).
+- Settles a group in at most n-1 payments, and in the fewest possible when the exact search finishes within 300,000 route combinations. Past that it falls back to greedy, which can use more ([measured](#results)).
+- Syncs live across members and devices, with an activity feed, comments, receipts, recurring bills and undo.
+- Tracks your own money, privately: a ledger with idempotent CSV import, budget, paychecks, accounts, debt payoff, subscriptions and credit scores.
+- Reads receipts in the browser (Tesseract.js). The image never goes to an OCR service, and unclear fields stay blank.
+- Connects out through a private calendar (ICS) feed, a credit-score sync token, an Apple Pay Shortcut and a bring-your-own-key AI "Ask".
 
-All writes go through Postgres functions in `supabase/schema.sql` that check group membership and validate totals. Reads are protected by Row Level Security, so the browser key is safe to expose.
+Full feature reference: [docs/features.md](docs/features.md). Self-hosting: [docs/setup.md](docs/setup.md).
 
----
+## Results
 
-## Setup (about 15 minutes)
+The receipt reader would rather leave a field blank than guess: on synthetic OCR receipts, 105 of the 106 totals it filled were right, and it left 81 of 83 unknowable dates blank.
 
-### 1. Supabase project
+Caveats first. Every dataset is synthetic and seeded: generated groups, rendered receipts, fictional people. Seeded counts (payments, invariant failures, authorization results) repeat on any machine. Times and receipt OCR counts can vary with the machine and its load. Times come from one Apple M4 Pro laptop under heavy load from other work (load average 8 to 19).
 
-1. Create a free project at [supabase.com/dashboard](https://supabase.com/dashboard).
-2. Open **SQL Editor > New query**, paste all of [`supabase/schema.sql`](supabase/schema.sql), and click **Run**. It is safe to re-run.
-3. Open **Project Settings > API** (or the **Connect** button) and copy the **Project URL** and the **anon / publishable key**.
+**Debt simplification.** Data: seeded synthetic groups (seed 1, 1 to 30 expenses each). Circle groups are built so that greedy can fail: each expense stays inside one circle of members. Code: `src/lib/debts.ts` at `f2c4679`, Node 24.17.0, 2026-10-23. Reproduce: `npm run bench:simplify -- --shape circles --min-n 4`, `npm run bench:simplify` and `node eval/compare-simplify-main.ts`. Results: [eval/results/](eval/results).
 
-### 2. Turn on sign-in providers
+| Metric | Value | n | Baseline |
+|---|---|---|---|
+| Fewest payments, circle groups of 4 to 10 | 500 / 500 | 500 groups | plain greedy: 368 / 500 |
+| Fewest payments, random groups of 2 to 10 (sanity check: greedy is already optimal here) | 500 / 500 | 500 groups | plain greedy: 500 / 500 |
+| Invariant failures (settles everyone, no relays, at most n-1) | 0 | 1,000 groups | |
+| Same payments as `main` (`108950d`) | 1,000 / 1,000 | 1,000 groups | |
+| Time, circle groups | p50 0.07 ms, p95 2.6 ms, max 79 ms | 500 groups | |
+| Time, random groups (slowest: 10 people) | p50 0.19 ms, p95 1.7 s, max 10.8 s | 500 groups | |
 
-In Supabase go to **Authentication > Sign In / Providers**. The callback URL both providers need is:
+**Receipt extraction.** Data: 200 receipts rendered from SVG (seed 1). Their labels and date formats come from the set the parser supports, so the perfect-text column is a ceiling, not a baseline. Engine: tesseract.js 7.0.0, `eng` 4.0.0_best_int. Commit `40e5d16`, 2026-10-22. Reproduce: `npm run eval:receipts` and `node --test tests/receipt-held-out.test.ts`.
 
-```
-https://<your-project-ref>.supabase.co/auth/v1/callback
-```
+| Field | OCR precision (right / filled) | 95% CI | OCR coverage | Perfect-text ceiling (same metric) |
+|---|---|---|---|---|
+| Total | 99.1% (105/106) | 94.8 to 99.8% | 53.0% (106/200) | 100% (200/200) |
+| Date | 98.6% (71/72) | 92.5 to 99.8% | 59.8% (70/117) | 100% (99/99) |
+| Date left blank when unknowable | 97.6% (81/83) | | | 100% (83/83) |
+| Merchant | 57.8% (100/173) | 50.4 to 64.9% | 86.5% (173/200) | 93.0% (186/200) |
+| Held-out formats, perfect text | 0 wrong | | 2/12 total labels, 2/9 date formats | |
 
-**GitHub**
-1. GitHub > Settings > Developer settings > [OAuth Apps](https://github.com/settings/developers) > New OAuth App.
-2. Homepage URL: your Vercel URL. Authorization callback URL: the Supabase callback above.
-3. Copy the Client ID, generate a Client Secret, and paste both into the GitHub provider in Supabase. Enable it.
+**Authorization matrix.** Generated from `pg_catalog` in PGlite, on a fresh `schema.sql` and on `schema.sql` plus the newest migrations. Commit `c4b2de1`, 2026-10-23. Reproduce: `node --test tests/authz-matrix.test.ts`.
 
-**Google**
-1. [Google Cloud Console](https://console.cloud.google.com/) > APIs & Services > Google Auth Platform. Set up Branding (app name SPLITTER, support email) and an External audience.
-2. Clients > Create client > **Web application**. Authorized redirect URI: the Supabase callback above.
-3. Paste the Client ID and Secret into the Google provider in Supabase. Enable it.
-4. While the app is in "Testing", add your roommates' Gmail addresses as test users, or publish the app.
+| Check | Result |
+|---|---|
+| Row level security on public tables | 23 / 23 |
+| `SECURITY DEFINER` functions that pin `search_path` | 74 / 74 |
+| Table reads that returned a victim row, outsider and signed-out caller | 0 of 23 each |
+| Outsider sending the victim's user and group ids: refused by an authorization check / answered with nothing of the victim's | 51 / 18, of 69 granted functions |
+| Outsider sending its own user, group and member ids with the victim's row ids (the IDOR case): refused by an ownership or membership check / nothing of the victim's | 36 / 33, of 69 |
+| Signed-out caller: refused / nothing of the victim's | 21 / 13, of 34 |
+| Planted IDORs caught (a finance delete without its owner filter, a bill update without its group filter) | 2 / 2 |
+| Known gaps | 0 in the repo; production still has 3 until a migration is applied ([Threat model](#threat-model)) |
 
-**Email links** work out of the box (Supabase's built-in mailer is rate limited; add custom SMTP under Authentication > Emails for heavier use).
+Method and every caveat: [eval/README.md](eval/README.md).
 
-### 3. Tell Supabase where the app lives
+## Quickstart
 
-**Authentication > URL Configuration**
-- Site URL: `https://<your-app>.vercel.app`
-- Redirect URLs: add `https://<your-app>.vercel.app/**` and `http://localhost:3000/**`
+Needs Node 24. No keys, no network after install, no Supabase project:
 
-### 4. Deploy on Vercel
-
-1. [vercel.com/new](https://vercel.com/new) > Import this GitHub repo. Framework preset: Next.js.
-2. Add environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL` = Project URL
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = anon / publishable key
-3. Deploy. Every push to `main` redeploys automatically.
-
-If the env vars are missing, the app shows a setup screen instead of crashing.
-
-A daily Vercel cron (`vercel.json`) calls `/api/keepalive`, one tiny query that keeps a free Supabase project from pausing after a quiet week.
-
-### Local development
-
-```bash
-cp .env.example .env.local   # fill in the two values
-npm install
-npm run dev                  # http://localhost:3000
-npm test                     # split + debt math tests
+```sh
+git clone https://github.com/neerajbhargav/splitter && cd splitter
+npm ci
+npm test    # the summary shows: ℹ tests 341, ℹ pass 341, ℹ fail 0
 ```
 
----
+`npm test` includes the database tests: it loads `supabase/schema.sql` into in-memory Postgres and calls the real RPCs. Running the app itself needs a Supabase project ([docs/setup.md](docs/setup.md)).
 
-## How the money math works
+## How it works
 
-- Amounts are integer cents. Even splits give leftover cents to the first people in the list; percentage and share splits use the largest-remainder method, so parts always sum to the total.
-- **Not simplified:** within each expense, the people who owe pay back whoever paid, then each pair of people is netted.
-- **Simplified** (Splitwise's rules): nobody's total changes, the group settles in the fewest payments possible, nobody who is owed money is asked to pay, and among the fewest-payment answers the one closest to who already owed whom wins. It searches payment routes from people who owe to people who are owed; very large groups fall back to biggest-debtor-pays-biggest-creditor.
-- **By days:** shares are weighted by the days of the bill's period each person lived there (move-in and move-out dates are inclusive), using the same largest-remainder method.
-- A payment is stored as an expense where the payer "paid" and the receiver "owes" the same amount, which cancels the debt.
-
-## Project layout
-
+```mermaid
+flowchart LR
+  B["Browser<br/>React + supabase-js<br/>anon key + user JWT"]
+  X["Calendar app or<br/>your scheduled job"]
+  subgraph V["Next.js 16 on Vercel"]
+    P["proxy.ts<br/>refresh session cookie<br/>guard private pages"]
+    T["Token routes<br/>/api/calendar/[token] (ICS)<br/>/api/finance/credit-scores/sync"]
+    PL["/api/finance/plaid/*<br/>built, off in production"]
+  end
+  subgraph S["Supabase Postgres"]
+    R["RPCs, SECURITY DEFINER<br/>membership + totals checks"]
+    D[("Tables<br/>RLS on all 23")]
+    RT["Realtime<br/>postgres_changes"]
+  end
+  B -->|page loads| P
+  B -->|"writes: rpc()"| R
+  B -->|reads| D
+  R --> D
+  D --> RT
+  RT -->|change, then refetch| B
+  X --> T
+  T -->|token hash lookup| R
+  PL -.->|sealed access token| R
+  PL -.-> PA[("Plaid API")]
 ```
-supabase/schema.sql        tables, RLS policies, RPC functions, realtime, storage
-src/proxy.ts               session refresh + route protection (Next 16 "proxy", formerly middleware)
-src/lib/split.ts           money parsing and split math
-src/lib/debts.ts           balances, pairwise debts, simplify
-src/lib/data.ts            Supabase queries, RPC wrappers, live-refresh hook
-src/components/            shell, expense editor, settle up, expense detail, activity
-src/app/(app)/             dashboard, groups, group detail + settings, activity, account
-src/app/join/[code]        invite links
-tests/                     node:test suite for the math
-```
 
-## Notes
+The browser talks to Supabase directly with the public anon key and the user's session. Reads hit tables that row level security filters to what the user may see. Every money write is a PL/pgSQL function that checks membership or ownership and re-checks that the cents add up, so a modified client cannot save a bill that does not balance. Comments and receipt files are written directly, under RLS and Storage policies. `src/proxy.ts` only refreshes the session cookie and sends signed-out visitors to `/login`. Live sync subscribes to `postgres_changes` and refetches, debounced by 200 ms, and also refetches on tab focus and when the device comes back online. The server routes hold no service-role key: the calendar feed and the score sync look up a token hash through an RPC, and the Plaid routes answer 503 until their env vars are set.
 
+## Design decisions
+
+- **Integer cents and largest remainder over floating point.** Splits, weights and by-days shares are allocated in exact integer math, so parts always sum to the total and ties go to the earlier person.
+- **Invariants in the database over checks in the client.** Membership, totals, item shares and currency conversions are recomputed in Postgres, because the anon key is public and the browser is not trusted.
+- **PGlite tests on the real schema over mocks.** Tests load `supabase/schema.sql` into in-memory Postgres and call the real RPCs. The tests that applied migrations on top of it hid a `schema.sql`-only bug in the itemized split functions for three weeks (fixed in `9d1845b`); `tests/schema-itemized.test.ts` now runs on `schema.sql` alone.
+- **A combination budget over a wall-clock cap for simplify.** The search stops after 300,000 route combinations, so every device shows the same payments for the same ledger. The cost: a 9 or 10 person group can block the page for seconds the first time a ledger renders.
+- **Idempotent migrations over a migration runner.** Every migration is safe to re-run, and `tests/migrations.test.ts` applies each one twice. The cost: no version table, and migrations are pasted by hand.
+- **`FOR UPDATE SKIP LOCKED` for recurring bills over a cron job.** Due copies post when anyone opens the app. If two devices open it at once, the second skips the rows the first has locked, and once the first commits those rows are no longer due. It is designed so a bill cannot post twice; PGlite has one connection, so no test races two sessions.
+
+## Threat model
+
+The browser is untrusted and Postgres is the enforcement point. An outsider, signed in or not, holds only the public anon key. The authorization matrix reads every table as an outsider and as a signed-out caller, and calls every granted function three ways: claiming the victim's user and group ids, sending its own ids with the victim's row ids, and signed out. A refusal counts only if an authorization check raised it.
+
+Inside a group, members trust each other the way Splitwise users do: any member can record or edit any expense, as long as the payers and splits add up and name only group members, and every change writes an activity row. The server does not check that an equal, percent or shares split matches its weights (it does recompute itemized ones).
+
+The matrix found 3 functions that answered outside the group. They are closed in the repo at `c4b2de1` by revoking EXECUTE, and production needs `supabase/migrations/20261023_revoke_internal_helpers.sql` applied by hand:
+
+- `member_balance(member id)` returned that member's balance to anyone, signed in or not.
+- `suggest_spot(group id)` returned, to a signed-in caller, the member id of an unclaimed spot with their first name.
+- `spot_looks_like_me(member id)` told a signed-in caller whether a spot in any group matched their name or email.
+
+Secret links are 64 hex characters from two random UUIDs, stored hashed, and revocable. The score-sync token can add scores or overwrite a score with the same bureau, day and model, including one typed in by hand; it cannot read or delete anything. The bring-your-own AI key sits in the browser's `localStorage` and the ledger summary goes from the browser to the chosen provider, so a script injection bug would expose the key. The CSP sets `frame-ancestors`, `base-uri` and `object-src` but no `script-src` yet, because Next's inline scripts need nonces first.
+
+## Limitations
+
+- Tests run Postgres in PGlite with a stubbed `auth.uid()`. PostgREST, JWT handling, Realtime and Storage policies are not tested against a real Supabase stack; the Playwright smoke tests use a stub server.
+- Each Realtime change triggers a full refetch of the page's data. That is fine for a household, not for large groups.
+- Simplify runs on the browser's main thread. On the loaded test laptop, random groups of 10 people took 5.4 s at p95 the first time; a phone is slower. Moving the search to a Web Worker would remove the freeze without changing any answer. That is not built.
+- The receipt reader's labels and date formats are narrow: on formats the synthetic eval never prints, it filled 2 of 12 total labels and 2 of 9 date formats.
+- Plaid sync is unit-tested with mocked HTTP only. There is no recorded run against Plaid's sandbox.
 - SPLITTER records who owes whom. It never moves money.
-- Changing a group's currency relabels amounts; it does not convert them.
-- People can only be removed, or leave, once their balance is zero.
 
-## Free expense tools
+## Repo map
 
-- **Global search:** Search opens every expense/payment you can access through RLS. Filter by group, category, dates or entry type. Deleted entries are excluded.
-- **Saved group splits:** Group settings saves equal subsets, percentages or shares. New expenses start with that preset; old expenses never change. If a preset references inactive people, the editor falls back to equal splitting with a review warning.
-- **Currency conversion:** The expense editor can fetch an ECB reference rate for the expense date through Frankfurter, or accept a manual rate for unsupported currencies/exact bank charges. Apply explicitly. The original amount, fixed rate and rate date are retained. Weekends use the preceding published rate. Fees/spreads are not included. Balances and splits remain in the group's currency; a group with bills cannot relabel its base currency.
-- **Itemization:** Choose By item. Enter line totals in the group currency and assign people. Shared lines split equally; tax/tip are proportional to each person's subtotal with exact, deterministic cent allocation. The server independently recomputes the final shares. Foreign-currency bills retain the original lines, tax and tip alongside the converted group-currency amounts. One whole-bill conversion is allocated across components to preserve the exact converted total; the database checks both source and converted line amounts.
-- **Receipt scanning:** Attach a JPG, PNG, WebP, BMP or PDF and choose Scan. English OCR runs locally using Tesseract.js; engine/language files download from CDN, but the image/text are not sent to an external OCR service. Review/edit suggestions before applying. PDFs use local selectable-text extraction first, with local OCR fallback for image pages. At most five pages are read; longer PDFs warn and leave the final total blank. Encrypted PDFs require an unlocked copy. HEIC can be attached, not scanned. Ambiguous dates and conflicting totals are left blank. Receipt files are uploaded to private Supabase storage only when the expense is saved.
+```
+supabase/schema.sql    tables, RLS, RPCs, realtime, storage (a fresh install runs this alone)
+supabase/migrations/   idempotent upgrades for existing databases
+src/proxy.ts           session refresh and route guard (Next 16 "proxy", formerly middleware)
+src/lib/split.ts       money parsing and split math
+src/lib/debts.ts       balances, pairwise debts, simplify
+src/lib/data.ts        Supabase queries, RPC wrappers, live-refresh hook
+src/lib/finance-*.ts   ledger, import, insights, sample data, BYOK AI
+src/lib/plaid-*.ts     Plaid client, server helpers, token sealing
+src/app/               pages and API routes
+tests/                 node:test suite, PGlite harness, seeded ledgers
+e2e/                   Playwright smoke tests on a Supabase stub, and the demo recorder
+eval/                  receipt eval, simplify bench and main comparison, committed results
+docs/                  setup, feature reference, demo GIF
+```
 
-For existing deployments, apply `supabase/migrations/20261001_free_expense_tools.sql` then `supabase/migrations/20261002_itemized_currency.sql` before deploying this version. Then apply `supabase/migrations/20261021_group_fixes.sql` (split by days, owner-only group delete, first-name joining, check marks that survive edits) and `supabase/migrations/20261021_personal_tokens.sql` (calendar and score-sync links). Both are safe to re-run. Fresh deployments can use the complete idempotent schema. `npm test` includes isolated PostgreSQL/WASM permission and calculation regressions using synthetic data, not production records.
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs on every push and pull request with read-only permissions. The check job runs `npm audit --omit=dev --audit-level=high`, `npm run lint`, `npm run typecheck`, `npm test` (341 tests, offline, about 30 s on the runner) and `npm run build` with no env vars. The e2e job runs `npm run e2e` in the Playwright container image. The receipt OCR test is a gate: it fails if total precision or coverage drops below the committed baseline.
 
-## Personal finance (private)
+## License
 
-SPLITTER Finance v2 lives at `/finance` and absorbed the standalone Folio app. It is private to each account and independent of shared group balances.
-
-- **Overview:** net worth, this month's budget pace, upcoming renewals and recent activity.
-- **Activity:** the full transaction ledger with search and filters. Import a bank CSV (columns and date order are detected, signs can be inverted), preview every row, then import. Rows already imported are skipped by a stable per-row id, so re-importing the same file adds nothing. Each import is a batch that can be undone in one step.
-- **Budget:** a plan per month with income and per-category limits, spending pace, and category progress. Categories are needs, wants or savings.
-- **Accounts:** checking, savings, cards, loans and investments, with holdings (symbol, shares, price) and a net worth total. Liabilities are stored as the amount owed.
-- **Debt payoff:** avalanche or snowball with extra monthly payments, payoff month, interest and a month-by-month schedule. Interest uses exact BigInt-cent arithmetic and the plan stops at 600 months rather than promising a payoff it cannot reach.
-- **Subscriptions:** weekly, monthly, quarterly and yearly items with renewal dates, a 30-day forecast and monthly/yearly equivalents. Recurring charges are detected from imported activity and offered as suggestions you accept or hide. Marking one canceled does not cancel the merchant.
-- **Health:** Folio's six rules, each shown as pass, warn, fail or unknown.
-- **Ask:** questions about your finances answered by an AI model with your own API key. The request goes from your browser straight to the provider, and the key stays on your device.
-- **Settings:** profile (income, currency), categories (rename, archive, delete with reassignment) and the sample-data toggle.
-- **Reminders in your calendar:** Account > Links for other apps > Reminders makes a private calendar link (Apple, Google or Outlook). It lists group bills you still owe, subscription renewals, card due days from your payoff plan and paydays, each with an alert at 9am the day before, and refreshes itself.
-- **Card consolidation what-if:** on Debt, compare keeping your cards against one fixed-rate loan (APR, fee, term): interest plus fee, monthly payment and payoff date side by side.
-- **Credit score sync link:** Account > Links for other apps > Credit score sync makes a token so a scheduled job on your own machine can `POST /api/finance/credit-scores/sync` with `Authorization: Bearer <token>` (no browser session). It can only add scores.
-- **Apple Pay logging:** an iPhone Shortcut opens SPLITTER after every Apple Pay tap with the amount, merchant and card filled in. Add it to your spending (the category you last used at that merchant is picked for you) or tap **Split with a group**. Setup is below.
-
-**Sample data:** choose Explore with sample data to preview every page. Nothing is saved in this mode and every write is refused until you exit it.
-
-**Privacy model**
-
-- Integer cents everywhere, in one finance currency that is locked once chosen. Group currencies are unaffected.
-- Reads are owner-only through row level security, and the client also filters every query by `user_id` and paginates.
-- Writes go only through validated RPCs. Every draft is bound to the account and currency it was opened in, and each RPC re-checks both under a per-owner lock. Switching accounts or changing currency elsewhere cannot reuse an old draft.
-- Bank sync (Plaid) is optional. Access tokens are encrypted with AES-GCM on the server, stored in a table the browser cannot read, and never sent to the browser. The browser reads only a safe connection list (institution, status, last sync).
-
-**Apple Pay Shortcut (iPhone, iOS 17 or later)**
-
-1. Shortcuts > Automation > New Automation > **Transaction**. Pick your cards, choose **Run Immediately**, then Next.
-2. Add **URL Encode** with input *Merchant*, and a second **URL Encode** with input *Card*.
-3. Add **URL**: `https://usesplitter.vercel.app/finance/activity?add=1&amount=[Amount]&merchant=[URL Encoded Text 1]&card=[URL Encoded Text 2]` (insert the variables from the Transaction trigger and the two encode steps).
-4. Add **Open URLs**. Every tap now opens a prefilled entry. Nothing is saved until you press Add or split it.
-
-The card name or its last 4 digits picks the matching account in Accounts, if you have one.
-
-**Setup**
-
-For an existing database, apply `supabase/migrations/20261004_finance_ledger.sql` after `20261003_personal_finance.sql`. It adds accounts, holdings, categories, a unified ledger and the Plaid tables, and moves existing v1 debts, budget transactions and subscription data into them. Fresh deployments can run `supabase/schema.sql`, which already includes it.
-
-Bank sync needs these server-only variables (never prefix them with `NEXT_PUBLIC_`). Leave them blank to hide bank linking.
-
-| Variable | Value |
-| --- | --- |
-| `PLAID_CLIENT_ID` | Plaid client id |
-| `PLAID_SECRET` | Plaid secret for the chosen environment |
-| `PLAID_ENV` | `sandbox` or `production` |
-| `PLAID_TOKEN_KEY` | 32 random bytes, base64. Generate with `openssl rand -base64 32` |
-| `PLAID_REDIRECT_URI` | Optional, for OAuth banks. Must be https (localhost is allowed in sandbox) |
+[MIT](LICENSE)

@@ -229,16 +229,30 @@ function finish(tx: Tx[]): Tx[] {
   return tx.sort((a, b) => b.amount - a.amount || a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
 }
 
+/** Payment-route combinations tried before the greedy fallback. A count, not a clock, so every device
+ *  computes the same payments for the same ledger. */
+export const SIMPLIFY_BUDGET = 300_000;
+
+/** `fallback` is "budget" when the exact search ran out of combinations and returned greedy. */
+export type SimplifyResult = { tx: Tx[]; fallback: "budget" | null };
+
 /**
  * Simplified debts. `raw` (the unsimplified debts) tells us who already owes whom,
  * so payments stay between people who actually shared expenses whenever that
  * doesn't cost an extra payment.
+ *
+ * Exact when `fallback` is null: the fewest payments possible, found by searching route sets of
+ * the subset-DP size upward. The search stops early after `budget` combinations,
+ * and then returns the greedy answer, which still settles everyone with no relays in at most
+ * n-1 payments but may use more than the fewest. The DP bound is exact only for up to 16 people
+ * with a balance; above that the search starts at n-1.
  */
-export function simplifyDebts(net: Record<string, number>, raw: Tx[] = []): Tx[] {
+export function simplifyDebtsInfo(net: Record<string, number>, raw: Tx[] = [], opts: { budget?: number } = {}): SimplifyResult {
   const ids = Object.keys(net).filter((id) => net[id] !== 0).sort();
-  if (!ids.length) return [];
+  if (!ids.length) return { tx: [], fallback: null };
   const fallback = greedy(net);
   const target = minPayments(ids.map((id) => net[id]));
+  const done = (tx: Tx[], why: SimplifyResult["fallback"]): SimplifyResult => ({ tx: finish(tx), fallback: why });
 
   const rawAmt = new Map(raw.map((t) => [`${t.from}\u0000${t.to}`, t.amount]));
   const outTotal = new Map<string, number>();
@@ -278,7 +292,7 @@ export function simplifyDebts(net: Record<string, number>, raw: Tx[] = []): Tx[]
     }
     return ids.every((id) => seen.has(id));
   };
-  let budget = 300_000;
+  let budget = opts.budget ?? SIMPLIFY_BUDGET;
   for (let k = target; k <= fallback.length; k++) {
     for (let newAllowed = 0; newAllowed <= Math.min(k, fresh.length); newAllowed++) {
       // Build only combos with exactly `newAllowed` new routes, in the same order as choosing from existing.concat(fresh).
@@ -286,7 +300,7 @@ export function simplifyDebts(net: Record<string, number>, raw: Tx[] = []): Tx[]
       let best: Tx[] | null = null;
       let bestScore = Infinity;
       for (const old of combinations(existing, k - newAllowed)) for (const added of combinations(fresh, newAllowed)) {
-        if (--budget < 0) return finish(fallback);
+        if (--budget < 0) return done(fallback, "budget");
         const combo = old.concat(added);
         if (!coversEveryone(combo)) continue;
         const flows = route(net, combo);
@@ -299,10 +313,28 @@ export function simplifyDebts(net: Record<string, number>, raw: Tx[] = []): Tx[]
           bestScore = s;
         }
       }
-      if (best) return finish(best);
+      if (best) return done(best, null);
     }
   }
-  return finish(fallback);
+  return done(fallback, null);
+}
+
+// Pages recompute on every refetch and render, and the search can take seconds for big groups,
+// so results are kept per exact input. The key is the whole input, so a hit is always correct.
+const memo = new Map<string, Tx[]>();
+const MEMO_SIZE = 200;
+
+/** simplifyDebtsInfo's payments with the default budget, memoized by ledger (non-zero balances and raw debts, in order). */
+export function simplifyDebts(net: Record<string, number>, raw: Tx[] = []): Tx[] {
+  const balances = Object.keys(net).filter((id) => net[id] !== 0).sort().map((id) => [id, net[id]]);
+  const key = JSON.stringify([balances, raw.map((t) => [t.from, t.to, t.amount])]);
+  let tx = memo.get(key);
+  if (!tx) {
+    tx = simplifyDebtsInfo(net, raw).tx;
+    if (memo.size >= MEMO_SIZE) memo.delete(memo.keys().next().value!);
+    memo.set(key, tx);
+  }
+  return tx.map((t) => ({ ...t }));
 }
 
 /** Who pays whom for a group, honoring its simplify setting. */

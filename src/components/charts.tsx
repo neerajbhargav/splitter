@@ -6,22 +6,6 @@ import { money, moneyShort } from "@/lib/format";
 
 export const CHART_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)"];
 
-type TipRow = { name: string; value: number; color?: string };
-
-function Tip({ title, rows, currency }: { title?: string; rows: TipRow[]; currency: string }) {
-  return (
-    <div className="chart-tip">
-      {title && <div className="t">{title}</div>}
-      {rows.map((r) => (
-        <div className="r" key={r.name}>
-          <span>{r.color && <i className="sw" style={{ background: r.color }} />}{r.name}</span>
-          <b className="num">{money(r.value, currency)}</b>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export type Slice = { key: string; name: string; value: number; color: string };
 
 /** Donut with a big number in the middle and a legend beside it.

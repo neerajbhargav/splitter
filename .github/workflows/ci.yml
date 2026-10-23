@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          # The tests run .ts files directly, which needs Node's built-in type stripping.
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Fails on a high or critical advisory in a runtime dependency, including ones published after merge.
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      # Includes the PGlite tests that load supabase/schema.sql into in-memory Postgres. No secrets.
+      - run: npm test
+      # No Supabase or Plaid env vars: the build must not need them.
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The image ships Chromium and its system libraries for the pinned @playwright/test 1.64.1, so the job
+    # skips `playwright install --with-deps`, which took from 17 s to 9.5 min on hosted runners (slow apt mirrors).
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Runs next dev against e2e/stub-supabase.ts with synthetic data. No secrets, no real Supabase.
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-traces
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 14

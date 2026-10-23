@@ -78,6 +78,8 @@ export default function PaycheckPage() {
   const working: Working | null = selected
     ? optimistic[selected] ?? (saved.get(selected) ? fromSaved(saved.get(selected)!) : { pay_date: selected, amount_cents: settings?.paycheck_cents ?? 0, allocations: [], note: "", received: false })
     : null;
+  // Every write to createdIds is followed by reload() and setOptimistic(), so a render always sees it.
+  // eslint-disable-next-line react-hooks/refs
   const isSaved = !!working && (!!working.id || !!createdIds.current[working.pay_date]);
 
   /* ---------- suggestions from the budget, bills and debt plan ---------- */

@@ -219,6 +219,8 @@ export function ExpenseDetail({ expense, group, members, onClose, onEdit, allExp
               /\.pdf(\?|$)/i.test(expense.receipt_path) ? (
                 <a className="btn" href={receipt} target="_blank" rel="noreferrer">Open PDF</a>
               ) : (
+                // A private, short-lived signed URL: keep it out of the shared image optimizer cache.
+                // eslint-disable-next-line @next/next/no-img-element
                 <a href={receipt} target="_blank" rel="noreferrer"><img className="receipt" src={receipt} alt="Receipt" /></a>
               )
             ) : (

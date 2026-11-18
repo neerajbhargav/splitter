@@ -7,7 +7,12 @@ const read = (p: string) => fs.readFileSync(new URL(p, import.meta.url), "utf8")
 export async function freshDb(...migrations: string[]) {
   const db = new PGlite();
   await db.exec(`create role anon nologin;create role authenticated nologin;
-    create schema auth;create table auth.users(id uuid primary key default gen_random_uuid(),email text,raw_user_meta_data jsonb default '{}'::jsonb);
+    create schema auth;create table auth.users(id uuid primary key default gen_random_uuid(),email text,raw_user_meta_data jsonb default '{}'::jsonb,
+      is_anonymous boolean not null default false,created_at timestamptz not null default now(),last_sign_in_at timestamptz);
+    create table auth.identities(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,
+      provider text not null,identity_data jsonb not null default '{}'::jsonb,created_at timestamptz not null default now());
+    create table auth.sessions(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,
+      created_at timestamptz not null default now(),updated_at timestamptz,refreshed_at timestamp);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     create schema storage;create table storage.buckets(id text primary key,name text,public boolean);
     create table storage.objects(id uuid primary key default gen_random_uuid(),bucket_id text,name text,owner uuid);

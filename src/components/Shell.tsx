@@ -21,9 +21,9 @@ export const useQuickAdd = () => useContext(QuickAddContext);
 /** Finance pages listen for this to open "add a transaction" in place. */
 export const ADD_TRANSACTION_EVENT = "splitter:add-transaction";
 
-export function Shell({ user, profile, children }: { user: { id: string; email: string | null }; profile: Profile | null; children: ReactNode }) {
+export function Shell({ user, profile, children }: { user: { id: string; email: string | null; guest?: boolean }; profile: Profile | null; children: ReactNode }) {
   return (
-    <MeProvider id={user.id} email={user.email} profile={profile}>
+    <MeProvider id={user.id} email={user.email} guest={user.guest} profile={profile}>
       <Frame>{children}</Frame>
     </MeProvider>
   );
@@ -44,10 +44,11 @@ function Frame({ children }: { children: ReactNode }) {
   useEffect(reload, [reload]);
   useLiveRefresh("shell", [{ table: "groups" }, { table: "group_members", filter: `user_id=eq.${me.id}` }], reload);
 
-  // First load: make sure a profile exists, then create any recurring expenses that came due.
+  // First load: make sure a profile exists (and pick up the name and email of a guest who just connected
+  // Google or GitHub), then create any recurring expenses that came due.
   useEffect(() => {
     (async () => {
-      if (!me.profile) {
+      if (!me.profile || !me.profile.email) {
         await api.ensureProfile().catch(() => {});
         const p = await loadProfile(me.id).catch(() => null);
         if (p) me.setProfile(p);
@@ -71,6 +72,7 @@ function Frame({ children }: { children: ReactNode }) {
   );
 
   async function signOut() {
+    if (me.guest) return router.push("/account#save");
     await supabaseBrowser().auth.signOut();
     router.replace("/login");
     router.refresh();
@@ -146,6 +148,7 @@ function Frame({ children }: { children: ReactNode }) {
               <ThemeCycle /><Link href="/account" aria-label="Account"><Avatar name={name} src={me.profile?.avatar_url} size={30} /></Link>
             </span>
           </header>
+          {me.guest && <GuestBar />}
           {children}
         </div>
 
@@ -182,5 +185,17 @@ function Frame({ children }: { children: ReactNode }) {
         }}
       />
     </QuickAddContext.Provider>
+  );
+}
+
+/** Shown on every page of a guest session: their data lives only in this browser's session until they save it. */
+function GuestBar() {
+  const path = usePathname();
+  if (path.startsWith("/account")) return null;
+  return (
+    <div className="guest-bar" role="status">
+      <span className="grow min0">You&apos;re trying SPLITTER as a guest. Save your data to keep it and use it on other devices.</span>
+      <Link href="/account#save" className="btn btn-sm btn-primary">Save my data</Link>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { Mail } from "lucide-react";
+import { Mail, UserRound } from "lucide-react";
 import { GitHubLogo, GoogleLogo, LogoMark, Spinner } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
@@ -14,6 +14,8 @@ export function LoginForm({ next, initialError, joining, deleted = false }: { ne
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(initialError);
   const [sent, setSent] = useState(false);
+  const [guestOpen, setGuestOpen] = useState(false);
+  const [guestName, setGuestName] = useState("");
 
   const callback = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
@@ -25,6 +27,21 @@ export function LoginForm({ next, initialError, joining, deleted = false }: { ne
       setError(error.message.includes("provider is not enabled") ? `${provider === "google" ? "Google" : "GitHub"} sign-in is not turned on in Supabase yet.` : error.message);
       setBusy(null);
     }
+  }
+
+  /** Guest mode: a Supabase anonymous account, saved later by connecting Google or GitHub on Account. */
+  async function startGuest(e: FormEvent) {
+    e.preventDefault();
+    setBusy("guest");
+    setError(null);
+    const name = guestName.trim().replace(/\s+/g, " ").slice(0, 40) || "Guest";
+    const { error } = await supabaseBrowser().auth.signInAnonymously({ options: { data: { name } } });
+    if (error) {
+      setError(/anonymous/i.test(error.message) ? "Guest mode isn't turned on for this copy of SPLITTER. Sign in with Google or GitHub." : error.message);
+      setBusy(null);
+      return;
+    }
+    window.location.assign(next);
   }
 
   async function magic(e: FormEvent) {
@@ -54,6 +71,19 @@ export function LoginForm({ next, initialError, joining, deleted = false }: { ne
           {busy === "github" ? <Spinner /> : <GitHubLogo />} Continue with GitHub
         </button>
       </div>
+
+      {guestOpen ? (
+        <form onSubmit={startGuest} className="stack-sm guest-start">
+          <label className="label" htmlFor="guest-name">What should your groups call you?</label>
+          <input id="guest-name" className="input" autoFocus maxLength={40} placeholder="First name (optional)" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
+          <button type="submit" className="btn btn-primary btn-block" disabled={!!busy}>{busy === "guest" ? <Spinner /> : <UserRound />} {joining ? "Join as a guest" : "Start as a guest"}</button>
+          <span className="hint">No email needed. Your data stays with this browser until you save it with Google or GitHub. Guest data that isn&apos;t opened for 30 days is deleted.</span>
+        </form>
+      ) : (
+        <button type="button" className="btn btn-ghost btn-block guest-link" onClick={() => setGuestOpen(true)} disabled={!!busy}>
+          <UserRound /> {joining ? "Join without an account" : "Try it without an account"}
+        </button>
+      )}
 
       {EMAIL_SIGNIN && (
         <>

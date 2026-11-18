@@ -3,12 +3,13 @@ import { createContext, useCallback, useContext, useMemo, useRef, useState, type
 import type { Profile } from "@/lib/types";
 
 // ---------- current user ----------
-type Me = { id: string; email: string | null; profile: Profile | null; setProfile: (p: Profile) => void };
+/** `guest`: signed in with Supabase anonymous sign-in (no email) until they connect Google or GitHub. */
+type Me = { id: string; email: string | null; guest: boolean; profile: Profile | null; setProfile: (p: Profile) => void };
 const MeContext = createContext<Me | null>(null);
 
-export function MeProvider({ id, email, profile: initial, children }: { id: string; email: string | null; profile: Profile | null; children: ReactNode }) {
+export function MeProvider({ id, email, guest = false, profile: initial, children }: { id: string; email: string | null; guest?: boolean; profile: Profile | null; children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(initial);
-  const value = useMemo(() => ({ id, email, profile, setProfile }), [id, email, profile]);
+  const value = useMemo(() => ({ id, email, guest, profile, setProfile }), [id, email, guest, profile]);
   return <MeContext.Provider value={value}>{children}</MeContext.Provider>;
 }
 

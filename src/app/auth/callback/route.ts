@@ -12,15 +12,28 @@ export async function GET(request: NextRequest) {
   const proto = request.headers.get("x-forwarded-proto")?.split(",")[0] ?? url.protocol.replace(":", "");
   const base = `${proto}://${host}`;
 
+  const supabase = await supabaseServer();
+  // A guest connecting Google or GitHub (linkIdentity) still has their session when this fails, and the
+  // sign-in page would bounce them straight back into the app, so their errors go to Account instead.
+  const fail = async (message: string) => {
+    const { data } = await supabase.auth.getUser();
+    if (data.user) return NextResponse.redirect(`${base}/account?link_error=${encodeURIComponent(linkMessage(message))}#save`);
+    return NextResponse.redirect(`${base}/login?error=${encodeURIComponent(message)}&next=${encodeURIComponent(next)}`);
+  };
   const providerError = url.searchParams.get("error_description") ?? url.searchParams.get("error");
-  if (providerError) {
-    return NextResponse.redirect(`${base}/login?error=${encodeURIComponent(providerError)}&next=${encodeURIComponent(next)}`);
-  }
+  if (providerError) return fail(providerError);
   if (code) {
-    const supabase = await supabaseServer();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(`${base}${next}`);
-    return NextResponse.redirect(`${base}/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`);
+    return fail(error.message);
   }
   return NextResponse.redirect(`${base}/login?error=${encodeURIComponent("Sign-in link was missing a code. Try again.")}`);
+}
+
+function linkMessage(message: string): string {
+  if (/already (been )?linked|identity_already_exists|already exists/i.test(message)) {
+    return "That account already has its own SPLITTER account, so this guest data can't be added to it. Connect a different one, or keep using this guest session.";
+  }
+  if (/manual linking is disabled/i.test(message)) return "Saving guest data isn't turned on for this copy of SPLITTER yet.";
+  return message;
 }

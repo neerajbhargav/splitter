@@ -1,9 +1,9 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { CalendarDays, Copy, Gauge, LogOut, Trash2 } from "lucide-react";
+import { CalendarDays, Copy, CreditCard, Gauge, LogOut, Trash2 } from "lucide-react";
 import { useMe, useToast } from "@/components/providers";
-import { Avatar } from "@/components/ui";
+import { Avatar, GitHubLogo, GoogleLogo, Spinner } from "@/components/ui";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { api, deleteMyAccount, loadProfile } from "@/lib/data";
 import { CURRENCIES, timeAgo } from "@/lib/format";
@@ -33,6 +33,14 @@ export default function AccountPage() {
   }
 
   async function signOut() {
+    if (me.guest) {
+      if (!confirm("A guest session can't be signed back into. Delete this guest data and sign out? To keep it, use Save your data above.")) return;
+      try { await deleteMyAccount(me.id); } catch (e) { toast.err(e); return; }
+      await supabaseBrowser().auth.signOut({ scope: "local" });
+      router.replace("/login");
+      router.refresh();
+      return;
+    }
     await supabaseBrowser().auth.signOut();
     router.replace("/login");
     router.refresh();
@@ -42,10 +50,12 @@ export default function AccountPage() {
     <main className="page page-narrow">
       <div className="page-head">
         <div>
-          <div className="eyebrow">Signed in as {me.email}</div>
+          <div className="eyebrow">{me.guest ? "Guest session" : `Signed in as ${me.email}`}</div>
           <h1 className="page-title">Account</h1>
         </div>
       </div>
+
+      <SaveGuest />
 
       <form onSubmit={save} className="card">
         <div className="card-body stack">
@@ -91,7 +101,7 @@ export default function AccountPage() {
 
       <section className="card">
         <div className="card-body">
-          <button type="button" className="btn btn-danger" onClick={signOut}><LogOut /> Sign out</button>
+          <button type="button" className="btn btn-danger" onClick={signOut}><LogOut /> {me.guest ? "Delete guest data and sign out" : "Sign out"}</button>
         </div>
       </section>
 
@@ -100,10 +110,12 @@ export default function AccountPage() {
   );
 }
 
-type Kind = "calendar" | "scores";
+type Kind = "calendar" | "scores" | "purchases";
 const LINKS: { kind: Kind; icon: typeof CalendarDays; title: string; body: string }[] = [
   { kind: "calendar", icon: CalendarDays, title: "Reminders in your calendar",
     body: "Group bills you still owe, subscription renewals, card due days and paydays, with an alert at 9am the day before. Subscribe once in Apple, Google or Outlook Calendar; it updates itself." },
+  { kind: "purchases", icon: CreditCard, title: "Apple Pay logging",
+    body: "Every Apple Pay tap on your iPhone goes straight into Money, with the category you used last time at that merchant (or a best guess) and the card's account. Set it up once in the Shortcuts app." },
   { kind: "scores", icon: Gauge, title: "Credit score sync",
     body: "Lets a scheduled job on your own computer post your scores without signing in. It can only add credit scores." },
 ];
@@ -116,7 +128,9 @@ function SecretLinks() {
   const reload = useCallback(() => api.tokenStatus().then(setStatus).catch(() => setStatus({})), []);
   useEffect(() => { reload(); }, [reload]);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  const urlFor = (kind: Kind, token: string) => kind === "calendar" ? `${origin}/api/calendar/${token}.ics` : token;
+  const zone = typeof Intl === "undefined" ? "" : Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const urlFor = (kind: Kind, token: string) => kind === "calendar" ? `${origin}/api/calendar/${token}.ics`
+    : kind === "purchases" ? `${origin}/api/finance/purchases/${token}${zone ? `?tz=${encodeURIComponent(zone)}` : ""}` : token;
 
   async function make(kind: Kind) {
     if (status[kind] && !confirm("Make a new link? The old one stops working.")) return;
@@ -128,7 +142,7 @@ function SecretLinks() {
   }
 
   return (
-    <section className="card">
+    <section className="card" id="links">
       <div className="card-head"><span className="card-title">Links for other apps</span></div>
       <div className="card-body stack">
         {LINKS.map(({ kind, icon: Icon, title, body }) => {
@@ -150,11 +164,11 @@ function SecretLinks() {
                     <input className="input mono" readOnly value={shown} onFocus={(e) => e.target.select()} aria-label={`${title} link`} />
                     <button type="button" className="btn btn-icon" style={{ height: 40, width: 40 }} aria-label="Copy" onClick={() => navigator.clipboard.writeText(shown).then(() => toast.ok("Copied"))}><Copy /></button>
                   </div>
-                  {kind === "calendar"
+                  {kind === "purchases" ? <ApplePaySteps /> : kind === "calendar"
                     ? <div className="row-flex wrap" style={{ gap: 8 }}><a className="btn btn-sm btn-primary" href={shown.replace(/^https?:/, "webcal:")}>Add to Apple Calendar</a>
                         <a className="btn btn-sm" target="_blank" rel="noreferrer" href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(shown.replace(/^https?:/, "webcal:"))}`}>Add to Google Calendar</a></div>
                     : <pre className="small mono" style={{ whiteSpace: "pre-wrap", wordBreak: "break-all", margin: 0 }}>{`curl -X POST ${origin}/api/finance/credit-scores/sync \\\n  -H "Authorization: Bearer ${fresh!.token}" -H "content-type: application/json" \\\n  -d '{"scores":[{"bureau":"experian","score":712,"model":"FICO 8","as_of":"2026-10-20"}]}'`}</pre>}
-                  <span className="hint">Shown once. Keep it private: anyone with it can {kind === "calendar" ? "read these reminders" : "add scores"}. Make a new link if it leaks.</span>
+                  <span className="hint">Shown once. Keep it private: anyone with it can {kind === "calendar" ? "read these reminders" : kind === "purchases" ? "add purchases to your Money" : "add scores"}. Make a new link if it leaks.</span>
                 </div>
               )}
               <div className="row-flex wrap" style={{ gap: 8 }}>
@@ -215,6 +229,76 @@ function DeleteAccount({ userId, email }: { userId: string; email: string | null
             </div>
           </form>
         )}
+      </div>
+    </section>
+  );
+}
+
+/** The one-time Shortcuts setup for Apple Pay logging, in the order the Shortcuts app asks for things. */
+function ApplePaySteps() {
+  return (
+    <ol className="steps small">
+      <li>Copy the link above. On your iPhone, open <b>Shortcuts</b> &gt; <b>Automation</b> &gt; <b>+</b> &gt; <b>Transaction</b>.</li>
+      <li>Choose your Wallet cards, pick <b>Run Immediately</b>, then <b>Next</b> &gt; <b>Create New Shortcut</b>.</li>
+      <li>Add <b>Get Contents of URL</b> and paste the link. Tap <b>Show More</b>: Method <b>POST</b>, Request Body <b>JSON</b>.</li>
+      <li>Add three Text fields: <code>amount</code> = <b>Shortcut Input › Amount</b>, <code>merchant</code> = <b>Shortcut Input › Merchant</b>, <code>card</code> = <b>Shortcut Input › Card or Pass</b>.</li>
+      <li>Optional: add <b>Show Notification</b> with <b>Contents of URL</b> to see “Logged $4.75 at Starbucks · Coffee” after each tap.</li>
+      <li>Tap <b>Done</b>. Your next Apple Pay tap shows up in Money &gt; Activity. Change a category once and the next tap at that merchant follows it.</li>
+    </ol>
+  );
+}
+
+/**
+ * For a guest: connect Google or GitHub to the same account (Supabase linkIdentity), so every group,
+ * expense and Money row stays where it is. After a successful link, also shows the confirmation.
+ */
+function SaveGuest() {
+  const me = useMe();
+  const router = useRouter();
+  const params = useSearchParams();
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(params.get("link_error"));
+  const saved = params.get("saved") === "1" && !me.guest;
+
+  // After the redirect back, copy the new name, email and picture into the profile.
+  useEffect(() => {
+    if (params.get("saved") !== "1") return;
+    (async () => {
+      await api.ensureProfile().catch(() => {});
+      const p = await loadProfile(me.id).catch(() => null);
+      if (p) me.setProfile(p);
+      router.refresh();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function link(provider: "google" | "github") {
+    setBusy(provider);
+    setError(null);
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/account?saved=1")}`;
+    const { error } = await supabaseBrowser().auth.linkIdentity({ provider, options: { redirectTo } });
+    if (error) {
+      setError(/manual linking/i.test(error.message) ? "Saving guest data isn't turned on for this copy of SPLITTER yet." : error.message);
+      setBusy(null);
+    }
+  }
+
+  if (saved) return <div className="banner" id="save">Saved. Your data is now on your account, and you can sign in from any device.</div>;
+  if (!me.guest) return null;
+  return (
+    <section className="card card-accent" id="save">
+      <div className="card-head"><span className="card-title">Save your data</span></div>
+      <div className="card-body stack-sm">
+        <p className="muted">
+          You&apos;re using SPLITTER as a guest, so this data lives with this browser. Connect Google or GitHub to keep it and sign in
+          anywhere. Nothing moves: your groups, expenses and Money stay exactly as they are.
+        </p>
+        <div className="row-flex wrap" style={{ gap: 8 }}>
+          <button type="button" className="btn" disabled={!!busy} onClick={() => link("google")}>{busy === "google" ? <Spinner /> : <GoogleLogo />} Save with Google</button>
+          <button type="button" className="btn" disabled={!!busy} onClick={() => link("github")}>{busy === "github" ? <Spinner /> : <GitHubLogo />} Save with GitHub</button>
+        </div>
+        {error && <div className="banner neg">{error}</div>}
+        <span className="hint">Guest data that isn&apos;t opened for 30 days is deleted.</span>
       </div>
     </section>
   );

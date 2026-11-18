@@ -33,10 +33,10 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # The image ships Chromium and its system libraries for the pinned @playwright/test 1.64.1, so the job
+    # The image ships Chromium and its system libraries for the pinned @playwright/test 1.65.0, so the job
     # skips `playwright install --with-deps`, which took from 17 s to 9.5 min on hosted runners (slow apt mirrors).
     container:
-      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
       options: --user 1001
     steps:
       - uses: actions/checkout@v7

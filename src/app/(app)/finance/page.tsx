@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUp, CalendarClock, Check, ChevronRight, Eye, FileUp, Plus, Smartphone, Sparkles, Users, Wallet } from "lucide-react";
+import { ArrowUp, CalendarClock, Check, ChevronLeft, ChevronRight, CreditCard, Eye, FileUp, Plus, Repeat, Smartphone, Sparkles, Tag, Users, Wallet } from "lucide-react";
 import { useMe } from "@/components/providers";
 import { api, loadOverview } from "@/lib/data";
 import { summarize, type PersonBalance } from "@/lib/overview";
@@ -13,7 +13,8 @@ import { TransactionEditor } from "@/components/finance/TransactionEditor";
 import { CategoryTile, DateTile, StatusChip, TxAmount, dayDiff, monthLong, relativeDay, shortDay } from "@/components/finance/kit";
 import { askSuggestions } from "@/components/finance/ask-suggestions";
 import { compareDebtPlans } from "@/lib/debt-planner";
-import { PACE_MIN_DAYS, currentBudgetMonth, summarizeBudget } from "@/lib/budget-planner";
+import { PACE_MIN_DAYS, budgetInsights, currentBudgetMonth, summarizeBudget, type BudgetInsight } from "@/lib/budget-planner";
+import { subscriptionEquivalentTotals } from "@/lib/subscription-planner";
 import { dailySpending, evaluateHealth, healthScore, monthActivity, netWorth } from "@/lib/finance-insights";
 import { forecastSubscriptionCharges, forecastTotalCents } from "@/lib/subscription-planner";
 import { categoryLookup, debtsMissingTerms, isEmptyWorkspace, payoffDebts, sortTransactions } from "@/lib/finance-selectors";
@@ -54,7 +55,14 @@ export default function FinanceOverview() {
     const nextPayday = schedule ? paydaysFrom(schedule, today, 1)[0] ?? null : null;
     const nextPaycheck = nextPayday ? bundle.paychecks.find((p) => p.pay_date === nextPayday) ?? null : null;
     const paycheckLeft = nextPaycheck ? paycheckTotals(nextPaycheck.amount_cents, nextPaycheck.allocations).left_cents : null;
-    return { worth, summary, activity, topCategories, daily, rules, known, score: known >= 3 ? healthScore(rules) : null, charges, chargesTotal: Number(forecastTotalCents(charges)), debts, payoff, nextPayday, nextPaycheck, paycheckLeft };
+    const subsCat = bundle.categories.find((c) => !c.archived && c.name.trim().toLowerCase() === "subscriptions") ?? null;
+    const insights = budgetInsights(summary, {
+      subscriptionsMonthlyCents: subsCat ? Number(subscriptionEquivalentTotals(bundle.subscriptions.filter((x) => x.category_id === subsCat.id)).monthly_cents) : 0,
+      debtMinimumsCents: debts.reduce((a, d) => a + d.minimum_cents, 0), categories: bundle.categories, format: (c) => money(c, currency), paceBasis: "flexible",
+    });
+    const known_ids = new Set(bundle.categories.map((c) => c.id));
+    const uncategorized = bundle.transactions.filter((t) => t.kind === "expense" && t.date.startsWith(month.slice(0, 7)) && (!t.category_id || !known_ids.has(t.category_id))).length;
+    return { worth, summary, activity, topCategories, daily, rules, known, score: known >= 3 ? healthScore(rules) : null, charges, chargesTotal: Number(forecastTotalCents(charges)), debts, payoff, nextPayday, nextPaycheck, paycheckLeft, insights, uncategorized };
   }, [bundle, month, today, currency, cats]);
 
   if (isEmptyWorkspace(bundle)) return <Welcome />;
@@ -147,6 +155,15 @@ export default function FinanceOverview() {
         </div>
 
         <div className="dash-col">
+          <InsightCard insights={view.insights} score={view.score} />
+          <NeedsYou items={[
+            ...(view.uncategorized ? [{ key: "uncat", icon: Tag, tone: "warn", title: `${view.uncategorized} expense${view.uncategorized === 1 ? " needs" : "s need"} a category`, sub: "So your budget and insights add up", href: `/finance/activity?category=uncategorized&month=${month.slice(0, 7)}` }] : []),
+            ...(view.nextPayday && !view.nextPaycheck && dayDiff(today, view.nextPayday) <= 10 ? [{ key: "pay", icon: CalendarClock, tone: "info", title: `Plan your ${shortDay(view.nextPayday)} paycheck`, sub: `${relativeDay(view.nextPayday, today)}, before it lands`, href: "/finance/paycheck" }] : []),
+            ...(!summary.is_set_up ? [{ key: "plan", icon: Wallet, tone: "info", title: `Plan ${monthLong(month).split(" ")[0]}`, sub: "Give every dollar a job with a 50/30/20 starter", href: "/finance/budget" }] : []),
+            ...(missingTerms.length ? [{ key: "terms", icon: CreditCard, tone: "warn", title: `Add APR and minimum for ${missingTerms.length === 1 ? missingTerms[0].name : `${missingTerms.length} debts`}`, sub: "Needed for your payoff date", href: "/finance/accounts" }] : []),
+            ...view.charges.filter((c) => dayDiff(today, c.date) <= 3).slice(0, 2).map((c) => ({ key: `sub-${c.subscription_id}`, icon: Repeat, tone: "info", title: `${c.name} renews ${relativeDay(c.date, today).toLowerCase()}`, sub: `${money(c.amount_cents, currency)} · cancel before then if you don't use it`, href: "/finance/subscriptions" })),
+          ]} />
+
           <Card title="Coming up" description={upcoming.length ? `${money(view.chargesTotal, currency)} due in the next 14 days` : "Next 14 days"}
             action={<Link href="/finance/subscriptions" className="btn btn-sm">Subscriptions <ChevronRight /></Link>}>
             {upcoming.length ? (
@@ -191,6 +208,56 @@ export default function FinanceOverview() {
 
       <TransactionEditor open={editing !== null} tx={editing?.tx ?? null} onClose={() => setEditing(null)} />
     </>
+  );
+}
+
+/**
+ * The one accent card (from his bookmarked dashboards: one grain-gradient card among quiet hairline ones).
+ * It cycles through the month's budget insights, most important first.
+ */
+function InsightCard({ insights, score }: { insights: BudgetInsight[]; score: number | null }) {
+  const [i, setI] = useState(0);
+  const list = insights.length ? insights : [{
+    id: "steady", tone: "good" as const,
+    title: score !== null && score >= 80 ? "A strong month so far" : "Nothing needs you right now",
+    detail: "Your spending is inside your plan. New insights show up here as the month moves.",
+  }];
+  const cur = list[Math.min(i, list.length - 1)];
+  return (
+    <section className={`card fin-accent ${cur.tone}`} aria-live="polite">
+      <div className="fin-accent-top">
+        <span className="fin-accent-chip"><Sparkles /> {cur.tone === "bad" || cur.tone === "warn" ? "Worth a look" : "Insight"}</span>
+        {list.length > 1 && (
+          <span className="fin-accent-nav">
+            <button type="button" aria-label="Previous insight" onClick={() => setI((i - 1 + list.length) % list.length)}><ChevronLeft /></button>
+            <span className="num">{i + 1} of {list.length}</span>
+            <button type="button" aria-label="Next insight" onClick={() => setI((i + 1) % list.length)}><ChevronRight /></button>
+          </span>
+        )}
+      </div>
+      <div className="fin-accent-title">{cur.title}</div>
+      <p className="fin-accent-detail">{cur.detail}</p>
+      <Link href="/finance/budget" className="fin-accent-cta">Open budget <ChevronRight /></Link>
+    </section>
+  );
+}
+
+type Need = { key: string; icon: typeof Tag; tone: string; title: string; sub: string; href: string };
+/** Things only the user can do, each one tap away. Hidden when there are none. */
+function NeedsYou({ items }: { items: Need[] }) {
+  if (!items.length) return null;
+  return (
+    <Card title="Needs you" description={`${items.length} thing${items.length === 1 ? "" : "s"} to do`}>
+      <div className="list">
+        {items.map(({ key, icon: Icon, tone, title, sub, href }) => (
+          <Link key={key} href={href} className="item clickable fin-need">
+            <span className={`icon-tile sm fin-need-${tone}`}><Icon /></span>
+            <div className="item-main"><div className="item-title">{title}</div><div className="item-sub">{sub}</div></div>
+            <ChevronRight className="fin-need-go" aria-hidden />
+          </Link>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -263,10 +330,10 @@ function Welcome() {
       <div className="card-body" style={{ padding: "28px 22px" }}>
         <div className="serif" style={{ fontSize: 32, lineHeight: 1.1 }}>Set up your money.</div>
         <p className="muted" style={{ marginTop: 8, maxWidth: 560 }}>Budget, accounts, debt payoff, subscriptions and health checks in one private place. Free, and nothing is shared with your groups.</p>
-        <div className="list" style={{ marginTop: 18 }}>
+        <div className="list fin-steps" style={{ marginTop: 18 }}>
           {steps.map((s, i) => (
             <div className="item" key={s.title} style={{ alignItems: "flex-start" }}>
-              <span className={`icon-tile ${s.done ? "fin-in" : "gold"}`}>{s.done ? <Check /> : <b style={{ fontSize: 13 }}>{i + 1}</b>}</span>
+              <span className={`fin-step-dot ${s.done ? "done" : i === steps.findIndex((x) => !x.done) ? "now" : ""}`}>{s.done ? <Check /> : i + 1}</span>
               <div className="item-main">
                 <div className="item-title" style={{ whiteSpace: "normal" }}>{s.title}</div>
                 <div className="hint" style={{ marginTop: 2 }}>{s.body}</div>

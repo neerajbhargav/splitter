@@ -8,7 +8,7 @@ export async function freshDb(...migrations: string[]) {
   const db = new PGlite();
   await db.exec(`create role anon nologin;create role authenticated nologin;
     create schema auth;create table auth.users(id uuid primary key default gen_random_uuid(),email text,raw_user_meta_data jsonb default '{}'::jsonb,
-      is_anonymous boolean not null default false,created_at timestamptz not null default now(),last_sign_in_at timestamptz);
+      is_anonymous boolean not null default false,created_at timestamptz not null default now(),last_sign_in_at timestamptz,email_confirmed_at timestamptz);
     create table auth.identities(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,
       provider text not null,identity_data jsonb not null default '{}'::jsonb,created_at timestamptz not null default now());
     create table auth.sessions(id uuid primary key default gen_random_uuid(),user_id uuid not null references auth.users(id) on delete cascade,
@@ -28,6 +28,6 @@ export async function freshDb(...migrations: string[]) {
   for (const m of migrations) for (let i = 0; i < 2; i++) await db.exec(read(`../supabase/migrations/${m}`));
   const as = (id: string) => db.query(`select set_config('request.jwt.claim.sub',$1,false)`, [id]);
   const user = async (id: string, email: string, name: string) =>
-    db.query(`insert into auth.users(id,email,raw_user_meta_data) values ($1,$2,$3::jsonb)`, [id, email, JSON.stringify({ name })]);
+    db.query(`insert into auth.users(id,email,raw_user_meta_data,email_confirmed_at) values ($1,$2,$3::jsonb,now())`, [id, email, JSON.stringify({ name })]);
   return { db, as, user };
 }

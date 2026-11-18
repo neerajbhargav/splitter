@@ -136,7 +136,7 @@ export type BudgetMonthInput = Pick<BudgetMonth, "month" | "income_cents" | "lim
 
 /* ---------- ledger (Folio "Activity") ---------- */
 export type TxKind = "expense" | "income" | "transfer";
-export type TxSource = "manual" | "csv" | "plaid" | "subscription";
+export type TxSource = "manual" | "csv" | "plaid" | "subscription" | "applepay";
 export type FinanceTransaction = {
   id: string;
   user_id: string;

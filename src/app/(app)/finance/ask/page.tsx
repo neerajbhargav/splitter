@@ -1,9 +1,10 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
+import { askSuggestions } from "@/components/finance/ask-suggestions";
 import { ChevronDown, CircleAlert, KeyRound, SendHorizontal, Square } from "lucide-react";
 import { Card } from "@/components/kit";
 import { Segmented, Spinner } from "@/components/ui";
-import { moneyTight } from "@/components/finance/kit";
 import { useFinance } from "@/components/finance/FinanceProvider";
 import { buildAiContext } from "@/lib/finance-insights";
 import {
@@ -109,12 +110,7 @@ export default function AskPage() {
   }, [messages, busy]);
 
   const context = useMemo(() => buildAiContext(bundle, today), [bundle, today]);
-  const suggestions = useMemo(() => [
-    "Where is my money leaking this month?",
-    `Can I afford a ${moneyTight(42_000, currency)} car payment?`,
-    `When could I be debt-free if I add ${moneyTight(20_000, currency)} a month?`,
-    "Is my emergency fund big enough?",
-  ], [currency]);
+  const suggestions = useMemo(() => askSuggestions(currency), [currency]);
 
   const resize = () => {
     const el = input.current;
@@ -122,6 +118,17 @@ export default function AskPage() {
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   };
+
+  // A question asked from Overview's Ask bar arrives as ?q=.
+  const params = useSearchParams();
+  const asked = useRef(false);
+  useEffect(() => {
+    const q = params.get("q");
+    if (!loaded || asked.current || !q) return;
+    asked.current = true;
+    if (config) void send(q); else setDraft(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, config]);
 
   const send = async (text: string) => {
     const q = text.trim();

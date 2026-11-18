@@ -1045,3 +1045,82 @@ button.item.clickable:focus-visible { outline: 2px solid var(--gold); outline-of
 .legal-body a, .legal-foot a, .auth-foot a { color: var(--gold-text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(201, 169, 110, 0.4); }
 .legal-foot { margin-top: 44px; }
 .auth-card .auth-foot { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--line); }
+.steps { margin: 4px 0 0; padding-left: 20px; color: var(--ink-2); line-height: 1.55; }
+.steps li { margin-bottom: 6px; }
+.steps b { color: var(--ink); font-weight: 500; }
+.steps code { font-family: var(--mono); font-size: 0.92em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+.guest-bar { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: calc(100% - 2 * var(--page-x, 32px)); max-width: var(--content-max, 980px);
+  margin: 14px auto 0; padding: 10px 12px 10px 16px; border-radius: 14px; background: var(--gold-wash); border: 1px solid rgba(201, 169, 110, 0.28);
+  color: var(--gold-2); font-size: 13px; line-height: 1.4; }
+@media (max-width: 760px) { .guest-bar { font-size: 12.5px; } }
+.auth-card .guest-link { margin-top: 10px; color: var(--ink-2); }
+.auth-card .guest-start { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.card-accent { border-color: rgba(201, 169, 110, 0.45); }
+
+/* ---------- Money redesign (2026-11-18): one header, one summary card, one widget pattern ----------
+   Borrowed from Claude's Personal Finance (one dashboard of same-shaped widgets with an Ask bar on top)
+   and Monarch (Track / Budget / Plan groups; card heads with a one-line summary and a quiet link). */
+
+/* sidebar: money sections in groups */
+.nav-money { gap: 0; }
+.nav-group { display: flex; flex-direction: column; gap: 2px; }
+.nav-group + .nav-group { margin-top: 10px; }
+.nav-group-label { padding: 4px 10px 4px; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+
+/* phone chip bar: same groups, a hairline between them */
+.fin-nav-group { display: contents; }
+.fin-nav-sep { flex: none; width: 1px; height: 18px; align-self: center; margin: 0 5px; background: var(--line-2); }
+
+/* page header: group eyebrow, section title, one line of purpose */
+.fin-blurb { margin: 6px 0 0; font-size: 14px; color: var(--ink-3); max-width: 560px; line-height: 1.45; }
+
+/* summary card: left-aligned number with its chips, actions on the right (stacked on phones) */
+.fin-hero .hero-bal { text-align: left; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: end; }
+.fin-hero .hero-bal > .hb-label, .fin-hero .hero-bal > .big, .fin-hero .hero-bal > .sub, .fin-hero .hero-bal > .fin-hero-note { grid-column: 1; }
+.fin-hero .hb-label { font-size: 14px; color: var(--ink-2); font-weight: 500; }
+.fin-hero .hero-bal .big { font-size: clamp(44px, calc(var(--main-w) * 0.03 + 28px), 64px); margin: 4px 0 10px; }
+.fin-hero .hero-bal .sub { justify-content: flex-start; gap: 8px; }
+.fin-hero .hero-actions { grid-column: 2; grid-row: 1 / span 4; align-self: center; justify-content: flex-end; margin-top: 0; flex-direction: column; align-items: stretch; }
+.fin-hero .hero-actions .btn { min-width: 168px; height: 42px; }
+.fin-hero .fin-hero-note { margin-top: 12px; }
+.fin-big-text { font-size: clamp(40px, calc(var(--main-w) * 0.026 + 26px), 56px) !important; }
+@media (max-width: 640px) {
+  .fin-hero .hero-bal { grid-template-columns: minmax(0, 1fr); }
+  .fin-hero .hero-actions { grid-column: 1; grid-row: auto; flex-direction: row; margin-top: 16px; }
+  .fin-hero .hero-actions .btn { flex: 1; min-width: 0; }
+}
+
+/* card heads: links to a section read as a quiet "Budget ›", actions stay buttons */
+.fin-page .card-head > a.btn.btn-sm { background: none; border-color: transparent; box-shadow: none; padding: 0 2px 0 6px; height: 28px; color: var(--gold-text); font-weight: 500; gap: 2px; }
+.fin-page .card-head > a.btn.btn-sm:hover { color: var(--ink); background: none; }
+.fin-page .card-head > a.btn.btn-sm svg { width: 15px; height: 15px; }
+.fin-page .card-desc { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+.fin-subhead { margin: 18px 0 8px; font-size: 12px; color: var(--ink-3); font-weight: 500; }
+
+/* Overview: Ask bar */
+.fin-askbar { padding: 14px; }
+.fin-askbar-form { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border: 1px solid var(--line-2); border-radius: 999px; background: var(--bg); }
+.fin-askbar-form:focus-within { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-wash); }
+.fin-askbar-icon { width: 18px; height: 18px; color: var(--gold-text); flex: none; }
+.fin-askbar-input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: 15px; color: var(--ink); height: 36px; }
+.fin-askbar-input::placeholder { color: var(--ink-3); }
+.fin-askbar-form .btn-icon { width: 36px; height: 36px; flex: none; }
+.fin-askbar-chips { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.fin-askbar-chips::-webkit-scrollbar { display: none; }
+.fin-chip { flex: none; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2); font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.fin-chip:hover { color: var(--ink); border-color: var(--line-2); }
+
+/* Overview: snapshot strip, four tiles that each open their section */
+.fin-snapshot { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: hidden; }
+.fin-snapshot .snap { display: flex; flex-direction: column; gap: 4px; padding: 16px 18px 15px; color: inherit; min-width: 0; transition: background .15s; }
+.fin-snapshot .snap + .snap { border-left: 1px solid var(--line); }
+.fin-snapshot .snap:hover { background: var(--hover-fill); }
+.fin-snapshot .k { font-size: 12.5px; color: var(--ink-3); font-weight: 500; }
+.fin-snapshot .v { font-family: var(--serif); font-size: clamp(22px, calc(var(--main-w) * 0.012 + 14px), 28px); line-height: 1.1; color: var(--ink); overflow-wrap: anywhere; }
+.fin-snapshot .v.neg { color: var(--neg); }
+.fin-snapshot .s { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 860px) {
+  .fin-snapshot { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fin-snapshot .snap:nth-child(3) { border-left: 0; }
+  .fin-snapshot .snap:nth-child(n + 3) { border-top: 1px solid var(--line); }
+}

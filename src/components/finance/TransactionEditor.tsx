@@ -17,6 +17,7 @@ const KIND_OPTIONS: { id: TxKind; label: string }[] = [
 ];
 const SOURCE_NOTE: Record<FinanceTransaction["source"], string | null> = {
   manual: null, csv: "Imported from a CSV file.", plaid: "Synced from your bank. Edits stay, except the bank can update amount and date.", subscription: "Logged from Subscriptions.",
+  applepay: "Logged from Apple Pay by your iPhone Shortcut. Change the category here and the next tap at this merchant uses it.",
 };
 
 /** Add or edit one ledger line. Used by Overview, Activity, Budget and Accounts. */

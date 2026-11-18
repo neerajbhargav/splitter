@@ -3,7 +3,7 @@ import "@/components/finance/styles/activity.css";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { FileUp, Plus, RefreshCw, Search, X } from "lucide-react";
+import { FileUp, Plus, RefreshCw, Search, Smartphone, X } from "lucide-react";
 import { Card } from "@/components/kit";
 import { Empty, Spinner } from "@/components/ui";
 import { useToast } from "@/components/providers";
@@ -164,6 +164,7 @@ export default function ActivityPage() {
   const empty = bundle.transactions.length === 0;
   const addBtn = <button type="button" className="btn btn-primary" onClick={openAdd}><Plus /> Add transaction</button>;
   const importBtn = <button type="button" className="btn" onClick={() => setImportOpen(true)}><FileUp /> Import CSV</button>;
+  const applePayBtn = <Link href="/account#links" className="btn" title="Log every Apple Pay tap automatically"><Smartphone /> Apple Pay</Link>;
 
   return (
     <>
@@ -172,6 +173,7 @@ export default function ActivityPage() {
           <div className="fin-actions">
             {addBtn}
             {importBtn}
+            {!demo && applePayBtn}
             {bundle.connections.length > 0 && !demo && (
               <button type="button" className="btn" disabled={syncing} onClick={() => void sync()}>
                 {syncing ? <Spinner /> : <RefreshCw />} {syncing ? "Syncing" : "Sync"}
@@ -258,7 +260,7 @@ export default function ActivityPage() {
 
       {empty ? (
         <Card>
-          <Empty title="No transactions yet" action={<div className="fin-actions" style={{ justifyContent: "center" }}>{addBtn}{importBtn}</div>}>
+          <Empty title="No transactions yet" action={<div className="fin-actions" style={{ justifyContent: "center" }}>{addBtn}{importBtn}{applePayBtn}</div>}>
             Add one by hand, import a CSV from your bank, or link a bank in Accounts.
           </Empty>
         </Card>

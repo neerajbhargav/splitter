@@ -14,6 +14,7 @@ export default function PrivacyPage() {
       <h2>What is stored</h2>
       <ul>
         <li><b>Your sign-in.</b> When you sign in with Google or GitHub, SPLITTER receives your name, email address and profile picture. No password is stored.</li>
+        <li><b>Guest mode.</b> Trying SPLITTER without an account makes an anonymous account tied to this browser, with only the name you type, if any. Connecting Google or GitHub later keeps the same data. A guest account that isn&apos;t opened for 30 days is deleted with everything in it.</li>
         <li><b>Groups.</b> Group names, the names (and any email or phone) you add for the people in them, expenses, bills, comments, settle-ups and receipt photos you attach.</li>
         <li><b>Money.</b> The accounts, transactions, budgets, debts, paychecks, subscriptions and credit scores you enter or import from a CSV file.</li>
       </ul>
@@ -26,7 +27,7 @@ export default function PrivacyPage() {
       <ul>
         <li>Your Money pages are yours alone. The database checks the signed-in account on every row.</li>
         <li>A group, its expenses, comments and receipt photos are visible to the people who have joined that group.</li>
-        <li>Links you make for other apps (a reminder calendar, credit score sync) are secret links. The server keeps only a hash of each one, and you can turn them off.</li>
+        <li>Links you make for other apps (a reminder calendar, Apple Pay logging, credit score sync) are secret links. The server keeps only a hash of each one, and you can turn them off.</li>
       </ul>
 
       <h2>What stays on your device</h2>
@@ -36,6 +37,10 @@ export default function PrivacyPage() {
         <li><b>Exchange rates</b> come from the Frankfurter API (European Central Bank rates), requested by your browser.</li>
         <li>Your theme choice and a sample-data flag are kept in browser storage. The only cookies are the ones that keep you signed in.</li>
       </ul>
+      <p>
+        <b>Apple Pay logging</b> is off unless you set it up. Your iPhone&apos;s Shortcuts app then sends each Apple Pay purchase&apos;s amount,
+        merchant and card name to your secret link, and SPLITTER saves it in Money. Apple does not share anything else with SPLITTER.
+      </p>
       <p>Bank linking through Plaid is built into the code but is not turned on in this deployment.</p>
 
       <h2>Deleting your data</h2>

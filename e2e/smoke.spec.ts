@@ -31,6 +31,10 @@ test("privacy and terms are public, the sign-in page links them, and links previ
   await expect(page.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
   // Email links stay hidden without NEXT_PUBLIC_EMAIL_SIGNIN=on (Supabase's built-in mailer reaches only the team).
   await expect(page.getByRole("button", { name: /email me a sign-in link/i })).toHaveCount(0);
+  // Guest mode: one tap opens a name field, then "Start as a guest" (Supabase anonymous sign-in).
+  await page.getByRole("button", { name: "Try it without an account" }).click();
+  await expect(page.getByLabel("What should your groups call you?")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start as a guest" })).toBeVisible();
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
   const og = await page.locator('meta[property="og:image"]').getAttribute("content");
   const card = await request.get(new URL(og!).pathname);

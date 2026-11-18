@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!data.user) redirect("/login");
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", data.user.id).maybeSingle();
   return (
-    <Shell user={{ id: data.user.id, email: data.user.email ?? null }} profile={(profile as Profile) ?? null}>
+    <Shell user={{ id: data.user.id, email: data.user.email || null, guest: data.user.is_anonymous === true }} profile={(profile as Profile) ?? null}>
       {children}
     </Shell>
   );

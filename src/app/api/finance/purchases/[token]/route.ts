@@ -39,7 +39,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
   const ctxRes = await sb.rpc("purchase_context_with_token", { p_token: token });
   if (ctxRes.error) {
     const msg = ctxRes.error.message ?? "";
-    if (/turned-off link|invalid/i.test(msg)) return reply("This Apple Pay link was turned off. Make a new one in SPLITTER > Account.", 401, { code: "unauthorized" }, asJson);
+    if (/Invalid or turned-off link/.test(msg)) return reply("This Apple Pay link was turned off. Make a new one in SPLITTER > Account.", 401, { code: "unauthorized" }, asJson);
     if (/open money/i.test(msg)) return reply("Open Money in SPLITTER once, then try again.", 409, { code: "no_workspace" }, asJson);
     console.error("[purchases] context failed:", msg.slice(0, 120));
     return reply("SPLITTER couldn't log this purchase. Try again.", 502, { code: "db_error" }, asJson);

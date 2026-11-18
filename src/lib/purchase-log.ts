@@ -24,12 +24,13 @@ export type PurchasePlan = {
 
 const text = (v: unknown, max: number) => (typeof v === "string" || typeof v === "number" ? String(v) : "").replace(/\s+/g, " ").trim().slice(0, max);
 
-/** Cents from "$4.75", "4.75", "USD 1,234.50" or "4,75 €". Null when it isn't a positive amount. */
+/** Cents from "$4.75", "4.75", "USD 1,234.50" or "4,75 €". Null when it isn't a positive amount (a refund is negative). */
 export function purchaseCents(raw: unknown): number | null {
   let t = text(raw, 40).replace(/[^\d.,-]/g, "");
+  if (t.startsWith("-")) return null;
   // A comma followed by exactly two digits at the end is a decimal comma ("4,75", "1.234,50").
   if (/,\d{2}$/.test(t) && !/\.\d{2}$/.test(t)) t = t.replace(/\./g, "").replace(",", ".");
-  const cents = parseMoney(t.replace(/^-/, ""));
+  const cents = parseMoney(t);
   return cents !== null && cents > 0 ? cents : null;
 }
 
@@ -57,20 +58,28 @@ export function matchAccount(card: string, accounts: PurchaseContext["accounts"]
   return partial.length === 1 ? partial[0] : null;
 }
 
+// Words a bank statement adds after a merchant's name: store numbers, locations, legal suffixes.
+const STATEMENT_NOISE = /^(\d+|#\d*|store|shop|location|inc|llc|ltd|co|corp|online|www|com|pos|purchase|[a-z]{2})$/;
+
 /**
  * Wallet sends clean names ("Starbucks") while bank imports look like "STARBUCKS STORE #1234 NEW YORK NY".
- * Two normalized names are the same merchant when they are equal or one starts the other at a word break.
+ * Two normalized names are the same merchant when they are equal, or when one starts the other and what
+ * follows looks like statement noise (a store number, a city and state). "Uber" is not "Uber Eats".
  */
 export function sameMerchant(a: string, b: string): boolean {
   if (!a || !b) return false;
   if (a === b) return true;
   const [short, long] = a.length <= b.length ? [a, b] : [b, a];
-  return short.length >= 4 && long.startsWith(short + " ");
+  if (short.length < 4 || !long.startsWith(short + " ")) return false;
+  const rest = long.slice(short.length + 1).split(" ").filter(Boolean);
+  return rest.length >= 2 || rest.every((w) => STATEMENT_NOISE.test(w));
 }
 
 export function planPurchase(input: PurchaseInput, ctx: PurchaseContext, today: string): PurchasePlan | { error: string } {
   const amount_cents = purchaseCents(input.amount);
-  if (amount_cents === null) return { error: "The Shortcut sent no amount. Check that Amount is in the request body." };
+  if (amount_cents === null) {
+    return { error: /^\s*-/.test(text(input.amount, 40)) ? "Refunds aren't logged. Add it as income in Activity if you want it counted." : "The Shortcut sent no amount. Check that Amount is in the request body." };
+  }
   const card = text(input.card, 100);
   const description = text(input.merchant, 140) || text(input.name, 140) || (card ? `Apple Pay · ${card}`.slice(0, 140) : "Apple Pay purchase");
   const sent = text(input.date, 40).slice(0, 10);
@@ -79,6 +88,7 @@ export function planPurchase(input: PurchaseInput, ctx: PurchaseContext, today: 
   const account = matchAccount(card, ctx.accounts);
   const key = normalizeMerchant(description);
   const known = new Set(ctx.categories.map((c) => c.id));
+  // The newest categorized purchase at the same merchant wins ("Uber Eats" history is a different merchant from "Uber").
   const last = key ? ctx.history.find((h) => known.has(h.category_id) && sameMerchant(normalizeMerchant(h.description), key)) : undefined;
   let category = last ? ctx.categories.find((c) => c.id === last.category_id) ?? null : null;
   let how: PurchasePlan["how"] = category ? "history" : null;

@@ -26,7 +26,7 @@ test("amounts from Shortcuts parse to cents in the formats Wallet uses", () => {
   assert.equal(purchaseCents("4,75 €"), 475);
   assert.equal(purchaseCents("1.234,50"), 123450);
   assert.equal(purchaseCents(12), 1200);
-  assert.equal(purchaseCents("-$3.00"), 300, "a sign from the card network is ignored; Apple Pay taps are purchases");
+  assert.equal(purchaseCents("-$3.00"), null, "a refund is not a purchase");
   assert.equal(purchaseCents(""), null);
   assert.equal(purchaseCents("$0.00"), null);
   assert.equal(purchaseCents(undefined), null);
@@ -53,10 +53,20 @@ test("the category is the one last used at that merchant, else a keyword guess, 
 
 test("a clean Wallet merchant name matches its bank-statement form, but not a different merchant", () => {
   assert.ok(sameMerchant("starbucks", "starbucks store new york"));
-  assert.ok(sameMerchant("blue bottle coffee", "blue bottle"));
+  assert.ok(sameMerchant("joes pizza", "joes pizza 1234"));
+  assert.ok(!sameMerchant("uber", "uber eats"), "a different product of the same brand is a different merchant");
   assert.ok(!sameMerchant("star", "starbucks"), "no match inside a word");
   assert.ok(!sameMerchant("bp", "bp gas station"), "names under 4 letters must match exactly");
   assert.ok(!sameMerchant("", "starbucks"));
+});
+
+test("another product of the same brand is a different merchant, and refunds are refused", () => {
+  const c: PurchaseContext = { ...ctx, categories: [...ctx.categories, { id: "cat-transport", name: "Transport" }],
+    history: [{ description: "UBER EATS", category_id: "cat-dining", date: "2026-11-12" }, { description: "Uber", category_id: "cat-transport", date: "2026-11-01" }] };
+  const ride = planPurchase({ amount: "$18", merchant: "Uber" }, c, "2026-11-18");
+  assert.ok(!("error" in ride));
+  assert.equal(ride.category, "Transport");
+  assert.deepEqual(planPurchase({ amount: "-$4.75", merchant: "Starbucks" }, ctx, "2026-11-18"), { error: "Refunds aren't logged. Add it as income in Activity if you want it counted." });
 });
 
 test("cards match accounts by name, last 4, or one unique partial name", () => {

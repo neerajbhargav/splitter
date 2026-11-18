@@ -54,6 +54,7 @@ const CASES: Record<string, (f: Fx, me: Me) => Record<string, unknown>> = {
   import_finance_transactions: () => ({ p_rows: [{ date: "2026-01-02", description: "x", amount_cents: 1, kind: "expense", category_id: null, external_id: "csv:dddddddddddddddd" }] }),
   is_group_member: () => ({}),
   join_group: () => ({}),
+  log_purchase_with_token: () => ({ p: { date: "2026-01-05", description: "Hijacked", amount_cents: 100 } }),
   leave_group: () => ({}),
   mark_upcoming_paid: () => ({}),
   member_color: () => ({}),
@@ -66,7 +67,8 @@ const CASES: Record<string, (f: Fx, me: Me) => Record<string, unknown>> = {
   plaid_save_connection: () => ({}),
   plaid_set_status: () => ({}),
   plaid_upsert_accounts: () => ({}),
-  process_recurring: () => ({}), // must post only the caller's own recurring expenses
+  process_recurring: () => ({}),
+  purchase_context_with_token: () => ({}), // must post only the caller's own recurring expenses
   recategorize_finance_transactions: () => ({}),
   regenerate_invite: () => ({}),
   remove_member: () => ({}),
@@ -160,6 +162,7 @@ async function victimFixture(db: Db, as: (id: string) => Promise<unknown>): Prom
   await db.query(`select public.plaid_upsert_accounts($1,$2::jsonb,$3,'USD')`, [f.connection, JSON.stringify([{ account_id: "victim-acc", name: "Victim plaid checking", type: "checking", balance_cents: 50000, mask: "1234" }]), V]);
   await db.query(`select public.create_personal_token('calendar')`);
   await db.query(`select public.create_personal_token('scores')`);
+  await db.query(`select public.create_personal_token('purchases')`);
   await as("");
   return f;
 }
@@ -322,7 +325,7 @@ function report(t: { diagnostic: (s: string) => void }, m: Awaited<ReturnType<ty
 // A fresh schema.sql, and schema.sql with the newest migrations applied on top (twice). The second
 // checks that re-running those migrations on a current database leaves no hole. It does not rebuild an older
 // database: the harness has no copy of one.
-for (const [label, migrations] of [["fresh schema", []], ["schema plus the 2026-10-21, 2026-10-23 and 2026-11-18 migrations", ["20261021_group_fixes.sql", "20261021_personal_tokens.sql", "20261023_revoke_internal_helpers.sql", "20261118_delete_account.sql"]]] as const) test(`authorization matrix (${label}): RLS on every table, search_path on every definer, and outsiders refused by every RPC`, async (t) => {
+for (const [label, migrations] of [["fresh schema", []], ["schema plus the 2026-10-21, 2026-10-23 and 2026-11-18 migrations", ["20261021_group_fixes.sql", "20261021_personal_tokens.sql", "20261023_revoke_internal_helpers.sql", "20261118_delete_account.sql", "20261118_guests.sql", "20261118_purchases.sql"]]] as const) test(`authorization matrix (${label}): RLS on every table, search_path on every definer, and outsiders refused by every RPC`, async (t) => {
   const { db, as, user } = await freshDb(...migrations);
   try {
     const m = await matrix(db, as, user);

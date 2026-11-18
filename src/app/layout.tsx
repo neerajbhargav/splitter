@@ -8,9 +8,15 @@ const serif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["nor
 const sans = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
+const DESCRIPTION = "Split rent and bills to the cent, by the days each person lived there, and settle in the fewest payments. Plus a private view of your own money. Free, open source, no ads.";
+
 export const metadata: Metadata = {
+  // Absolute URLs for the share card. A self-hosted copy sets NEXT_PUBLIC_SITE_URL to its own address.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://usesplitter.vercel.app"),
   title: { default: "SPLITTER", template: "%s · SPLITTER" },
-  description: "Your money in one place: spending, budget, debt payoff, paychecks and subscriptions, plus rent and trips you split with roommates and friends. Free, no ads.",
+  description: DESCRIPTION,
+  openGraph: { type: "website", siteName: "SPLITTER", title: "SPLITTER: split rent to the cent", description: DESCRIPTION, url: "/" },
+  twitter: { card: "summary_large_image", title: "SPLITTER: split rent to the cent", description: DESCRIPTION },
   applicationName: "SPLITTER",
   appleWebApp: { capable: true, title: "SPLITTER", statusBarStyle: "black-translucent" },
   icons: { icon: "/icon.svg", apple: "/apple-touch-icon.png" },

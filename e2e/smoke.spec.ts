@@ -21,6 +21,23 @@ test("pages send the security headers and the image optimizer is off", async ({ 
   expect((await request.get("/icon-192.png")).status()).toBe(200);
 });
 
+test("privacy and terms are public, the sign-in page links them, and links preview with a card", async ({ page, request }) => {
+  for (const path of ["/privacy", "/terms"]) {
+    const res = await request.get(path, { maxRedirects: 0 });
+    expect(res.status(), path).toBe(200);
+  }
+  await page.goto("/login");
+  await expect(page.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/privacy");
+  await expect(page.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/terms");
+  // Email links stay hidden without NEXT_PUBLIC_EMAIL_SIGNIN=on (Supabase's built-in mailer reaches only the team).
+  await expect(page.getByRole("button", { name: /email me a sign-in link/i })).toHaveCount(0);
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary_large_image");
+  const og = await page.locator('meta[property="og:image"]').getAttribute("content");
+  const card = await request.get(new URL(og!).pathname);
+  expect(card.status()).toBe(200);
+  expect(card.headers()["content-type"]).toBe("image/png");
+});
+
 test.describe("signed in (stub Supabase)", () => {
   test.beforeEach(async ({ context, baseURL }) => {
     await context.addCookies([{ ...sessionCookie(), url: baseURL! }]);

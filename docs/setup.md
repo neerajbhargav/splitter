@@ -27,6 +27,8 @@ Google:
 1. [Google Cloud Console](https://console.cloud.google.com/) > APIs & Services > Google Auth Platform. Set up Branding (app name, support email) and an External audience.
 2. Clients > Create client > **Web application**. Authorized redirect URI: the Supabase callback above.
 3. Paste the Client ID and Secret into the Google provider in Supabase. Enable it.
+
+Guest mode needs **Allow anonymous sign-ins** and **Allow manual linking** on (Authentication > Sign In / Providers).
 4. While the app is in "Testing", add your housemates' Gmail addresses as test users, or publish the app.
 
 Email sign-in links are hidden on the sign-in page by default. Supabase's built-in mailer only delivers to members of your Supabase team, a few an hour, so set up custom SMTP under Authentication > Emails first, then build with `NEXT_PUBLIC_EMAIL_SIGNIN=on`.
@@ -72,6 +74,8 @@ A fresh database needs only `supabase/schema.sql`. An existing one gets the migr
 | `20261021_personal_tokens.sql` | calendar and score-sync links |
 | `20261023_revoke_internal_helpers.sql` | removes EXECUTE from `member_balance`, `suggest_spot` and `spot_looks_like_me`, which answered outside the group; the app keeps working |
 | `20261118_delete_account.sql` | `delete_my_account`, behind Account > Delete account |
+| `20261118_guests.sql` | guest mode: profile upgrade after a guest links Google or GitHub, and a daily pg_cron job deleting guests unused for 30 days |
+| `20261118_purchases.sql` | Apple Pay logging links and the `applepay` transaction source |
 
 There is no migration version table. Track what you applied yourself.
 
@@ -91,11 +95,15 @@ Bank sync needs these server-only variables. Never prefix them with `NEXT_PUBLIC
 | `PLAID_TOKEN_KEY` | 32 random bytes, base64. Generate with `openssl rand -base64 32` |
 | `PLAID_REDIRECT_URI` | Optional, for OAuth banks. Must be https (localhost is allowed in sandbox) |
 
-## Apple Pay Shortcut (iPhone, iOS 17 or later)
+## Apple Pay logging (iPhone, iOS 17 or later)
 
-1. Shortcuts > Automation > New Automation > **Transaction**. Pick your cards, choose **Run Immediately**, then Next.
-2. Add **URL Encode** with input *Merchant*, and a second **URL Encode** with input *Card*.
-3. Add **URL**: `https://<your-app>/finance/activity?add=1&amount=[Amount]&merchant=[URL Encoded Text 1]&card=[URL Encoded Text 2]` (insert the variables from the Transaction trigger and the two encode steps).
-4. Add **Open URLs**. Every tap now opens a prefilled entry. Nothing is saved until you press Add or split it.
+Every Apple Pay tap is logged into Money with no confirm step. Make the link in **Account > Links for other apps > Apple Pay logging** (it carries your time zone), then:
 
-The card name or its last 4 digits picks the matching account in Accounts, if you have one.
+1. Shortcuts > Automation > **+** > **Transaction**. Pick your Wallet cards, choose **Run Immediately**, then Next > Create New Shortcut.
+2. Add **Get Contents of URL** and paste the link. Show More: Method **POST**, Request Body **JSON**.
+3. Add three Text fields: `amount` = Shortcut Input > Amount, `merchant` = Shortcut Input > Merchant, `card` = Shortcut Input > Card or Pass.
+4. Optional: add **Show Notification** with *Contents of URL* to see "Logged $4.75 at Starbucks · Coffee".
+
+`POST /api/finance/purchases/<token>?tz=Area/City` takes JSON or a form, and answers with that one line (`&format=json` for JSON). The category is the one you last used at that merchant (a Wallet name like "Starbucks" matches its bank form "STARBUCKS STORE #1234"), else a keyword guess, else none. The card name or its last 4 digits picks the account. The same amount, merchant and card twice within two minutes is logged once, and a link can log 300 purchases a day.
+
+To review each purchase before it saves instead, end the automation with **Open URLs** on `https://<your-app>/finance/activity?add=1&amount=[Amount]&merchant=[URL-encoded Merchant]&card=[URL-encoded Card]`.

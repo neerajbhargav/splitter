@@ -10,7 +10,7 @@ SPLITTER splits bills between housemates and tracks your own money, exact to the
 
 *Recorded on 2026-10-23 by [`e2e/demo-gif.spec.ts`](e2e/demo-gif.spec.ts) on a local Supabase stub with synthetic data: a fictional 3-person house settles in one payment, and a $90.00 bill split by days comes to $38.57, $38.57 and $12.86.*
 
-**Status (2026-11-18):** live at [usesplitter.vercel.app](https://usesplitter.vercel.app), running `main`. Sign in with Google or GitHub, then choose "Explore with sample data first" to look around without entering anything. [Privacy](https://usesplitter.vercel.app/privacy) says what is stored, and Account > Delete account removes it. Plaid bank sync is built but not enabled there. Migrations are applied by hand.
+**Status (2026-11-18):** live at [usesplitter.vercel.app](https://usesplitter.vercel.app), running `main`. Sign in with Google or GitHub, or tap "Try it without an account". "Explore with sample data first" shows fictional data without entering anything. [Privacy](https://usesplitter.vercel.app/privacy) says what is stored, and Account > Delete account removes it. Plaid bank sync is built but not enabled there. Migrations are applied by hand.
 
 ## What it does
 
@@ -19,7 +19,9 @@ SPLITTER splits bills between housemates and tracks your own money, exact to the
 - Syncs live across members and devices, with an activity feed, comments, receipts, recurring bills and undo.
 - Tracks your own money, privately: a ledger with idempotent CSV import, budget, paychecks, accounts, debt payoff, subscriptions and credit scores.
 - Reads receipts in the browser (Tesseract.js). The image never goes to an OCR service, and unclear fields stay blank.
-- Connects out through a private calendar (ICS) feed, a credit-score sync token, an Apple Pay Shortcut and a bring-your-own-key AI "Ask".
+- Logs every Apple Pay tap from an iPhone Shortcuts automation, categorized from your own history ([setup](docs/setup.md#apple-pay-logging-iphone-ios-17-or-later)).
+- Works without an account: guest mode keeps everything in a guest session until you connect Google or GitHub.
+- Connects out through a private calendar (ICS) feed, a credit-score sync token and a bring-your-own-key AI "Ask".
 
 Full feature reference: [docs/features.md](docs/features.md). Self-hosting: [docs/setup.md](docs/setup.md).
 

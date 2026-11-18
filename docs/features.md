@@ -47,7 +47,7 @@ Personal finance lives at `/finance` and never touches shared group balances.
 - Ask: questions about your finances, answered by a model with your own API key (OpenRouter, OpenAI or Anthropic). The request goes from your browser straight to the provider, and the key stays in this browser.
 - Reminders in your calendar: Account > Links for other apps > Reminders makes a private ICS link for Apple, Google or Outlook. It lists group bills you still owe, subscription renewals, card due days from your payoff plan and paydays, each with a 9am alert the day before.
 - Credit score sync link: Account > Links for other apps > Credit score sync makes a token, so a scheduled job on your own machine can `POST /api/finance/credit-scores/sync` with `Authorization: Bearer <token>`. It can add scores and overwrite a score with the same bureau, day and model, including one typed in by hand. It cannot read or delete anything.
-- Apple Pay logging: an iPhone Shortcut opens SPLITTER after every Apple Pay tap with the amount, merchant and card filled in ([setup](setup.md#apple-pay-shortcut-iphone-ios-17-or-later)).
+- Apple Pay logging: an iPhone Shortcuts automation sends every Apple Pay tap to a secret link, and it lands in Money already categorized (the category you last used at that merchant, else a keyword guess) with the card's account ([setup](setup.md#apple-pay-logging-iphone-ios-17-or-later)).
 - Bank sync through Plaid is built and optional. It is not enabled on usesplitter.vercel.app.
 - Sample data: choose Explore with sample data to preview every money page. Nothing is saved in this mode, and every write is refused in the browser until you exit it.
 

@@ -168,6 +168,24 @@ export async function uploadReceipt(groupId: string, file: File): Promise<string
   return path;
 }
 
+/**
+ * Deletes the signed-in account. Groups nobody else has joined go with it, so their receipt photos are
+ * removed first (best effort: the account is deleted even if a photo is not). Shared groups keep theirs.
+ */
+export async function deleteMyAccount(userId: string): Promise<{ groups_deleted: number; spots_kept: number }> {
+  const rows = unwrap(await sb().from("group_members").select("group_id, user_id")) as { group_id: string; user_id: string | null }[];
+  const shared = new Set(rows.filter((r) => r.user_id && r.user_id !== userId).map((r) => r.group_id));
+  const solo = [...new Set(rows.filter((r) => r.user_id === userId).map((r) => r.group_id))].filter((g) => !shared.has(g));
+  for (const gid of solo) {
+    try {
+      const { data } = await sb().storage.from("receipts").list(gid, { limit: 1000 });
+      const paths = (data ?? []).map((o) => `${gid}/${o.name}`);
+      if (paths.length) await sb().storage.from("receipts").remove(paths);
+    } catch { /* a photo left behind is unreadable once its group is gone */ }
+  }
+  return call<{ groups_deleted: number; spots_kept: number }>("delete_my_account", {}, false);
+}
+
 export async function receiptUrl(path: string): Promise<string | null> {
   const { data } = await sb().storage.from("receipts").createSignedUrl(path, 3600);
   return data?.signedUrl ?? null;

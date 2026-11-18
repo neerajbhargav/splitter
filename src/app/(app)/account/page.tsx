@@ -1,11 +1,11 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { CalendarDays, Copy, Gauge, LogOut } from "lucide-react";
+import { CalendarDays, Copy, Gauge, LogOut, Trash2 } from "lucide-react";
 import { useMe, useToast } from "@/components/providers";
 import { Avatar } from "@/components/ui";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { api, loadProfile } from "@/lib/data";
+import { api, deleteMyAccount, loadProfile } from "@/lib/data";
 import { CURRENCIES, timeAgo } from "@/lib/format";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
@@ -94,6 +94,8 @@ export default function AccountPage() {
           <button type="button" className="btn btn-danger" onClick={signOut}><LogOut /> Sign out</button>
         </div>
       </section>
+
+      <DeleteAccount userId={me.id} email={me.email} />
     </main>
   );
 }
@@ -162,6 +164,57 @@ function SecretLinks() {
             </div>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+/** Permanent. Typing the email (or DELETE without one) is the confirmation. */
+function DeleteAccount({ userId, email }: { userId: string; email: string | null }) {
+  const toast = useToast();
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const word = email ?? "DELETE";
+  const ready = typed.trim().toLowerCase() === word.toLowerCase();
+
+  async function remove(e: FormEvent) {
+    e.preventDefault();
+    if (!ready) return;
+    setBusy(true);
+    try {
+      await deleteMyAccount(userId);
+      await supabaseBrowser().auth.signOut({ scope: "local" });
+      router.replace("/login?deleted=1");
+      router.refresh();
+    } catch (err) {
+      toast.err(err);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="card">
+      <div className="card-head"><span className="card-title">Delete account</span></div>
+      <div className="card-body stack-sm">
+        <p className="muted">
+          Deletes your profile and everything in Money: accounts, transactions, budgets, debts, paychecks, subscriptions,
+          credit scores and links for other apps. Groups only you joined are deleted too. In a group others have joined,
+          your spot stays with your name so their balances still add up, and its email and phone are removed.
+        </p>
+        {!open ? (
+          <div><button type="button" className="btn btn-danger" onClick={() => setOpen(true)}><Trash2 /> Delete my account</button></div>
+        ) : (
+          <form onSubmit={remove} className="stack-sm">
+            <label className="label" htmlFor="del-confirm">Type {email ? "your email" : "DELETE"} to confirm. This cannot be undone.</label>
+            <input id="del-confirm" className="input" autoComplete="off" placeholder={word} value={typed} onChange={(e) => setTyped(e.target.value)} />
+            <div className="row-flex wrap" style={{ gap: 8 }}>
+              <button type="submit" className="btn btn-danger" disabled={!ready || busy}><Trash2 /> {busy ? "Deleting..." : "Delete permanently"}</button>
+              <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => { setOpen(false); setTyped(""); }}>Cancel</button>
+            </div>
+          </form>
+        )}
       </div>
     </section>
   );

@@ -44,6 +44,7 @@ const CASES: Record<string, (f: Fx, me: Me) => Record<string, unknown>> = {
   delete_finance_paycheck: (f) => ({ p_id: f.paycheck }),
   delete_finance_transaction: (f) => ({ p_id: f.txn }),
   delete_group: () => ({}),
+  delete_my_account: () => ({}), // deletes the outsider's own account, never the victim's
   delete_personal_subscription: (f) => ({ p_id: f.sub }),
   delete_upcoming_bill: () => ({}),
   ensure_finance_workspace: () => ({}),
@@ -321,7 +322,7 @@ function report(t: { diagnostic: (s: string) => void }, m: Awaited<ReturnType<ty
 // A fresh schema.sql, and schema.sql with the newest migrations applied on top (twice). The second
 // checks that re-running those migrations on a current database leaves no hole. It does not rebuild an older
 // database: the harness has no copy of one.
-for (const [label, migrations] of [["fresh schema", []], ["schema plus the 2026-10-21 and 2026-10-23 migrations", ["20261021_group_fixes.sql", "20261021_personal_tokens.sql", "20261023_revoke_internal_helpers.sql"]]] as const) test(`authorization matrix (${label}): RLS on every table, search_path on every definer, and outsiders refused by every RPC`, async (t) => {
+for (const [label, migrations] of [["fresh schema", []], ["schema plus the 2026-10-21, 2026-10-23 and 2026-11-18 migrations", ["20261021_group_fixes.sql", "20261021_personal_tokens.sql", "20261023_revoke_internal_helpers.sql", "20261118_delete_account.sql"]]] as const) test(`authorization matrix (${label}): RLS on every table, search_path on every definer, and outsiders refused by every RPC`, async (t) => {
   const { db, as, user } = await freshDb(...migrations);
   try {
     const m = await matrix(db, as, user);

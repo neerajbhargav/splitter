@@ -1034,3 +1034,14 @@ button.item.clickable:focus-visible { outline: 2px solid var(--gold); outline-of
 .fin-facts dt { color: var(--ink-3); }
 .fin-facts dd { text-align: right; overflow-wrap: anywhere; }
 .fin-facts dt:last-of-type, .fin-facts dd:last-of-type { border-bottom: 0; }
+
+/* ---------- Privacy and Terms ---------- */
+.legal-body { margin-top: 26px; line-height: 1.65; color: var(--ink-2); font-size: 15px; }
+.legal-body h2 { font-family: var(--serif); font-weight: 400; font-size: 26px; color: var(--ink); margin: 34px 0 10px; letter-spacing: -0.01em; }
+.legal-body p, .legal-body ul { margin: 0 0 14px; }
+.legal-body ul { padding-left: 20px; }
+.legal-body li { margin-bottom: 8px; }
+.legal-body b { color: var(--ink); font-weight: 500; }
+.legal-body a, .legal-foot a, .auth-foot a { color: var(--gold-text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(201, 169, 110, 0.4); }
+.legal-foot { margin-top: 44px; }
+.auth-card .auth-foot { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--line); }

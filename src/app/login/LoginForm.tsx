@@ -1,10 +1,15 @@
 "use client";
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { Mail } from "lucide-react";
 import { GitHubLogo, GoogleLogo, LogoMark, Spinner } from "@/components/ui";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
-export function LoginForm({ next, initialError, joining }: { next: string; initialError: string | null; joining: boolean }) {
+// Supabase's built-in mailer only delivers to the project's own team, so email links stay hidden until a
+// custom SMTP sender is set up in Supabase and NEXT_PUBLIC_EMAIL_SIGNIN=on is set for the build.
+const EMAIL_SIGNIN = process.env.NEXT_PUBLIC_EMAIL_SIGNIN === "on";
+
+export function LoginForm({ next, initialError, joining, deleted = false }: { next: string; initialError: string | null; joining: boolean; deleted?: boolean }) {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(initialError);
@@ -50,21 +55,28 @@ export function LoginForm({ next, initialError, joining }: { next: string; initi
         </button>
       </div>
 
-      <div className="or">or</div>
-
-      {sent ? (
-        <div className="banner"><Mail /> Check {email} for a sign-in link. You can close this tab.</div>
-      ) : (
-        <form onSubmit={magic} className="stack-sm">
-          <input className="input" type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
-          <button type="submit" className="btn btn-block" disabled={!!busy}>
-            {busy === "email" ? <Spinner /> : <Mail />} Email me a sign-in link
-          </button>
-        </form>
+      {EMAIL_SIGNIN && (
+        <>
+          <div className="or">or</div>
+          {sent ? (
+            <div className="banner"><Mail /> Check {email} for a sign-in link. You can close this tab.</div>
+          ) : (
+            <form onSubmit={magic} className="stack-sm">
+              <input className="input" type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+              <button type="submit" className="btn btn-block" disabled={!!busy}>
+                {busy === "email" ? <Spinner /> : <Mail />} Email me a sign-in link
+              </button>
+            </form>
+          )}
+        </>
       )}
+      {deleted && !error && <div className="banner" style={{ marginTop: 14 }}>Your account was deleted.</div>}
       {error && <div className="banner neg" style={{ marginTop: 14 }}>{error}</div>}
       <p className="hint" style={{ marginTop: 22 }}>
         Tip: sign in with the same email your roommates added you with, and you will be connected to their group automatically.
+      </p>
+      <p className="hint auth-foot">
+        Free and open source, no ads · <a href="https://github.com/neerajbhargav/splitter" target="_blank" rel="noreferrer">GitHub</a> · <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link>
       </p>
     </div>
   );

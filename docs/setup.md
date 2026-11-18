@@ -29,7 +29,7 @@ Google:
 3. Paste the Client ID and Secret into the Google provider in Supabase. Enable it.
 4. While the app is in "Testing", add your housemates' Gmail addresses as test users, or publish the app.
 
-Email links work out of the box. Supabase's built-in mailer is rate limited; add custom SMTP under Authentication > Emails for heavier use.
+Email sign-in links are hidden on the sign-in page by default. Supabase's built-in mailer only delivers to members of your Supabase team, a few an hour, so set up custom SMTP under Authentication > Emails first, then build with `NEXT_PUBLIC_EMAIL_SIGNIN=on`.
 
 ## 3. Tell Supabase where the app lives
 
@@ -41,7 +41,7 @@ Email links work out of the box. Supabase's built-in mailer is rate limited; add
 ## 4. Deploy on Vercel
 
 1. [vercel.com/new](https://vercel.com/new) > import the repo. Framework preset: Next.js.
-2. Add `NEXT_PUBLIC_SUPABASE_URL` (Project URL) and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (anon / publishable key).
+2. Add `NEXT_PUBLIC_SUPABASE_URL` (Project URL) and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (anon / publishable key). Set `NEXT_PUBLIC_SITE_URL` to your app's address so link previews point at your copy.
 3. Deploy. Every push to `main` redeploys.
 
 If the env vars are missing, the app shows a setup screen instead of crashing.
@@ -71,6 +71,7 @@ A fresh database needs only `supabase/schema.sql`. An existing one gets the migr
 | `20261021_group_fixes.sql` | split by days, owner-only group delete, first-name joining, check marks that survive edits |
 | `20261021_personal_tokens.sql` | calendar and score-sync links |
 | `20261023_revoke_internal_helpers.sql` | removes EXECUTE from `member_balance`, `suggest_spot` and `spot_looks_like_me`, which answered outside the group; the app keeps working |
+| `20261118_delete_account.sql` | `delete_my_account`, behind Account > Delete account |
 
 There is no migration version table. Track what you applied yourself.
 

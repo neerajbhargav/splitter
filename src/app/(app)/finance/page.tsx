@@ -1,15 +1,17 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, CalendarClock, Check, Eye, FileUp, Landmark, Plus, Repeat, Users, Wallet } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUp, CalendarClock, Check, ChevronRight, Eye, FileUp, Plus, Smartphone, Sparkles, Users, Wallet } from "lucide-react";
 import { useMe } from "@/components/providers";
-import { loadOverview } from "@/lib/data";
+import { api, loadOverview } from "@/lib/data";
 import { summarize, type PersonBalance } from "@/lib/overview";
 import { Card, Progress } from "@/components/kit";
 import { useFinance } from "@/components/finance/FinanceProvider";
 import { DailyBars } from "@/components/finance/charts";
 import { TransactionEditor } from "@/components/finance/TransactionEditor";
-import { CategoryTile, Hero, Pill, StatusChip, TxAmount, monthLong, relativeDay, shortDay } from "@/components/finance/kit";
+import { CategoryTile, DateTile, StatusChip, TxAmount, dayDiff, monthLong, relativeDay, shortDay } from "@/components/finance/kit";
+import { askSuggestions } from "@/components/finance/ask-suggestions";
 import { compareDebtPlans } from "@/lib/debt-planner";
 import { PACE_MIN_DAYS, currentBudgetMonth, summarizeBudget } from "@/lib/budget-planner";
 import { dailySpending, evaluateHealth, healthScore, monthActivity, netWorth } from "@/lib/finance-insights";
@@ -57,44 +59,52 @@ export default function FinanceOverview() {
 
   if (isEmptyWorkspace(bundle)) return <Welcome />;
 
-  const { worth, summary, activity } = view;
+  const { worth, summary } = view;
   const recent = sortTransactions(bundle.transactions).slice(0, 6);
   const missingTerms = debtsMissingTerms(bundle.accounts);
   const spendLimit = summary.spending_limit_cents;
+  const debtTotal = view.debts.reduce((a, d) => a + d.balance_cents, 0);
+  const upcoming = [
+    ...view.charges.map((c) => ({ key: `${c.subscription_id}-${c.date}`, date: c.date, title: c.name, sub: "Subscription", cents: c.amount_cents, income: false })),
+    ...(view.nextPayday && dayDiff(today, view.nextPayday) <= 14
+      ? [{ key: "pay", date: view.nextPayday, title: "Paycheck", sub: view.nextPaycheck ? "Planned" : "Not planned yet", cents: view.nextPaycheck?.amount_cents ?? bundle.settings?.paycheck_cents ?? 0, income: true }] : []),
+  ].sort((a, b) => a.date.localeCompare(b.date));
 
   return (
     <>
-      {bundle.accounts.length ? (
-        <Hero label="Net worth" cents={worth.net} currency={currency} tone="auto"
-          actions={<><button type="button" className="btn btn-primary" onClick={() => setEditing({ tx: null })}><Plus /> Add transaction</button>
-            <Link href="/finance/accounts" className="btn"><Wallet /> Accounts</Link></>}>
-          <Pill color="var(--pos)" label="Cash" value={money(worth.liquid, currency)} />
-          {worth.investments > 0 && <Pill color="var(--chart-2)" label="Investments" value={money(worth.investments, currency)} />}
-          {worth.liabilities > 0 && <Pill color="var(--neg)" label="Debt" value={money(worth.liabilities, currency)} />}
-        </Hero>
-      ) : (
-        <Hero label={`Spent in ${monthLong(month).split(" ")[0]}`} cents={summary.spent_cents} currency={currency}
-          actions={<><button type="button" className="btn btn-primary" onClick={() => setEditing({ tx: null })}><Plus /> Add transaction</button>
-            <Link href="/finance/accounts" className="btn"><Wallet /> Add accounts</Link></>}
-          note="Add your accounts to see net worth.">
-          <Pill color="var(--pos)" label="In" value={money(activity.income, currency)} />
-          <Pill color="var(--chart-3)" label="Saved" value={money(activity.savings, currency)} />
-        </Hero>
-      )}
+      <AskBar />
+
+      <section className="card fin-snapshot" aria-label="Snapshot">
+        <Link href="/finance/accounts" className="snap">
+          <span className="k">Net worth</span>
+          <span className={`v num ${worth.net < 0 ? "neg" : ""}`}>{bundle.accounts.length ? money(worth.net, currency) : "–"}</span>
+          <span className="s">{bundle.accounts.length ? `${bundle.accounts.length} account${bundle.accounts.length === 1 ? "" : "s"}` : "Add your accounts"}</span>
+        </Link>
+        <Link href="/finance/budget" className="snap">
+          <span className="k">{spendLimit > 0 ? "Left to spend" : "Spent this month"}</span>
+          <span className={`v num ${spendLimit > 0 && summary.spent_cents > spendLimit ? "neg" : ""}`}>{money(spendLimit > 0 ? spendLimit - summary.spent_cents : summary.spent_cents, currency)}</span>
+          <span className="s">{spendLimit > 0 ? `${money(summary.spent_cents, currency)} of ${money(spendLimit, currency)} spent` : "No plan for this month yet"}</span>
+        </Link>
+        <Link href="/finance/paycheck" className="snap">
+          <span className="k">Next paycheck</span>
+          <span className="v num">{view.nextPayday ? money(view.nextPaycheck?.amount_cents ?? bundle.settings?.paycheck_cents ?? 0, currency) : "–"}</span>
+          <span className="s">{view.nextPayday ? `${relativeDay(view.nextPayday, today)} · ${shortDay(view.nextPayday)}` : "Set your pay schedule"}</span>
+        </Link>
+        <Link href="/finance/debt" className="snap">
+          <span className="k">{view.debts.length ? "Debt-free by" : "Debt"}</span>
+          <span className="v num">{view.debts.length ? (view.payoff ? monthLong(view.payoff) : money(debtTotal, currency)) : "None"}</span>
+          <span className="s">{view.debts.length ? `${money(debtTotal, currency)} owed${view.payoff ? " · on minimums" : ""}` : missingTerms.length ? "Add APR and minimums" : "No cards or loans tracked"}</span>
+        </Link>
+      </section>
 
       <div className="dash-grid">
         <div className="dash-col">
-          <Card title={monthLong(month)} description={summary.is_set_up ? "Against your plan" : "No plan yet for this month"}
-            action={<Link href="/finance/budget" className="btn btn-sm">{summary.is_set_up ? "Budget" : "Plan it"} <ArrowRight /></Link>}>
-            <div className="fin-kpis" style={{ margin: "-4px -18px 14px", borderTop: 0, borderBottom: "1px solid var(--line)" }}>
-              <div><div className="k">In</div><div className="v num pos">{money(activity.income, currency)}</div></div>
-              <div><div className="k">Spent</div><div className="v num">{money(summary.spent_cents, currency)}</div></div>
-              <div><div className="k">Saved</div><div className="v num">{money(summary.saved_cents, currency)}</div></div>
-            </div>
+          <Card title="Spending" description={`${monthLong(month)} · ${money(summary.spent_cents, currency)}${spendLimit > 0 ? ` of ${money(spendLimit, currency)} planned` : ""}`}
+            action={<Link href="/finance/budget" className="btn btn-sm">Budget <ChevronRight /></Link>}>
             {spendLimit > 0 && (
-              <div style={{ marginBottom: 12 }}>
+              <div style={{ marginBottom: 14 }}>
                 <Progress value={summary.spent_cents} max={spendLimit} tone={summary.spent_cents > spendLimit ? "neg" : "pos"} />
-                <div className="fin-row-meta"><span>{money(summary.spent_cents, currency)} of {money(spendLimit, currency)} planned</span><span>{paceLine(summary, currency)}</span></div>
+                <div className="fin-row-meta"><span>{Math.round((summary.spent_cents / spendLimit) * 100)}% of plan</span><span>{paceLine(summary, currency)}</span></div>
               </div>
             )}
             {view.topCategories.length ? (
@@ -102,19 +112,19 @@ export default function FinanceOverview() {
                 {view.topCategories.map(({ category, cents }) => (
                   <div className="item" key={category!.id}>
                     <CategoryTile category={category} size="sm" />
-                    <div className="item-main"><div className="item-title">{category!.name}</div></div>
+                    <div className="item-main"><div className="item-title">{category!.name}</div>
+                      <div className="item-sub">{summary.spent_cents > 0 ? `${Math.round((cents / summary.spent_cents) * 100)}% of spending` : ""}</div></div>
                     <div className="item-end"><div className="v">{money(cents, currency)}</div></div>
                   </div>
                 ))}
               </div>
             ) : <p className="hint">No spending logged this month yet.</p>}
-          </Card>
-
-          <Card title="Last 30 days" description="Daily spending, excluding savings and transfers">
+            <div className="fin-subhead">Last 30 days</div>
             <DailyBars data={view.daily} currency={currency} />
           </Card>
 
-          <Card title="Recent activity" action={<Link href="/finance/activity" className="btn btn-sm">All <ArrowRight /></Link>}>
+          <Card title="Recent activity" description={`${bundle.transactions.length} transaction${bundle.transactions.length === 1 ? "" : "s"} tracked`}
+            action={<Link href="/finance/activity" className="btn btn-sm">All activity <ChevronRight /></Link>}>
             {recent.length ? (
               <div className="list">
                 {recent.map((t) => {
@@ -124,7 +134,7 @@ export default function FinanceOverview() {
                       <CategoryTile category={c} income={t.kind === "income"} transfer={t.kind === "transfer"} />
                       <div className="item-main">
                         <div className="item-title">{t.description}</div>
-                        <div className="item-sub">{relativeDay(t.date, today)} · {t.kind === "expense" ? c?.name ?? "Uncategorized" : t.kind === "income" ? "Income" : "Transfer"}</div>
+                        <div className="item-sub">{relativeDay(t.date, today)} · {t.kind === "expense" ? c?.name ?? "Uncategorized" : t.kind === "income" ? "Income" : "Transfer"}{t.source === "applepay" ? " · Apple Pay" : ""}</div>
                       </div>
                       <div className="item-end"><div className="v"><TxAmount tx={t} currency={currency} /></div></div>
                     </button>
@@ -132,18 +142,35 @@ export default function FinanceOverview() {
                 })}
               </div>
             ) : <p className="hint">Nothing logged yet. Add a transaction or import a CSV from your bank.</p>}
+            <button type="button" className="btn btn-sm" style={{ marginTop: 12 }} onClick={() => setEditing({ tx: null })}><Plus /> Add transaction</button>
           </Card>
         </div>
 
         <div className="dash-col">
-          <Card title="Financial health" action={<Link href="/finance/health" className="btn btn-sm">Details <ArrowRight /></Link>}>
+          <Card title="Coming up" description={upcoming.length ? `${money(view.chargesTotal, currency)} due in the next 14 days` : "Next 14 days"}
+            action={<Link href="/finance/subscriptions" className="btn btn-sm">Subscriptions <ChevronRight /></Link>}>
+            {upcoming.length ? (
+              <div className="list">
+                {upcoming.slice(0, 6).map((u) => (
+                  <div className="item" key={u.key}>
+                    <DateTile date={u.date} />
+                    <div className="item-main"><div className="item-title">{u.title}</div><div className="item-sub">{relativeDay(u.date, today)} · {u.sub}</div></div>
+                    <div className="item-end"><div className={`v ${u.income ? "pos" : ""}`}>{u.income ? "+" : ""}{money(u.cents, currency)}</div></div>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="hint">{bundle.subscriptions.length ? "Nothing renews in the next two weeks." : "Track subscriptions to see renewals before they hit."}</p>}
+          </Card>
+
+          <Card title="Financial health" description={view.score === null ? "Add your income to score your month" : `${view.known} of 6 checks scored`}
+            action={<Link href="/finance/health" className="btn btn-sm">Details <ChevronRight /></Link>}>
             <div className="row-flex" style={{ gap: 16, alignItems: "center", marginBottom: 10 }}>
-              <div className="fin-score" style={{ ["--p" as string]: view.score ?? 0, ["--c" as string]: scoreColor(view.score), width: 76, height: 76 }}>
-                <div style={{ width: 62, height: 62 }}><b style={{ fontSize: 24 }}>{view.score ?? "–"}</b></div>
+              <div className="fin-score" style={{ ["--p" as string]: view.score ?? 0, ["--c" as string]: scoreColor(view.score), width: 64, height: 64 }}>
+                <div style={{ width: 52, height: 52 }}><b style={{ fontSize: 21 }}>{view.score ?? "–"}</b></div>
               </div>
               <div className="min0">
                 <div style={{ fontWeight: 600 }}>{view.score === null ? "Add your numbers" : view.score >= 80 ? "Strong month" : view.score >= 50 ? "A few things to tighten" : "Needs attention"}</div>
-                <div className="hint">{view.score === null ? "Income and accounts unlock the six checks." : `${view.known} of 6 checks scored`}</div>
+                <div className="hint">{view.score === null ? "Income and accounts unlock the six checks." : "Out of 100"}</div>
               </div>
             </div>
             <div className="list">
@@ -157,56 +184,49 @@ export default function FinanceOverview() {
             {view.score === null && <button type="button" className="btn btn-sm" style={{ marginTop: 10 }} onClick={() => f.settings.show("profile")}>Add income details</button>}
           </Card>
 
-          <Card title="Next paycheck" action={<Link href="/finance/paycheck" className="btn btn-sm">{view.nextPaycheck ? "Open" : "Plan it"} <ArrowRight /></Link>}>
-            {view.nextPayday ? (
-              <div className="list">
-                <div className="item">
-                  <span className="icon-tile sm"><CalendarClock /></span>
-                  <div className="item-main">
-                    <div className="item-title">{relativeDay(view.nextPayday, today)} · {shortDay(view.nextPayday)}</div>
-                    <div className="item-sub">{view.nextPaycheck
-                      ? view.paycheckLeft! < 0 ? `Over by ${money(-view.paycheckLeft!, currency)}` : view.paycheckLeft === 0 ? "Every dollar assigned" : `${money(view.paycheckLeft!, currency)} left to assign`
-                      : "Not planned yet"}</div>
-                  </div>
-                  <div className="item-end"><div className="v">{money(view.nextPaycheck?.amount_cents ?? bundle.settings?.paycheck_cents ?? 0, currency)}</div></div>
-                </div>
-              </div>
-            ) : <p className="hint">Set up your pay schedule to plan where each paycheck goes before it lands.</p>}
-          </Card>
-
-          <Card title="Coming up" description={view.charges.length ? `${money(view.chargesTotal, currency)} in the next 14 days` : "Next 14 days"}
-            action={<Link href="/finance/subscriptions" className="btn btn-sm">Subscriptions <ArrowRight /></Link>}>
-            {view.charges.length ? (
-              <div className="list">
-                {view.charges.slice(0, 5).map((c) => (
-                  <div className="item" key={`${c.subscription_id}-${c.date}`}>
-                    <span className="icon-tile sm"><Repeat /></span>
-                    <div className="item-main"><div className="item-title">{c.name}</div><div className="item-sub">{relativeDay(c.date, today)} · {shortDay(c.date)}</div></div>
-                    <div className="item-end"><div className="v">{money(c.amount_cents, currency)}</div></div>
-                  </div>
-                ))}
-              </div>
-            ) : <p className="hint">{bundle.subscriptions.length ? "No renewals in the next two weeks." : "Track subscriptions to see renewals before they hit."}</p>}
-          </Card>
-
           {!f.demo && <GroupsCard />}
-
-          <Card title="Debt" action={<Link href="/finance/debt" className="btn btn-sm">Payoff plan <ArrowRight /></Link>}>
-            {view.debts.length ? (
-              <div className="row-flex" style={{ gap: 14 }}>
-                <span className="icon-tile"><Landmark /></span>
-                <div className="min0">
-                  <div className="num" style={{ fontSize: 18 }}>{money(view.debts.reduce((a, d) => a + d.balance_cents, 0), currency)}</div>
-                  <div className="hint">{view.payoff ? `Debt-free by ${monthLong(view.payoff)} on minimums` : "Minimums don't cover interest yet"}</div>
-                </div>
-              </div>
-            ) : <p className="hint">{missingTerms.length ? `Add the APR and minimum for ${missingTerms.map((a) => a.name).join(", ")} to plan a payoff.` : "No debts tracked. Add credit cards or loans in Accounts."}</p>}
-          </Card>
+          {!f.demo && <ApplePayCard logged={bundle.transactions.some((t) => t.source === "applepay")} />}
         </div>
       </div>
 
       <TransactionEditor open={editing !== null} tx={editing?.tx ?? null} onClose={() => setEditing(null)} />
     </>
+  );
+}
+
+/** Claude-style: ask a question about your own numbers, or start from a suggestion. Answers live on Ask. */
+function AskBar() {
+  const router = useRouter();
+  const { currency } = useFinance();
+  const [q, setQ] = useState("");
+  const go = (text: string) => { const t = text.trim(); if (t) router.push(`/finance/ask?q=${encodeURIComponent(t)}`); };
+  return (
+    <section className="card fin-askbar">
+      <form className="fin-askbar-form" onSubmit={(e) => { e.preventDefault(); go(q); }}>
+        <Sparkles className="fin-askbar-icon" aria-hidden />
+        <input className="fin-askbar-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about your money" aria-label="Ask about your money" />
+        <button type="submit" className="btn btn-primary btn-icon" aria-label="Ask" disabled={!q.trim()}><ArrowUp /></button>
+      </form>
+      <div className="fin-askbar-chips">
+        {askSuggestions(currency).map((s) => <button type="button" key={s} className="fin-chip" onClick={() => go(s)}>{s}</button>)}
+      </div>
+    </section>
+  );
+}
+
+/** Points people at Apple Pay logging until they have it, then gets out of the way. */
+function ApplePayCard({ logged }: { logged: boolean }) {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => { let alive = true; api.tokenStatus().then((s) => alive && setOn(!!s.purchases)).catch(() => alive && setOn(null)); return () => { alive = false; }; }, []);
+  if (on !== false || logged) return null;
+  return (
+    <Card title="Log Apple Pay automatically" description="Every tap lands here, already categorized"
+      action={<Link href="/account#links" className="btn btn-sm">Set up <ChevronRight /></Link>}>
+      <div className="row-flex" style={{ gap: 12, alignItems: "flex-start" }}>
+        <span className="icon-tile sm"><Smartphone /></span>
+        <p className="hint" style={{ margin: 0 }}>A one-time iPhone Shortcuts automation sends each Apple Pay purchase to SPLITTER. It picks the category you used last time at that merchant, and the card&apos;s account.</p>
+      </div>
+    </Card>
   );
 }
 
@@ -229,10 +249,11 @@ function Welcome() {
   const { bundle, setDemo, settings } = useFinance();
   const steps = [
     { done: !!bundle.settings?.monthly_net_cents, title: "Add your income", body: "Gross and take-home pay power your budget and the six health checks.", action: <button type="button" className="btn btn-sm btn-primary" onClick={() => settings.show("profile")}>Add income</button> },
-    { done: bundle.accounts.length > 0 || bundle.transactions.length > 0, title: "Bring in your money", body: "Add accounts by hand, import a CSV from any bank, or link a bank where it's available.", action: (
+    { done: bundle.accounts.length > 0 || bundle.transactions.length > 0, title: "Bring in your money", body: "Add accounts by hand, import a CSV from any bank, or log every Apple Pay tap from your iPhone.", action: (
       <div className="row-flex wrap" style={{ gap: 6 }}>
         <Link href="/finance/accounts" className="btn btn-sm"><Wallet /> Add accounts</Link>
         <Link href="/finance/activity?import=1" className="btn btn-sm"><FileUp /> Import CSV</Link>
+        <Link href="/account#links" className="btn btn-sm"><Smartphone /> Log Apple Pay</Link>
       </div>
     ) },
     { done: bundle.budgets.some((b) => b.limits.length > 0), title: "Plan this month", body: "Give every dollar of take-home a job with a 50/30/20 starter you can adjust.", action: <Link href="/finance/budget" className="btn btn-sm">Open budget</Link> },
@@ -283,7 +304,7 @@ function GroupsCard() {
   }, [me.id]);
   if (!g) return null;
   return (
-    <Card title="Groups" description="Shared costs with roommates, trips and friends" action={<Link href="/dashboard" className="btn btn-sm">Split <ArrowRight /></Link>}>
+    <Card title="Groups" description="Shared costs with roommates, trips and friends" action={<Link href="/dashboard" className="btn btn-sm">Split <ChevronRight /></Link>}>
       {g.totals.length || g.upcoming.length ? (
         <div className="list">
           {g.totals.map(([cur, t]) => (

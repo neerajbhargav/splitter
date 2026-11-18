@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { ArrowLeftRight, ChartPie, LogOut, Plus, Search, Split, Users, Wallet } from "lucide-react";
 import { MeProvider, useMe, useToast } from "./providers";
 import { Avatar, LogoMark, Modal } from "./ui";
-import { MONEY_SECTIONS, sectionActive } from "./finance/sections";
+import { MONEY_GROUPS, sectionActive } from "./finance/sections";
 import { isSplitPath } from "./SplitNav";
 import { ThemeCycle } from "./ThemeToggle";
 import { ExpenseEditor } from "./ExpenseEditor";
@@ -100,11 +100,16 @@ function Frame({ children }: { children: ReactNode }) {
           <button type="button" className="btn btn-primary btn-block" onClick={() => setChoosing(true)}>
             <Plus /> Add
           </button>
-          <nav className="nav" aria-label="Your money">
-            {MONEY_SECTIONS.map((n) => (
-              <Link key={n.href} href={n.href} className={sectionActive(path, n.href) ? "active" : ""} aria-current={sectionActive(path, n.href) ? "page" : undefined}>
-                <n.icon /> {n.label}
-              </Link>
+          <nav className="nav nav-money" aria-label="Your money">
+            {MONEY_GROUPS.map((g) => (
+              <div key={g.label ?? "home"} className="nav-group">
+                {g.label && <div className="nav-group-label">{g.label}</div>}
+                {g.items.map((n) => (
+                  <Link key={n.href} href={n.href} className={sectionActive(path, n.href) ? "active" : ""} aria-current={sectionActive(path, n.href) ? "page" : undefined}>
+                    <n.icon /> {n.label}
+                  </Link>
+                ))}
+              </div>
             ))}
           </nav>
           <nav className="nav nav-split" aria-label="Split with others">

@@ -7,6 +7,7 @@ import { addComment, api, deleteComment, loadComments, receiptUrl, useLiveRefres
 import { category, groupKind } from "@/lib/categories";
 import { longDate, money, timeAgo, rangeLabel } from "@/lib/format";
 import type { Comment, Expense, Group, Member } from "@/lib/types";
+import { appLocale } from "@/lib/locale";
 
 const REPEAT_LABEL: Record<string, string> = { weekly: "Every week", biweekly: "Every 2 weeks", monthly: "Every month", yearly: "Every year" };
 
@@ -168,7 +169,7 @@ export function ExpenseDetail({ expense, group, members, onClose, onEdit, allExp
             const dt = new Date(base.getFullYear(), base.getMonth() - i, 1);
             const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
             const cents = allExpenses.filter((e) => !e.deleted_at && !e.is_payment && e.category === expense.category && e.expense_date.startsWith(key)).reduce((a, e) => a + e.amount_cents, 0);
-            months.push({ key, label: dt.toLocaleString("en-US", { month: "short" }), cents });
+            months.push({ key, label: dt.toLocaleString(appLocale(), { month: "short" }), cents });
           }
           const max = Math.max(1, ...months.map((m) => m.cents));
           if (!allExpenses.length || months.every((m) => m.cents === 0)) return null;

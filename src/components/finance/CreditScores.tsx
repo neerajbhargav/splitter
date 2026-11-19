@@ -10,6 +10,7 @@ import { useFinance } from "./FinanceProvider";
 import { CreditScoreEditor, type CreditEditorMode } from "./CreditScoreEditor";
 import { ScoreChart } from "./charts";
 import { dayDiff } from "./kit";
+import { appLocale } from "@/lib/locale";
 
 const HISTORY_PREVIEW = 8;
 
@@ -20,10 +21,10 @@ function ago(date: string, today: string): string {
   if (d < 60) return `${d} days ago`;
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   if (date.slice(0, 4) !== today.slice(0, 4)) opts.year = "numeric";
-  return `${new Date(`${date}T00:00:00`).toLocaleDateString("en-US", opts)}`;
+  return `${new Date(`${date}T00:00:00`).toLocaleDateString(appLocale(), opts)}`;
 }
 function fullDate(date: string): string {
-  return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return new Date(`${date}T00:00:00`).toLocaleDateString(appLocale(), { month: "short", day: "numeric", year: "numeric" });
 }
 function yearBefore(today: string): string {
   return `${String(Number(today.slice(0, 4)) - 1).padStart(4, "0")}${today.slice(4)}`;

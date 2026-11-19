@@ -8,11 +8,12 @@ import { BigMoney } from "@/components/kit";
 import { money } from "@/lib/format";
 import type { AccountType, CategoryKind, FinanceCategory, FinanceContext, FinanceTransaction } from "@/lib/finance-types";
 import { useFinance, sameContext } from "./FinanceProvider";
+import { appLocale } from "@/lib/locale";
 
 /* ---------- formatting ---------- */
 export function currencySymbol(currency: string): string {
   try {
-    const part = new Intl.NumberFormat("en-US", { style: "currency", currency, currencyDisplay: "narrowSymbol" }).formatToParts(0).find((p) => p.type === "currency");
+    const part = new Intl.NumberFormat(appLocale(), { style: "currency", currency, currencyDisplay: "narrowSymbol" }).formatToParts(0).find((p) => p.type === "currency");
     return part?.value ?? currency;
   } catch {
     return currency;
@@ -41,7 +42,7 @@ export function relativeDay(date: string, today: string): string {
   return shortDay(date);
 }
 export function shortDay(date: string): string {
-  return parseDay(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return parseDay(date).toLocaleDateString(appLocale(), { month: "short", day: "numeric" });
 }
 export function weekdayDay(date: string, today: string): string {
   const d = dayDiff(today, date);
@@ -49,15 +50,15 @@ export function weekdayDay(date: string, today: string): string {
   if (d === -1) return "Yesterday";
   const opts: Intl.DateTimeFormatOptions = { weekday: "short", month: "short", day: "numeric" };
   if (date.slice(0, 4) !== today.slice(0, 4)) opts.year = "numeric";
-  return parseDay(date).toLocaleDateString("en-US", opts);
+  return parseDay(date).toLocaleDateString(appLocale(), opts);
 }
 /** "Oct '26" */
 export function monthShort(month: string): string {
   const d = parseDay(month.length === 7 ? `${month}-01` : month);
-  return `${d.toLocaleDateString("en-US", { month: "short" })} '${String(d.getFullYear()).slice(2)}`;
+  return `${d.toLocaleDateString(appLocale(), { month: "short" })} '${String(d.getFullYear()).slice(2)}`;
 }
 export function monthLong(month: string): string {
-  return parseDay(month.length === 7 ? `${month}-01` : month).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return parseDay(month.length === 7 ? `${month}-01` : month).toLocaleDateString(appLocale(), { month: "long", year: "numeric" });
 }
 export function pct(n: number): string {
   return `${Math.round(n)}%`;
@@ -184,7 +185,7 @@ export function DateTile({ date }: { date: string }) {
   const d = parseDay(date);
   return (
     <span className="datebox fin-datebox">
-      <div className="m">{d.toLocaleDateString("en-US", { month: "short" })}</div>
+      <div className="m">{d.toLocaleDateString(appLocale(), { month: "short" })}</div>
       <div className="d">{d.getDate()}</div>
     </span>
   );

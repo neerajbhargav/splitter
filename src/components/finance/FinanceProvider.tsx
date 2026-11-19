@@ -7,6 +7,8 @@ import { demoBundle } from "@/lib/finance-demo";
 import { useLiveRefresh } from "@/lib/data";
 import { todayISO } from "@/lib/format";
 import type { FinanceBundle, FinanceContext } from "@/lib/finance-types";
+import { deviceCurrency, isNewProfile } from "@/lib/locale";
+import { CURRENCIES } from "@/lib/format";
 
 const DEMO_KEY = "splitter-finance-demo";
 export const DEMO_MESSAGE = "This is sample data, so nothing is saved. Exit the preview to use your own finances.";
@@ -63,6 +65,7 @@ export function FinanceProvider({ children, fallback, failure }: {
   const request = useRef(0);
   const ensured = useRef(false);
   const profileCurrency = /^[A-Z]{3}$/.test(me.profile?.default_currency ?? "") ? me.profile!.default_currency : "USD";
+  const newProfile = isNewProfile(me.profile);
 
   useEffect(() => {
     try { setDemoState(sessionStorage.getItem(DEMO_KEY) === "1"); } catch { /* storage blocked */ }
@@ -77,7 +80,9 @@ export function FinanceProvider({ children, fallback, failure }: {
       // First visit: create the private workspace and Folio's default categories once.
       if ((!data.settings || !data.settings.categories_seeded) && !ensured.current) {
         ensured.current = true;
-        await financeApi.ensureWorkspace({ userId: me.id, currency: data.settings?.currency ?? profileCurrency });
+        const local = deviceCurrency();
+        const start = profileCurrency === "USD" && newProfile && local && CURRENCIES.includes(local) ? local : profileCurrency;
+        await financeApi.ensureWorkspace({ userId: me.id, currency: data.settings?.currency ?? start });
         data = await loadFinance(me.id);
       }
       if (id === request.current) setState({ status: "ready", bundle: data });
@@ -86,7 +91,7 @@ export function FinanceProvider({ children, fallback, failure }: {
       const accountChanged = error instanceof FinanceContextError;
       setState({ status: "error", message: error instanceof Error ? error.message : "Could not load your finances.", accountChanged });
     }
-  }, [me.id, profileCurrency]);
+  }, [me.id, profileCurrency, newProfile]);
 
   useEffect(() => {
     setState({ status: "loading" });

@@ -15,11 +15,12 @@ import { debtsMissingTerms, payoffDebts, plannerInput, extraInEffect } from "@/l
 import { centsToInput, money } from "@/lib/format";
 import { parseMoney } from "@/lib/split";
 import { FINANCE_MAX_CENTS, isLiability, type DebtPlanInput, type DebtPlanSettings, type FinanceAccount, type FinanceAccountInput, type FinanceContext } from "@/lib/finance-types";
+import { appLocale } from "@/lib/locale";
 
 function bigMoney(c: bigint, currency: string): string {
   const n = Number(c);
   if (Number.isSafeInteger(n)) return money(n, currency);
-  return `${currencySymbol(currency)}${(c / 100n).toLocaleString("en-US")}`;
+  return `${currencySymbol(currency)}${(c / 100n).toLocaleString(appLocale())}`;
 }
 
 function presets(minimums: number): number[] {

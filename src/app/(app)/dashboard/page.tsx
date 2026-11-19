@@ -15,6 +15,7 @@ import { loadOverview, useLiveRefresh, type Overview } from "@/lib/data";
 import { summarize } from "@/lib/overview";
 import { category } from "@/lib/categories";
 import { money } from "@/lib/format";
+import { appLocale } from "@/lib/locale";
 
 export default function Dashboard() {
   const me = useMe();
@@ -44,7 +45,7 @@ export default function Dashboard() {
     const now = new Date();
     const months = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-      return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: d.toLocaleDateString("en-US", { month: "short" }), total: 0, mine: 0 };
+      return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: d.toLocaleDateString(appLocale(), { month: "short" }), total: 0, mine: 0 };
     });
     for (const e of spend) {
       const m = months.find((x) => e.expense_date.startsWith(x.key));
@@ -138,7 +139,7 @@ export default function Dashboard() {
                       <span className="icon-tile">{(() => { const I = category(b.category).icon; return <I />; })()}</span>
                       <div className="item-main">
                         <div className="item-title" style={{ whiteSpace: "normal" }}>{b.title}</div>
-                        <div className={`item-sub wrap2 ${overdue ? "neg" : ""}`}>{b.due_date ? `${overdue ? "Overdue since" : "Due"} ${new Date(b.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "No due date"} · {g!.name}</div>
+                        <div className={`item-sub wrap2 ${overdue ? "neg" : ""}`}>{b.due_date ? `${overdue ? "Overdue since" : "Due"} ${new Date(b.due_date + "T00:00:00").toLocaleDateString(appLocale(), { month: "short", day: "numeric" })}` : "No due date"} · {g!.name}</div>
                         <div style={{ marginTop: 8 }}><Progress value={paidAmt} max={b.amount_cents} size="sm" /></div>
                         <div className="tiny faint" style={{ marginTop: 4 }}>{paidCount} of {b.upcoming_bill_shares.length} paid · {money(paidAmt, g!.currency)} of {money(b.amount_cents, g!.currency)}</div>
                       </div>

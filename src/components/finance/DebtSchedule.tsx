@@ -3,11 +3,12 @@ import { useMemo, useState } from "react";
 import type { DebtPlan, DebtPlannerDebt } from "@/lib/debt-planner";
 import { money } from "@/lib/format";
 import { currencySymbol, monthShort } from "@/components/finance/kit";
+import { appLocale } from "@/lib/locale";
 
 function bigMoney(c: bigint, currency: string): string {
   const n = Number(c);
   if (Number.isSafeInteger(n)) return money(n, currency);
-  return `${currencySymbol(currency)}${(c / 100n).toLocaleString("en-US")}`;
+  return `${currencySymbol(currency)}${(c / 100n).toLocaleString(appLocale())}`;
 }
 
 export function DebtSchedule({ plan, debts, currency }: { plan: DebtPlan; debts: DebtPlannerDebt[]; currency: string }) {

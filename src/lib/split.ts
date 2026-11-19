@@ -2,12 +2,24 @@
 
 export type Portion = { id: string; amount: number };
 
-/** Parse "12.5", "$1,200.00", "12" into cents. Returns null for invalid or non-positive input. */
+/**
+ * Parse "12.5", "$1,200.00", "12" into cents. Also takes any currency symbol or code ("€12", "12 EUR",
+ * "R$ 10", "₹1,250") and a decimal comma ("12,50", "1.234,56", "1 234,56"), so it works in every region.
+ * Returns null for invalid input.
+ */
 export function parseMoney(input: string | number | null | undefined): number | null {
   if (input === null || input === undefined) return null;
   if (typeof input === "number") return Number.isFinite(input) ? Math.round(input * 100) : null;
-  // Accept "$1,234.56", "1234.5", "-12", " 12 ". Reject anything else ("1e2", "12abc", "1.2.3").
-  const t = input.trim().replace(/^(-?)\$\s*/, "$1");
+  // A currency symbol or 3-letter code on either side, and spaces used as thousands separators.
+  let t = input.trim()
+    .replace(/^(-?)\s*(?:[A-Za-z]{1,3}\s*)?[$€£₹¥₩₱฿₪₺₫₦₴₽¢]\s*/u, "$1")
+    .replace(/^(-?)\s*[A-Z]{3}\s+(?=[\d.,])/, "$1")
+    .replace(/\s*(?:[$€£₹¥₩₱฿₪₺₫₦₴₽¢]|[A-Z]{3})$/u, "")
+    .replace(/(\d)[\s\u00a0\u202f'](?=\d{3}\b)/g, "$1");
+  // Decimal comma: "12,5" / "12,50", or "1.234,56" with dots as thousands separators.
+  // "1,234" (comma then exactly 3 digits, no dot) stays a thousands separator, as before.
+  if (/^-?\d{1,3}(\.\d{3})+,\d{1,2}$/.test(t) || /^-?\d+,\d{1,2}$/.test(t)) t = t.replace(/\./g, "").replace(",", ".");
+  // Accept "1,234.56", "1234.5", "-12", " 12 ". Reject anything else ("1e2", "12abc", "1.2.3").
   if (!/^-?(\d{1,3}(,\d{3})+|\d+)?(\.\d*)?$/.test(t) || !/\d/.test(t)) return null;
   const neg = t.startsWith("-");
   const [whole, frac = ""] = t.replace(/[-,]/g, "").split(".");

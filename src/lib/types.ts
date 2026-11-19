@@ -12,6 +12,8 @@ export type Profile = {
   email: string | null;
   avatar_url: string | null;
   default_currency: string;
+  /** Set by the database; used to give brand-new accounts a regional default currency. */
+  created_at?: string | null;
 };
 
 export type Group = {

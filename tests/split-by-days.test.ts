@@ -7,7 +7,7 @@ import { splitByDays } from "../src/lib/split.ts";
 // The hand calculation charged Eli $5.25, Fin $17.25 and everyone else $22.50 (one $22.49).
 test("a bill is split by the days each person lived there", () => {
   const people = [
-    { id: "neeraj" }, { id: "ari" }, { id: "bea" }, { id: "cal" }, { id: "dee" },
+    { id: "ana" }, { id: "ari" }, { id: "bea" }, { id: "cal" }, { id: "dee" },
     { id: "eli", stay_from: "2025-07-29", stay_to: "2026-09-18" },
     { id: "fin", stay_from: "2026-09-19" },
   ];
@@ -18,8 +18,8 @@ test("a bill is split by the days each person lived there", () => {
   assert.equal(amt.fin, 1725);
   assert.equal(days.eli, 7);
   assert.equal(days.fin, 23);
-  assert.equal(days.neeraj, 30);
-  const others = ["neeraj", "ari", "bea", "cal", "dee"].map((id) => amt[id]).sort();
+  assert.equal(days.ana, 30);
+  const others = ["ana", "ari", "bea", "cal", "dee"].map((id) => amt[id]).sort();
   assert.deepEqual(others, [2249, 2250, 2250, 2250, 2250]);
   assert.equal(r.reduce((a, p) => a + p.amount, 0), 13499);
 });

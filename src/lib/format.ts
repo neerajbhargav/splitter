@@ -1,17 +1,18 @@
+import { appLocale } from "./locale.ts";
 const fmtCache = new Map<string, Intl.NumberFormat>();
 
 export function money(cents: number, currency = "USD", opts: { sign?: boolean } = {}): string {
-  const key = currency + (opts.sign ? "s" : "");
+  const key = appLocale() + currency + (opts.sign ? "s" : "");
   let f = fmtCache.get(key);
   if (!f) {
     try {
-      f = new Intl.NumberFormat("en-US", {
+      f = new Intl.NumberFormat(appLocale(), {
         style: "currency", currency, signDisplay: opts.sign ? "exceptZero" : "auto",
         // The ledger stores hundredths for every currency, including JPY.
         minimumFractionDigits: 2, maximumFractionDigits: 2,
       });
     } catch {
-      f = new Intl.NumberFormat("en-US", {
+      f = new Intl.NumberFormat(appLocale(), {
         style: "currency", currency: "USD", signDisplay: opts.sign ? "exceptZero" : "auto",
         minimumFractionDigits: 2, maximumFractionDigits: 2,
       });
@@ -49,23 +50,23 @@ function parseDay(iso: string): Date {
 
 export function shortDate(iso: string): { mon: string; day: number } {
   const d = parseDay(iso);
-  return { mon: d.toLocaleString("en-US", { month: "short" }), day: d.getDate() };
+  return { mon: d.toLocaleString(appLocale(), { month: "short" }), day: d.getDate() };
 }
 
 export function longDate(iso: string): string {
-  return parseDay(iso).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return parseDay(iso).toLocaleDateString(appLocale(), { month: "long", day: "numeric", year: "numeric" });
 }
 
 /** "Sep 12 – Oct 11, 2026"; with one open end, "From Aug 1, 2026" or "Until Jul 31, 2026". */
 export function rangeLabel(from?: string | null, to?: string | null): string {
   const f = (iso: string, year: boolean) =>
-    parseDay(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", ...(year ? { year: "numeric" } : {}) });
+    parseDay(iso).toLocaleDateString(appLocale(), { month: "short", day: "numeric", ...(year ? { year: "numeric" } : {}) });
   if (from && to) return `${f(from, from.slice(0, 4) !== to.slice(0, 4))} – ${f(to, true)}`;
   return from ? `From ${f(from, true)}` : to ? `Until ${f(to, true)}` : "";
 }
 
 export function monthLabel(iso: string): string {
-  return parseDay(iso).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return parseDay(iso).toLocaleDateString(appLocale(), { month: "long", year: "numeric" });
 }
 
 export function timeAgo(iso: string): string {
@@ -74,7 +75,7 @@ export function timeAgo(iso: string): string {
   if (s < 3600) return `${Math.round(s / 60)}m ago`;
   if (s < 86400) return `${Math.round(s / 3600)}h ago`;
   if (s < 7 * 86400) return `${Math.round(s / 86400)}d ago`;
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString(appLocale(), { month: "short", day: "numeric" });
 }
 
 export function initials(name: string): string {
@@ -88,11 +89,15 @@ export function greeting(): string {
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
-export const CURRENCIES = ["USD", "EUR", "GBP", "INR", "CAD", "AUD", "JPY", "SGD", "AED", "CHF", "MXN", "BRL"];
+/** Group and Money currencies. The first twelve were the original list; the rest are the other ECB-quoted currencies. */
+export const CURRENCIES = [
+  "USD", "EUR", "GBP", "INR", "CAD", "AUD", "JPY", "SGD", "AED", "CHF", "MXN", "BRL",
+  "BGN", "CNY", "CZK", "DKK", "HKD", "HUF", "IDR", "ILS", "ISK", "KRW", "MYR", "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "THB", "TRY", "ZAR",
+];
 
 /** Short money for chart labels: $45, $480, $1.2k, $12k. */
 export function moneyShort(cents: number, currency = "USD"): string {
   const v = Math.abs(cents) / 100;
-  const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency, notation: v >= 1000 ? "compact" : "standard", maximumFractionDigits: v >= 1000 ? 1 : 0, minimumFractionDigits: 0 });
+  const fmt = new Intl.NumberFormat(appLocale(), { style: "currency", currency, notation: v >= 1000 ? "compact" : "standard", maximumFractionDigits: v >= 1000 ? 1 : 0, minimumFractionDigits: 0 });
   return (cents < 0 ? "-" : "") + fmt.format(v);
 }

@@ -1184,3 +1184,11 @@ button.item.clickable:focus-visible { outline: 2px solid var(--gold); outline-of
 @keyframes fin-dots { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .fin-skel-block { animation: none; } }
 @media (max-width: 860px) { .fin-skel-row { grid-template-columns: minmax(0, 1fr); } }
+/* phones: the accent insight and Needs you come right after the snapshot */
+@media (max-width: 860px) {
+  .fin-dash { display: flex; flex-direction: column; }
+  .fin-dash > .dash-col { display: contents; }
+  .fin-dash .card { order: 7; }
+  .fin-dash .fin-accent { order: 1; } .fin-dash .o-needs { order: 2; } .fin-dash .o-spending { order: 3; }
+  .fin-dash .o-coming { order: 4; } .fin-dash .o-recent { order: 5; } .fin-dash .o-health { order: 6; }
+}

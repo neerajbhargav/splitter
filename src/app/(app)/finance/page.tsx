@@ -105,9 +105,9 @@ export default function FinanceOverview() {
         </Link>
       </section>
 
-      <div className="dash-grid">
+      <div className="dash-grid fin-dash">
         <div className="dash-col">
-          <Card title="Spending" description={`${monthLong(month)} · ${money(summary.spent_cents, currency)}${spendLimit > 0 ? ` of ${money(spendLimit, currency)} planned` : ""}`}
+          <Card className="o-spending" title="Spending" description={`${monthLong(month)} · ${money(summary.spent_cents, currency)}${spendLimit > 0 ? ` of ${money(spendLimit, currency)} planned` : ""}`}
             action={<Link href="/finance/budget" className="btn btn-sm">Budget <ChevronRight /></Link>}>
             {spendLimit > 0 && (
               <div style={{ marginBottom: 14 }}>
@@ -131,7 +131,7 @@ export default function FinanceOverview() {
             <DailyBars data={view.daily} currency={currency} />
           </Card>
 
-          <Card title="Recent activity" description={`${bundle.transactions.length} transaction${bundle.transactions.length === 1 ? "" : "s"} tracked`}
+          <Card className="o-recent" title="Recent activity" description={`${bundle.transactions.length} transaction${bundle.transactions.length === 1 ? "" : "s"} tracked`}
             action={<Link href="/finance/activity" className="btn btn-sm">All activity <ChevronRight /></Link>}>
             {recent.length ? (
               <div className="list">
@@ -164,7 +164,7 @@ export default function FinanceOverview() {
             ...view.charges.filter((c) => dayDiff(today, c.date) <= 3).slice(0, 2).map((c) => ({ key: `sub-${c.subscription_id}`, icon: Repeat, tone: "info", title: `${c.name} renews ${relativeDay(c.date, today).toLowerCase()}`, sub: `${money(c.amount_cents, currency)} · cancel before then if you don't use it`, href: "/finance/subscriptions" })),
           ]} />
 
-          <Card title="Coming up" description={upcoming.length ? `${money(view.chargesTotal, currency)} due in the next 14 days` : "Next 14 days"}
+          <Card className="o-coming" title="Coming up" description={upcoming.length ? `${money(view.chargesTotal, currency)} due in the next 14 days` : "Next 14 days"}
             action={<Link href="/finance/subscriptions" className="btn btn-sm">Subscriptions <ChevronRight /></Link>}>
             {upcoming.length ? (
               <div className="list">
@@ -179,7 +179,7 @@ export default function FinanceOverview() {
             ) : <p className="hint">{bundle.subscriptions.length ? "Nothing renews in the next two weeks." : "Track subscriptions to see renewals before they hit."}</p>}
           </Card>
 
-          <Card title="Financial health" description={view.score === null ? "Add your income to score your month" : `${view.known} of 6 checks scored`}
+          <Card className="o-health" title="Financial health" description={view.score === null ? "Add your income to score your month" : `${view.known} of 6 checks scored`}
             action={<Link href="/finance/health" className="btn btn-sm">Details <ChevronRight /></Link>}>
             <div className="row-flex" style={{ gap: 16, alignItems: "center", marginBottom: 10 }}>
               <div className="fin-score" style={{ ["--p" as string]: view.score ?? 0, ["--c" as string]: scoreColor(view.score), width: 64, height: 64 }}>
@@ -247,7 +247,7 @@ type Need = { key: string; icon: typeof Tag; tone: string; title: string; sub: s
 function NeedsYou({ items }: { items: Need[] }) {
   if (!items.length) return null;
   return (
-    <Card title="Needs you" description={`${items.length} thing${items.length === 1 ? "" : "s"} to do`}>
+    <Card className="o-needs" title="Needs you" description={`${items.length} thing${items.length === 1 ? "" : "s"} to do`}>
       <div className="list">
         {items.map(({ key, icon: Icon, tone, title, sub, href }) => (
           <Link key={key} href={href} className="item clickable fin-need">

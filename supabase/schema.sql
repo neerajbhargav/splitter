@@ -2625,7 +2625,9 @@ begin
       into ident using u.id;
   end if;
   meta := coalesce(u.raw_user_meta_data, '{}'::jsonb) || coalesce(ident, '{}'::jsonb);
-  mail := lower(nullif(coalesce(u.email, meta->>'email'), ''));
+  -- Only a verified email may claim spots: never raw_user_meta_data, which the signed-in user can write.
+  mail := lower(nullif(coalesce(case when to_jsonb(u)->>'email_confirmed_at' is not null then u.email end,
+                                case when coalesce((ident->>'email_verified')::boolean, false) then ident->>'email' end), ''));
   insert into public.profiles (id, display_name, email, avatar_url)
   values (u.id,
     left(coalesce(nullif(meta->>'full_name', ''), nullif(meta->>'name', ''), nullif(meta->>'user_name', ''),
@@ -2718,6 +2720,7 @@ declare
 begin
   if not exists (select 1 from public.finance_settings where user_id = u) then raise exception 'Open Money in SPLITTER once, then try again'; end if;
   if d > current_date + 1 or d < current_date - 7 then raise exception 'That purchase date is out of range'; end if;
+  perform pg_advisory_xact_lock(hashtextextended('purchases:' || u::text, 0));
   perform public._finance_check_refs(u, acc, cat, null);
   select id into v_id from public.finance_transactions
    where user_id = u and source = 'applepay' and amount_cents = amt and lower(description) = lower(descr)

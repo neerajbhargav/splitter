@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <h2>What is stored</h2>
       <ul>
         <li><b>Your sign-in.</b> When you sign in with Google or GitHub, SPLITTER receives your name, email address and profile picture. No password is stored.</li>
-        <li><b>Guest mode.</b> Trying SPLITTER without an account makes an anonymous account tied to this browser, with only the name you type, if any. Connecting Google or GitHub later keeps the same data. A guest account that isn&apos;t opened for 30 days is deleted with everything in it.</li>
+        <li><b>Guest mode.</b> Trying SPLITTER without an account makes an anonymous account tied to this browser, with only the name you type, if any. Connecting Google or GitHub later keeps the same data. A guest account that isn&apos;t opened for 30 days is deleted with everything in it; receipt photos from its groups can no longer be opened by anyone.</li>
         <li><b>Groups.</b> Group names, the names (and any email or phone) you add for the people in them, expenses, bills, comments, settle-ups and receipt photos you attach.</li>
         <li><b>Money.</b> The accounts, transactions, budgets, debts, paychecks, subscriptions and credit scores you enter or import from a CSV file.</li>
       </ul>

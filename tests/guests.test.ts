@@ -5,7 +5,7 @@ import { freshDb } from "./pg-harness.ts";
 const G = "33333333-3333-4333-8333-333333333333"; // guest who later connects Google
 const B = "44444444-4444-4444-8444-444444444444"; // someone who added the guest's email to their group
 
-for (const migration of [[], ["20261118_guests.sql"]]) test(`a guest who connects Google keeps their data and gets their name, email and spots${migration.length ? " (migration on top)" : ""}`, async () => {
+for (const migration of [[], ["20261118_guests.sql", "20261118_security_fixes.sql"]]) test(`a guest who connects Google keeps their data and gets their name, email and spots${migration.length ? " (migration on top)" : ""}`, async () => {
   const { db, as, user } = await freshDb(...migration);
   try {
     const one = async <T>(sql: string, params: unknown[] = []) => (await db.query<T>(sql, params)).rows[0];
@@ -17,6 +17,18 @@ for (const migration of [[], ["20261118_guests.sql"]]) test(`a guest who connect
     await as(G);
     await db.query(`select public.ensure_profile()`);
     assert.deepEqual(await one(`select display_name, email from profiles where id=$1`, [G]), { display_name: "Guest", email: null });
+    // Attack: a guest writes someone else's email into their own metadata (auth.updateUser({ data: { email } })).
+    await db.query(`update auth.users set raw_user_meta_data = raw_user_meta_data || '{"email":"sam@example.invalid"}' where id=$1`, [G]);
+    await db.query(`select public.ensure_profile()`);
+    assert.equal(Number((await one<{ n: string }>(`select count(*)::text n from group_members where group_id=$1 and user_id=$2`, [bens, G])).n), 0, "an unverified metadata email claims nothing");
+    assert.equal((await one<{ e: string | null }>(`select email e from profiles where id=$1`, [G])).e, null);
+    // Nor does an unconfirmed email on the user row, or an identity that says its email isn't verified.
+    await db.query(`update auth.users set email='sam@example.invalid', email_confirmed_at=null where id=$1`, [G]);
+    await db.query(`insert into auth.identities(user_id,provider,identity_data) values ($1,'github','{"email":"sam@example.invalid","email_verified":false}')`, [G]);
+    await db.query(`select public.ensure_profile()`);
+    assert.equal(Number((await one<{ n: string }>(`select count(*)::text n from group_members where group_id=$1 and user_id=$2`, [bens, G])).n), 0);
+    await db.query(`delete from auth.identities where user_id=$1`, [G]);
+    await db.query(`update auth.users set email=null, raw_user_meta_data='{"name":"Guest"}' where id=$1`, [G]);
     const trip = (await one<{ id: string }>(`select public.create_group('Trip','trip','USD','[{"name":"Pal"}]')::text id`)).id;
     await db.query(`select public.ensure_finance_workspace($1,'USD')`, [G]);
     await db.query(`select public.save_finance_account($1::jsonb,$2::uuid,'USD')`, [JSON.stringify({ name: "Wallet", type: "cash", balance_cents: 500 }), G]);
@@ -24,7 +36,7 @@ for (const migration of [[], ["20261118_guests.sql"]]) test(`a guest who connect
 
     // linkIdentity: same user id, now with an email and a Google identity.
     await db.query(`update auth.users set email='Sam@Example.invalid', is_anonymous=false where id=$1`, [G]);
-    await db.query(`insert into auth.identities(user_id,provider,identity_data) values ($1,'google','{"full_name":"Sam Lee","email":"sam@example.invalid","picture":"https://example.invalid/p.png"}')`, [G]);
+    await db.query(`insert into auth.identities(user_id,provider,identity_data) values ($1,'google','{"full_name":"Sam Lee","email":"sam@example.invalid","email_verified":true,"picture":"https://example.invalid/p.png"}')`, [G]);
     await db.query(`select public.ensure_profile()`);
     assert.deepEqual(await one(`select display_name, email, avatar_url from profiles where id=$1`, [G]),
       { display_name: "Sam Lee", email: "sam@example.invalid", avatar_url: "https://example.invalid/p.png" });

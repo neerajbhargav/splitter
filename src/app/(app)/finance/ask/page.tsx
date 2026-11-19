@@ -126,6 +126,8 @@ export default function AskPage() {
     const q = params.get("q");
     if (!loaded || asked.current || !q) return;
     asked.current = true;
+    // Drop ?q= so Back or a reload doesn't ask (and spend the key) again.
+    window.history.replaceState(null, "", window.location.pathname);
     if (config) void send(q); else setDraft(q);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, config]);

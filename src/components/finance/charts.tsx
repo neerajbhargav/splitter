@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useId } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CHART_COLORS } from "@/components/charts";
 import { money, moneyShort } from "@/lib/format";
@@ -8,6 +8,9 @@ import { shortDay } from "./kit";
 /** Copilot-style daily spending: flat-bottom bars, the hovered/tapped day is read out above the chart. */
 export function DailyBars({ data, currency, height = 150 }: { data: { date: string; cents: number }[]; currency: string; height?: number }) {
   const [active, setActive] = useState<number | null>(null);
+  // Hatched bars with today solid (from his bookmarked dashboards): texture without a second colour.
+  const hatch = `hatch-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const solid = active ?? data.length - 1;
   const total = data.reduce((a, d) => a + d.cents, 0);
   const days = data.filter((d) => d.cents > 0).length;
   const peak = data.reduce<{ date: string; cents: number } | null>((m, d) => (!m || d.cents > m.cents ? d : m), null);
@@ -30,12 +33,18 @@ export function DailyBars({ data, currency, height = 150 }: { data: { date: stri
           <BarChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }} barCategoryGap="18%"
             onMouseMove={(st) => { const n = Number(st?.activeTooltipIndex); if (Number.isInteger(n)) setActive(n); }}
             onMouseLeave={() => setActive(null)}>
+            <defs>
+              <pattern id={hatch} width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <rect width="5" height="5" fill="var(--gold)" fillOpacity="0.16" />
+                <line x1="0" y1="0" x2="0" y2="5" stroke="var(--gold)" strokeWidth="2.2" />
+              </pattern>
+            </defs>
             <CartesianGrid vertical={false} stroke="var(--line)" />
             <XAxis dataKey="date" tickLine={false} axisLine={{ stroke: "var(--line-2)" }} tick={{ fill: "var(--ink-3)", fontSize: 11 }}
               interval="preserveStartEnd" minTickGap={28} tickFormatter={(d: string) => shortDay(d)} />
             <YAxis width={44} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-3)", fontSize: 11 }} tickFormatter={(v) => moneyShort(Number(v), currency)} />
             <Bar dataKey="cents" fill="var(--gold)" radius={[3, 3, 0, 0]} isAnimationActive={false}>
-              {data.map((d, k) => <Cell key={d.date} fillOpacity={active === null || active === k ? 1 : 0.4} />)}
+              {data.map((d, k) => <Cell key={d.date} fill={k === solid ? "var(--gold)" : `url(#${hatch})`} fillOpacity={active === null || active === k ? 1 : 0.55} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>

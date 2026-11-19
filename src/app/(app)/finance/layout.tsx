@@ -3,7 +3,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Eye, LockKeyhole, Settings2 } from "lucide-react";
-import { Loading } from "@/components/ui";
 import { useMe } from "@/components/providers";
 import { ADD_TRANSACTION_EVENT, useQuickAdd } from "@/components/Shell";
 import { FinanceProvider, useFinance } from "@/components/finance/FinanceProvider";
@@ -75,7 +74,7 @@ function Shell({ children }: { children: ReactNode }) {
 export default function FinanceLayout({ children }: { children: ReactNode }) {
   return (
     <FinanceProvider
-      fallback={<Loading label="Loading your finances" />}
+      fallback={<FinanceSkeleton />}
       failure={(message, retry, accountChanged) => (
         <main className="page page-narrow">
           <div className="banner neg" role="alert" style={{ marginTop: 24 }}>{message}</div>
@@ -85,5 +84,22 @@ export default function FinanceLayout({ children }: { children: ReactNode }) {
     >
       <Shell>{children}</Shell>
     </FinanceProvider>
+  );
+}
+
+/** A dot field in the shape of the page while the ledger loads (no spinner, no grey shimmer). */
+function FinanceSkeleton() {
+  return (
+    <main className="page fin-page" aria-busy="true" aria-label="Loading your finances">
+      <div className="fin-head"><div className="min0"><div className="eyebrow">&nbsp;</div><h1 className="page-title" style={{ opacity: 0.25 }}>Your money</h1></div></div>
+      <div className="fin-skel">
+        <div className="fin-skel-block" style={{ height: 112 }} />
+        <div className="fin-skel-block" style={{ height: 96 }} />
+        <div className="fin-skel-row">
+          <div className="fin-skel-block" style={{ height: 360 }} />
+          <div className="fin-skel-block" style={{ height: 360 }} />
+        </div>
+      </div>
+    </main>
   );
 }

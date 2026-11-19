@@ -1124,3 +1124,71 @@ button.item.clickable:focus-visible { outline: 2px solid var(--gold); outline-of
   .fin-snapshot .snap:nth-child(3) { border-left: 0; }
   .fin-snapshot .snap:nth-child(n + 3) { border-top: 1px solid var(--line); }
 }
+
+/* ---------- Premium pass (2026-11-18), from his X bookmarks: @nizamdesign's one grain-gradient accent card among
+   hairline cards, @uisabor's outline status chips, hatched bars, a "Needs you" list, @Jakubantalik's dot-field
+   loading and @irfannnnali's step rail. Palette stays ink, cream and muted gold. ---------- */
+
+/* outline status chips, not fills */
+.fin-status { background: transparent !important; border: 1px solid; font-weight: 500; height: 24px; }
+.fin-status.pass { border-color: rgba(47, 125, 79, 0.35); }
+.fin-status.warn { border-color: rgba(142, 111, 56, 0.4); }
+.fin-status.fail { border-color: rgba(185, 80, 47, 0.38); }
+.fin-status.unknown { border-color: var(--line-2); }
+
+/* the one accent card: ink with a warm gold grain gradient */
+.fin-accent { position: relative; overflow: hidden; isolation: isolate; color: #f6efe2; border-color: transparent; padding: 18px 20px 18px;
+  background:
+    radial-gradient(120% 95% at 100% 0%, rgba(231, 201, 143, 0.95) 0%, rgba(201, 169, 110, 0.75) 22%, rgba(120, 92, 48, 0.55) 48%, rgba(23, 20, 15, 0) 78%),
+    radial-gradient(90% 80% at 0% 100%, rgba(201, 169, 110, 0.22) 0%, rgba(23, 20, 15, 0) 60%),
+    #17140f; }
+.fin-accent::after { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0.22; mix-blend-mode: overlay; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+.fin-accent-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fin-accent-chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500;
+  color: #f6efe2; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.18); backdrop-filter: blur(6px); }
+.fin-accent-chip svg { width: 12px; height: 12px; }
+.fin-accent-nav { display: inline-flex; align-items: center; gap: 2px; font-size: 11.5px; color: rgba(246, 239, 226, 0.75); }
+.fin-accent-nav button { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; border: 0; background: none; color: inherit; cursor: pointer; }
+.fin-accent-nav button:hover { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.fin-accent-nav svg { width: 15px; height: 15px; }
+.fin-accent-title { font-family: var(--serif); font-size: clamp(26px, calc(var(--main-w) * 0.012 + 18px), 32px); line-height: 1.08; letter-spacing: -0.01em; margin: 34px 0 8px; color: #fffaf0; }
+.fin-accent-detail { margin: 0; font-size: 13px; line-height: 1.5; color: rgba(246, 239, 226, 0.78); max-width: 44ch; }
+.fin-accent-cta { display: inline-flex; align-items: center; gap: 4px; margin-top: 16px; height: 32px; padding: 0 12px 0 14px; border-radius: 999px; font-size: 12.5px; font-weight: 600;
+  color: #17140f; background: #f6efe2; transition: background .15s; }
+.fin-accent-cta:hover { background: #fff; }
+.fin-accent-cta svg { width: 14px; height: 14px; }
+
+/* Needs you: tinted icon tiles and a trailing chevron */
+.fin-need .fin-need-go { width: 16px; height: 16px; color: var(--ink-3); flex: none; }
+.fin-need:hover .fin-need-go { color: var(--ink); }
+.fin-need-warn { background: var(--gold-wash) !important; color: var(--gold-text) !important; }
+.fin-need-info { background: var(--surface-2) !important; }
+
+/* step rail for setup */
+.fin-steps .item { position: relative; }
+.fin-steps .item + .item { border-top: 0; }
+.fin-steps .item:not(:last-child)::before { content: ""; position: absolute; left: 17px; top: 46px; bottom: -14px; width: 1px; background: var(--line-2); }
+.fin-step-dot { width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; flex: none; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--line-2); color: var(--ink-3); background: var(--surface); position: relative; z-index: 1; }
+.fin-step-dot.now { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.fin-step-dot.done { color: var(--pos); border-color: rgba(47, 125, 79, 0.4); }
+.fin-step-dot svg { width: 15px; height: 15px; }
+
+/* dot-field loading instead of a spinner line */
+.fin-skel { display: flex; flex-direction: column; gap: var(--gap, 16px); }
+.fin-skel-block { border: 1px solid var(--line); border-radius: var(--radius); background-color: var(--surface);
+  background-image: radial-gradient(var(--line-2) 1px, transparent 1.3px); background-size: 12px 12px; background-position: 6px 6px;
+  animation: fin-dots 1.6s ease-in-out infinite; }
+.fin-skel-row { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--gap, 16px); }
+@keyframes fin-dots { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .fin-skel-block { animation: none; } }
+@media (max-width: 860px) { .fin-skel-row { grid-template-columns: minmax(0, 1fr); } }
+/* phones: the accent insight and Needs you come right after the snapshot */
+@media (max-width: 860px) {
+  .fin-dash { display: flex; flex-direction: column; }
+  .fin-dash > .dash-col { display: contents; }
+  .fin-dash .card { order: 7; }
+  .fin-dash .fin-accent { order: 1; } .fin-dash .o-needs { order: 2; } .fin-dash .o-spending { order: 3; }
+  .fin-dash .o-coming { order: 4; } .fin-dash .o-recent { order: 5; } .fin-dash .o-health { order: 6; }
+}

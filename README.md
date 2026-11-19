@@ -6,6 +6,8 @@ SPLITTER splits bills between housemates and tracks your own money, exact to the
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![node 24](https://img.shields.io/badge/node-24-339933.svg)
 
+![SPLITTER Overview in light and dark, with sample data: net worth, left to spend, next paycheck and debt-free date, an insight card, and a Needs you list](docs/overview.jpg)
+
 ![SPLITTER demo: sample-data money pages, then a group that settles in one payment and a bill split by days](docs/demo.gif)
 
 *Recorded on 2026-10-23 by [`e2e/demo-gif.spec.ts`](e2e/demo-gif.spec.ts) on a local Supabase stub with synthetic data: a fictional 3-person house settles in one payment, and a $90.00 bill split by days comes to $38.57, $38.57 and $12.86.*

@@ -20,6 +20,7 @@ import {
   suggestAllocations, type SuggestedLine,
 } from "@/lib/paycheck-planner";
 import type { AllocationKind, FinanceContext, Paycheck, PaycheckAllocation, PaycheckInput } from "@/lib/finance-types";
+import { appLocale } from "@/lib/locale";
 
 const KIND_ICON: Record<AllocationKind, LucideIcon> = { bill: Receipt, debt: Landmark, spending: ShoppingCart, savings: PiggyBank, other: Shapes };
 const UPCOMING = 4;
@@ -31,10 +32,10 @@ function parseDay(iso: string) {
 function longDay(iso: string, today: string): string {
   const opts: Intl.DateTimeFormatOptions = { weekday: "long", month: "short", day: "numeric" };
   if (iso.slice(0, 4) !== today.slice(0, 4)) opts.year = "numeric";
-  return parseDay(iso).toLocaleDateString("en-US", opts);
+  return parseDay(iso).toLocaleDateString(appLocale(), opts);
 }
 function weekdayShort(iso: string): string {
-  return parseDay(iso).toLocaleDateString("en-US", { weekday: "short" });
+  return parseDay(iso).toLocaleDateString(appLocale(), { weekday: "short" });
 }
 const newId = () => crypto.randomUUID();
 const keyOf = (a: Pick<PaycheckAllocation, "kind" | "ref_id" | "label">) => `${a.kind}:${a.ref_id ?? a.label.toLowerCase()}`;

@@ -17,6 +17,7 @@ import { FINANCE_MAX_CENTS } from "./finance-types.ts";
 import { monthActivity, spendingPace } from "./finance-insights.ts";
 import type { SpendingPace } from "./finance-insights.ts";
 import { isValidCalendarDate } from "./subscription-planner.ts";
+import { appLocale } from "./locale.ts";
 
 export const MAX_BUDGET_LIMITS = 60;
 export const NEAR_LIMIT_PERCENT = 85;
@@ -556,7 +557,7 @@ export function copyLimits(previous: BudgetMonth | undefined, categories: Financ
 
 export function validateBudgetInput(input: BudgetMonthInput, categories: FinanceCategory[]): string[] {
   const errors: string[] = [];
-  const maxLabel = (FINANCE_MAX_CENTS / 100).toLocaleString("en-US");
+  const maxLabel = (FINANCE_MAX_CENTS / 100).toLocaleString(appLocale());
   if (!input || typeof input !== "object") return ["Budget details are missing."];
   if (!isBudgetMonth(input.month)) errors.push("Choose a valid month.");
   if (!isMoney(input.income_cents)) errors.push(`Income must be a whole number of cents from 0 to ${maxLabel}.`);

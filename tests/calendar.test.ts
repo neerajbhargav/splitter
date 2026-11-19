@@ -11,8 +11,8 @@ const feed: CalendarFeed = {
   debt_plan: { payments: [{ account_id: "card", monthly_cents: 30_000, due_day: 3 }] },
   accounts: [{ id: "card", name: "Visa", balance_cents: 120_000, minimum_cents: 4_000 }],
   bills: [
-    { id: "b1", title: "PSE&G unpaid balance", due_date: "2026-09-29", share_cents: 27_604, currency: "USD", group_name: "12 Example St #2" },
-    { id: "b2", title: "Verizon Wi-Fi", due_date: "2026-11-06", share_cents: 1_250, currency: "USD", group_name: "12 Example St #2" },
+    { id: "b1", title: "PSE&G unpaid balance", due_date: "2026-09-29", share_cents: 25_150, currency: "USD", group_name: "12 Example St #2" },
+    { id: "b2", title: "Verizon Wi-Fi", due_date: "2026-11-06", share_cents: 1_100, currency: "USD", group_name: "12 Example St #2" },
   ],
 };
 
@@ -24,11 +24,11 @@ test("the reminder calendar lists bills, renewals, card due days and paydays", (
     summary: /SUMMARY:(.*)\r\n/.exec(e)![1],
   }));
   assert.deepEqual(events, [
-    { date: "20261021", summary: "Overdue: pay PSE&G unpaid balance\\, your share $276.04" },
+    { date: "20261021", summary: "Overdue: pay PSE&G unpaid balance\\, your share $251.50" },
     { date: "20261023", summary: "Payday: $2\\,500.00" },
     { date: "20261031", summary: "Gym\\, Pro\\; plan renews: $49.99" },
     { date: "20261103", summary: "Visa payment due: $300.00" },
-    { date: "20261106", summary: "Pay Verizon Wi-Fi\\, your share $12.50" },
+    { date: "20261106", summary: "Pay Verizon Wi-Fi\\, your share $11.00" },
     { date: "20261106", summary: "Payday: $2\\,500.00" },
   ], "30 days from Oct 21 ends Nov 19, so the Nov 20 payday is left for the next refresh");
   assert.match(ics, /TRIGGER:-PT15H/, "alerts at 9am the day before");

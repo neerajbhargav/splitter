@@ -4,6 +4,7 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, R
 import { CHART_COLORS } from "@/components/charts";
 import { money, moneyShort } from "@/lib/format";
 import { shortDay } from "./kit";
+import { appLocale } from "@/lib/locale";
 
 /** Copilot-style daily spending: flat-bottom bars, the hovered/tapped day is read out above the chart. */
 export function DailyBars({ data, currency, height = 150 }: { data: { date: string; cents: number }[]; currency: string; height?: number }) {
@@ -105,7 +106,7 @@ export function ScoreChart({ data, height = 220 }: { data: ScorePoint[]; height?
   const present = SCORE_LINES.filter((l) => data.some((d) => typeof d[l.key] === "number"));
   const multiYear = data.length > 0 && data[0].date.slice(0, 4) !== data[data.length - 1].date.slice(0, 4);
   const tick = (d: string) => multiYear
-    ? new Date(`${d}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "2-digit" })
+    ? new Date(`${d}T00:00:00`).toLocaleDateString(appLocale(), { month: "short", year: "2-digit" })
     : shortDay(d);
   return (
     <div>
@@ -121,7 +122,7 @@ export function ScoreChart({ data, height = 220 }: { data: ScorePoint[]; height?
             <YAxis width={36} domain={domain} allowDecimals={false} tickLine={false} axisLine={false} tick={{ fill: "var(--ink-3)", fontSize: 11 }} />
             <Tooltip cursor={{ stroke: "var(--line-2)" }} content={({ active, payload, label }) => active && payload?.length ? (
               <div className="chart-tip">
-                <div className="t">{new Date(`${String(label)}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                <div className="t">{new Date(`${String(label)}T00:00:00`).toLocaleDateString(appLocale(), { month: "short", day: "numeric", year: "numeric" })}</div>
                 {payload.filter((p) => typeof p.value === "number").map((p) => (
                   <div className="r" key={String(p.dataKey)}><span><i className="sw" style={{ background: String(p.color) }} />{p.name}</span><b className="num">{String(p.value)}</b></div>
                 ))}

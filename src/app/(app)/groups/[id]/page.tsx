@@ -22,6 +22,7 @@ import { groupCsv, download } from "@/lib/csv";
 import { avatarFor } from "@/lib/overview";
 import { reminderLink } from "@/lib/remind";
 import type { Expense, Member } from "@/lib/types";
+import { appLocale } from "@/lib/locale";
 
 type Tab = "expenses" | "balances" | "activity" | "insights";
 
@@ -486,7 +487,7 @@ function Insights({ bundle }: { bundle: GroupBundle }) {
   const now = new Date();
   const months = Array.from({ length: 6 }, (_, i) => {
     const dt = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-    return { key: `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`, label: dt.toLocaleDateString("en-US", { month: "short" }), total: 0, mine: 0 };
+    return { key: `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`, label: dt.toLocaleDateString(appLocale(), { month: "short" }), total: 0, mine: 0 };
   });
   for (const e of spend) {
     const m = months.find((x) => e.expense_date.startsWith(x.key));

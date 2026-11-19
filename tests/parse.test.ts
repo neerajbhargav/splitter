@@ -5,7 +5,9 @@ import { parseMoney, splitByWeights, splitEqual } from "../src/lib/split.ts";
 test("parseMoney parses exact cents and rejects junk", () => {
   const ok: [string | number, number][] = [["19.99", 1999], ["$1,234.56", 123456], ["1234.5", 123450], ["12", 1200], [" 0.1 ", 10], [".5", 50], ["0.105", 11], ["0.104", 10], ["-12.30", -1230], ["$ 5", 500], [12.34, 1234], ["1,000,000.01", 100000001]];
   for (const [i, o] of ok) assert.equal(parseMoney(i), o, String(i));
-  for (const bad of ["", ".", "-", "1e2", "12abc", "abc12xyz34", "1.2.3", "1,23", "$", "--5"]) assert.equal(parseMoney(bad), null, bad);
+  for (const bad of ["", ".", "-", "1e2", "12abc", "abc12xyz34", "1.2.3", "$", "--5"]) assert.equal(parseMoney(bad), null, bad);
+  // "1,23" was rejected as junk until 2026-11-18. It is 1.23 written with a decimal comma, as most of the world writes it.
+  assert.equal(parseMoney("1,23"), 123);
 });
 
 test("splits always sum to the total", () => {

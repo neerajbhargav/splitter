@@ -9,6 +9,7 @@ import { connectBank, getPlaidStatus, isReauthError, repairConnection, syncConne
 import type { FinanceConnection } from "@/lib/finance-types";
 import { useFinance } from "./FinanceProvider";
 import { errorText } from "./kit";
+import { appLocale } from "@/lib/locale";
 
 const DEMO_NOTE = "Sample data can't link banks. Exit the preview to link your own.";
 
@@ -33,7 +34,7 @@ function syncedAgo(iso: string | null): string {
   const days = Math.round(hrs / 24);
   if (days === 1) return "Synced yesterday";
   if (days < 7) return `Synced ${days} days ago`;
-  return `Synced ${new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  return `Synced ${new Date(iso).toLocaleDateString(appLocale(), { month: "short", day: "numeric" })}`;
 }
 
 type Running = { id: string; label: string };

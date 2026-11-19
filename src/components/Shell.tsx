@@ -11,6 +11,8 @@ import { ThemeCycle } from "./ThemeToggle";
 import { ExpenseEditor } from "./ExpenseEditor";
 import { api, loadGroupsLite, loadProfile, useLiveRefresh } from "@/lib/data";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import { CURRENCIES } from "@/lib/format";
+import { deviceCurrency, isNewProfile } from "@/lib/locale";
 import { groupKind } from "@/lib/categories";
 import type { Group, Profile } from "@/lib/types";
 
@@ -48,10 +50,18 @@ function Frame({ children }: { children: ReactNode }) {
   // Google or GitHub), then create any recurring expenses that came due.
   useEffect(() => {
     (async () => {
-      if (!me.profile || !me.profile.email) {
+      let p = me.profile;
+      if (!p || !p.email) {
         await api.ensureProfile().catch(() => {});
-        const p = await loadProfile(me.id).catch(() => null);
+        p = await loadProfile(me.id).catch(() => null);
         if (p) me.setProfile(p);
+      }
+      // A brand-new account starts in the currency where the person lives, not always USD.
+      const local = deviceCurrency();
+      if (p && isNewProfile(p) && p.default_currency === "USD" && local && local !== "USD" && CURRENCIES.includes(local)) {
+        await api.updateProfile(p.display_name, local).catch(() => {});
+        const fresh = await loadProfile(me.id).catch(() => null);
+        if (fresh) me.setProfile(fresh);
       }
       api.processRecurring().catch(() => {});
     })();

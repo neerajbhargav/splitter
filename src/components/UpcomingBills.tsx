@@ -9,12 +9,13 @@ import { CATEGORIES, category } from "@/lib/categories";
 import { centsToInput, longDate, money, rangeLabel, todayISO } from "@/lib/format";
 import { daysStayed, parseMoney, parseMoneyOrZero, splitByDays, splitEqual } from "@/lib/split";
 import type { Group, Member, UpcomingBill } from "@/lib/types";
+import { appLocale } from "@/lib/locale";
 
 function dueLabel(b: UpcomingBill): { text: string; tone: "neg" | "gold" | "faint" } {
   if (!b.due_date) return { text: "No due date", tone: "faint" };
   const today = todayISO();
   const days = Math.round((new Date(b.due_date + "T00:00:00").getTime() - new Date(today + "T00:00:00").getTime()) / 864e5);
-  const when = new Date(b.due_date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const when = new Date(b.due_date + "T00:00:00").toLocaleDateString(appLocale(), { month: "short", day: "numeric" });
   if (days < 0) return { text: `Overdue since ${when}`, tone: "neg" };
   if (days === 0) return { text: "Due today", tone: "neg" };
   if (days <= 7) return { text: `Due ${when} · in ${days} day${days === 1 ? "" : "s"}`, tone: "gold" };
@@ -106,7 +107,7 @@ export function UpcomingBills({ group, members, bills }: { group: Group; members
                                 <div className="item-main">
                                   <span className="item-title" style={{ fontWeight: 500 }}>{name(s.member_id)}</span>
                                   {s.paid_at && (
-                                    <div className="item-sub">Paid {new Date(s.paid_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}{marker && marker.id !== s.member_id ? ` · marked by ${marker.user_id === me.id ? "you" : marker.display_name}` : ""}
+                                    <div className="item-sub">Paid {new Date(s.paid_at).toLocaleDateString(appLocale(), { month: "short", day: "numeric" })}{marker && marker.id !== s.member_id ? ` · marked by ${marker.user_id === me.id ? "you" : marker.display_name}` : ""}
                                       {s.paid_cents != null && s.paid_cents !== s.amount_cents && <span className={s.paid_cents < s.amount_cents ? "neg" : "pos"}> · sent {money(s.paid_cents, cur)}, {s.paid_cents < s.amount_cents ? `${money(s.amount_cents - s.paid_cents, cur)} still to send` : `${money(s.paid_cents - s.amount_cents, cur)} extra, comes back in balances`}</span>}</div>
                                   )}
                                 </div>

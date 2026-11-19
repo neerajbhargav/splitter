@@ -24,6 +24,7 @@ import {
   nextRenewalDate,
   subscriptionEquivalentTotals,
 } from "./subscription-planner.ts";
+import { appLocale } from "./locale.ts";
 
 /* ---------------------------------------------------------------- helpers */
 
@@ -84,11 +85,11 @@ function ratioNumber(n: bigint, d: bigint): number {
 
 const formatterCache = new Map<string, Intl.NumberFormat | null>();
 function formatter(currency: string, fractionDigits: number): Intl.NumberFormat | null {
-  const key = `${currency}|${fractionDigits}`;
+  const key = `${appLocale()}|${currency}|${fractionDigits}`;
   if (!formatterCache.has(key)) {
     let f: Intl.NumberFormat | null = null;
     try {
-      f = new Intl.NumberFormat("en-US", {
+      f = new Intl.NumberFormat(appLocale(), {
         style: "currency",
         currency,
         minimumFractionDigits: fractionDigits,
